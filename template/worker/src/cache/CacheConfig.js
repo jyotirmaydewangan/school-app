@@ -1,18 +1,18 @@
-const CACHE_DEFAULTS = {
-  users: 2592000,
-  config: 2592000,
-  roles: 2592000,
-  attendance: 604800,
-  noticeboard: 604800,
-  timetable: 2592000,
-  marks: 604800,
-  verify: 900,
-  default: 60
+const CACHE_TTL = {
+  users: () => parseInt(globalThis.workerEnv?.CACHE_TTL_USERS) || 2592000,
+  config: () => parseInt(globalThis.workerEnv?.CACHE_TTL_CONFIG) || 2592000,
+  roles: () => parseInt(globalThis.workerEnv?.CACHE_TTL_ROLES) || 2592000,
+  attendance: () => parseInt(globalThis.workerEnv?.CACHE_TTL_ATTENDANCE) || 604800,
+  noticeboard: () => parseInt(globalThis.workerEnv?.CACHE_TTL_NOTICEBOARD) || 604800,
+  timetable: () => parseInt(globalThis.workerEnv?.CACHE_TTL_TIMETABLE) || 2592000,
+  marks: () => parseInt(globalThis.workerEnv?.CACHE_TTL_MARKS) || 604800,
+  verify: () => parseInt(globalThis.workerEnv?.CACHE_TTL_VERIFY) || 900,
+  default: () => 2592000
 };
 
 const POST_READ_ACTIONS = [
   'getUsers',
-  'getRoles', 
+  'getRoles',
   'getConfig',
   'getAttendance',
   'getNoticeboard',
@@ -48,23 +48,14 @@ const CACHE_INVALIDATION_MAP = {
 
 export const CacheConfig = {
   getTTL(action) {
-    const env = globalThis.workerEnv || {};
-    
-    const ttlMap = {
-      verify: env.CACHE_TTL_VERIFY || CACHE_DEFAULTS.verify,
-      attendance: env.CACHE_TTL_ATTENDANCE || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.attendance,
-      noticeboard: env.CACHE_TTL_NOTICEBOARD || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.noticeboard,
-      timetable: env.CACHE_TTL_TIMETABLE || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.timetable,
-      marks: env.CACHE_TTL_MARKS || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.marks,
-      users: env.CACHE_TTL_USERS || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.users,
-      roles: env.CACHE_TTL_ROLES || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.roles,
-      config: env.CACHE_TTL_CONFIG || env.DEFAULT_CACHE_TTL || CACHE_DEFAULTS.config
-    };
-
-    for (const [key, value] of Object.entries(ttlMap)) {
-      if (action.includes(key)) return parseInt(value);
+    const normalizedAction = action.toLowerCase();
+    for (const [key, value] of Object.entries(CACHE_TTL)) {
+      if (key !== 'default' && normalizedAction.includes(key.toLowerCase())) {
+        return typeof value === 'function' ? value() : value;
+      }
     }
-    return parseInt(env.DEFAULT_CACHE_TTL) || CACHE_DEFAULTS.default;
+    const defaultValue = CACHE_TTL.default;
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
   },
 
   shouldCache(action) {
@@ -73,12 +64,13 @@ export const CacheConfig = {
       'getNoticeboard', 'getTimetable', 'getMarks', 'verify',
       'users', 'roles', 'config', 'attendance',
       'noticeboard', 'timetable', 'marks'
-    ];
-    return cacheable.includes(action);
+    ].map(s => s.toLowerCase());
+    return cacheable.includes(action.toLowerCase());
   },
 
   isPostReadAction(action) {
-    return POST_READ_ACTIONS.includes(action);
+    const normalizedAction = action.toLowerCase();
+    return POST_READ_ACTIONS.some(a => a.toLowerCase() === normalizedAction);
   },
 
   getInvalidatePatterns(action) {

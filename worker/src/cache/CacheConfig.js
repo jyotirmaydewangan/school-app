@@ -1,12 +1,12 @@
 const CACHE_TTL = Object.freeze({
-  users: 300,
-  config: 3600,
-  roles: 600,
-  attendance: 300,
-  noticeboard: 600,
-  timetable: 3600,
-  marks: 300,
-  default: 60
+  users: 2592000,
+  config: 2592000,
+  roles: 2592000,
+  attendance: 604800,
+  noticeboard: 604800,
+  timetable: 2592000,
+  marks: 604800,
+  default: 2592000
 });
 
 export const CacheConfig = {
@@ -21,10 +21,14 @@ export const CacheConfig = {
       config: CACHE_TTL.config
     };
 
+    const normalizedAction = action.toLowerCase();
     for (const [key, value] of Object.entries(ttlMap)) {
-      if (action.includes(key)) return value;
+      if (normalizedAction.includes(key.toLowerCase())) {
+        return typeof value === 'function' ? value() : value;
+      }
     }
-    return CACHE_TTL.default;
+    const defaultValue = CACHE_TTL.default;
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
   },
 
   shouldCache(action) {
@@ -33,7 +37,7 @@ export const CacheConfig = {
       'getNoticeboard', 'getTimetable', 'getMarks',
       'users', 'roles', 'config', 'attendance',
       'noticeboard', 'timetable', 'marks'
-    ];
-    return cacheable.includes(action);
+    ].map(s => s.toLowerCase());
+    return cacheable.includes(action.toLowerCase());
   }
 };
