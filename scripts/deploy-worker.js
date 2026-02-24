@@ -1,10 +1,77 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  ROOT_DIR,
+  TEMPLATE_DIR,
   getTenantDir,
+  getKVConfig,
   log,
-  runCommand
+  runCommand,
+  copyFile
 } = require('./utils');
+
+function syncWorkerFiles(tenantDir) {
+  const templateWorkerDir = path.join(TEMPLATE_DIR, 'worker');
+  const tenantWorkerDir = path.join(tenantDir, 'worker');
+  
+  const filesToSync = [
+    'src/index.js',
+    'src/cache/KVCacheHandler.js',
+    'src/cache/CacheHandler.js',
+    'src/cache/CacheConfig.js',
+    'src/routes/RouteConfig.js',
+    'src/middleware/AuthMiddleware.js',
+    'src/middleware/CorsMiddleware.js',
+    'src/utils/ResponseHandler.js'
+  ];
+
+  log('Syncing worker template files...', 'info');
+  
+  filesToSync.forEach(file => {
+    const src = path.join(templateWorkerDir, file);
+    const dest = path.join(tenantWorkerDir, file);
+    if (fs.existsSync(src)) {
+      copyFile(src, dest);
+    }
+  });
+  
+  log('✓ Worker files synced', 'success');
+}
+
+function updateWranglerConfig(tenantDir, tenantName) {
+  const tomlPath = path.join(tenantDir, 'worker', 'wrangler.toml');
+  let tomlContent = fs.readFileSync(tomlPath, 'utf8');
+  const kvConfig = getKVConfig();
+  let updated = false;
+
+  if (!tomlContent.includes('[[kv_namespaces]]')) {
+    const kvBlock = `
+[[kv_namespaces]]
+binding = "${kvConfig.binding || 'DATA_CACHE'}"
+id = "${kvConfig.namespaceId || ''}"
+preview_id = ""
+
+`;
+    tomlContent = tomlContent.replace(
+      'compatibility_date = ',
+      kvBlock + 'compatibility_date = '
+    );
+    updated = true;
+  }
+
+  if (!tomlContent.includes('ENABLE_KV_CACHE')) {
+    tomlContent = tomlContent.replace(
+      'ENABLE_RATE_LIMIT = false',
+      'ENABLE_RATE_LIMIT = false\nENABLE_KV_CACHE = true'
+    );
+    updated = true;
+  }
+
+  if (updated) {
+    fs.writeFileSync(tomlPath, tomlContent);
+    log('✓ wrangler.toml updated with KV config', 'success');
+  }
+}
 
 function deployWorker(tenantName, args = []) {
   if (!tenantName) {
@@ -20,6 +87,9 @@ function deployWorker(tenantName, args = []) {
     log('Run: node scripts/create-tenant.js <tenant-name> first', 'info');
     process.exit(1);
   }
+
+  syncWorkerFiles(tenantDir);
+  updateWranglerConfig(tenantDir, tenantName);
 
   const webAppUrlPath = path.join(tenantDir, 'apps-script', 'WEB_APP_URL.txt');
   

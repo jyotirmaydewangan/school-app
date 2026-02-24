@@ -1,6 +1,5 @@
 import { CorsMiddleware } from '../middleware/CorsMiddleware.js';
 import { CacheHandler } from '../cache/CacheHandler.js';
-import { CacheConfig } from '../cache/CacheConfig.js';
 
 export const ResponseHandler = {
   init(caches) {

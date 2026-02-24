@@ -50,6 +50,11 @@ function getRolesJson() {
   return JSON.stringify(roles);
 }
 
+function getKVConfig() {
+  const config = loadConfig();
+  return config?.kv || {};
+}
+
 function readJsonFile(filePath) {
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -171,5 +176,6 @@ module.exports = {
   getDefaults,
   getCacheConfig,
   getRoles,
-  getRolesJson
+  getRolesJson,
+  getKVConfig
 };

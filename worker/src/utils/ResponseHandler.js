@@ -16,13 +16,23 @@ export const ResponseHandler = {
       headers = CorsMiddleware.addHeaders(response);
       headers.set('X-Cache', 'MISS');
       
-      const cachedResponse = new Response(responseText, {
+      const isEmptyResponse = !responseText || responseText.trim() === '' || responseText === 'null';
+      const shouldNotCache = isEmptyResponse || response.status >= 400;
+      
+      if (!shouldNotCache) {
+        const cachedResponse = new Response(responseText, {
+          status: response.status,
+          headers
+        });
+        
+        await CacheHandler.set(request, cachedResponse, action);
+        return cachedResponse;
+      }
+      
+      return new Response(responseText, {
         status: response.status,
         headers
       });
-      
-      await CacheHandler.set(request, cachedResponse, action);
-      return cachedResponse;
     }
 
     if (['POST', 'PUT', 'DELETE'].includes(request.method)) {

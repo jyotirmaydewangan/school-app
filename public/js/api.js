@@ -20,7 +20,23 @@ const api = {
         headers
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { error: `HTTP ${response.status}` };
+        }
+        throw new Error(errorData.error || `HTTP error ${response.status}`);
+      }
+
+      if (!text || text.trim() === '') {
+        return null;
+      }
+
+      const data = JSON.parse(text);
       return data;
 
     } catch (error) {

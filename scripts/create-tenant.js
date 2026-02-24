@@ -9,7 +9,8 @@ const {
   log,
   getProjectPrefix,
   getDefaults,
-  getRolesJson
+  getRolesJson,
+  getKVConfig
 } = require('./utils');
 
 function createTenant(tenantName) {
@@ -41,6 +42,7 @@ function createTenant(tenantName) {
   const projectPrefix = getProjectPrefix();
   const rolesJson = getRolesJson();
   const storagePrefix = defaults.storagePrefix || getProjectPrefix() + '_app';
+  const kvConfig = getKVConfig();
   
   const replacements = {
     '{TENANT}': tenantName,
@@ -58,7 +60,9 @@ function createTenant(tenantName) {
     '{FAVICON_URL}': defaults.faviconUrl || '',
     '{SHOW_POWERED_BY}': String(defaults.showPoweredBy || false),
     '{ROLES_JSON}': rolesJson,
-    '{STORAGE_PREFIX}': storagePrefix
+    '{STORAGE_PREFIX}': storagePrefix,
+    '{KV_NAMESPACE_ID}': kvConfig.namespaceId || '',
+    '{KV_BINDING}': kvConfig.binding || 'DATA_CACHE'
   };
 
   copyDir(TEMPLATE_DIR, tenantDir);
