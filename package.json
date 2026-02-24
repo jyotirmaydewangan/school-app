@@ -1,0 +1,15 @@
+{
+  "name": "school-app",
+  "version": "1.0.0",
+  "description": "School App - Role Based Authentication System",
+  "scripts": {
+    "create-tenant": "node scripts/create-tenant.js",
+    "deploy-apps-script": "node scripts/deploy-apps-script.js",
+    "deploy-worker": "node scripts/deploy-worker.js",
+    "deploy-pages": "node scripts/deploy-pages.js"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

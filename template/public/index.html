@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School App - Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .tab {
+      flex: 1;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      background: #f5f5f5;
+      border: none;
+      font-size: 16px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s;
+    }
+    .tab.active {
+      background: white;
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+    }
+    .form-container {
+      padding: 30px;
+    }
+    .form {
+      display: none;
+    }
+    .form.active {
+      display: block;
+    }
+    h2 {
+      margin-bottom: 24px;
+      color: #333;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .error {
+      background: #fee;
+      color: #c00;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+    .error.show {
+      display: block;
+    }
+    .success {
+      background: #efe;
+      color: #060;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+    .success.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="login">Login</button>
+      <button class="tab" data-tab="register">Register</button>
+    </div>
+    
+    <div class="form-container">
+      <div id="login-error" class="error"></div>
+      <div id="login-success" class="success"></div>
+      
+      <form id="login-form" class="form active">
+        <h2>Welcome Back</h2>
+        
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" required placeholder="Enter your email">
+        </div>
+        
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" required placeholder="Enter your password">
+        </div>
+        
+        <button type="submit" id="login-btn">Login</button>
+      </form>
+      
+      <form id="register-form" class="form">
+        <h2>Create Account</h2>
+        
+        <div class="form-group">
+          <label for="register-name">Full Name</label>
+          <input type="text" id="register-name" required placeholder="Enter your name">
+        </div>
+        
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" required placeholder="Enter your email">
+        </div>
+        
+        <div class="form-group">
+          <label for="register-phone">Phone (Optional)</label>
+          <input type="tel" id="register-phone" placeholder="Enter your phone">
+        </div>
+        
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" required placeholder="Create a password" minlength="6">
+        </div>
+        
+        <div class="form-group">
+          <label for="register-role">Role</label>
+          <select id="register-role">
+            <option value="student">Student</option>
+            <option value="parent">Parent</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+        
+        <button type="submit" id="register-btn">Register</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script>
+    window.API_URL = window.TENANT_CONFIG?.API_URL || '';
+  </script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    
+    const tabs = document.querySelectorAll('.tab');
+    const forms = document.querySelectorAll('.form');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        
+        tabs.forEach(t => t.classList.remove('active'));
+        forms.forEach(f => f.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(`${tabName}-form`).classList.add('active');
+        
+        document.getElementById('login-error').classList.remove('show');
+        document.getElementById('login-success').classList.remove('show');
+      });
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-btn');
+      
+      const errorEl = document.getElementById('login-error');
+      const successEl = document.getElementById('login-success');
+      
+      errorEl.classList.remove('show');
+      successEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Logging in...';
+      
+      try {
+        const response = await api.login(email, password);
+        
+        if (response.success) {
+          auth.setToken(response.token);
+          auth.setUser(response.user);
+          
+          successEl.textContent = 'Login successful! Redirecting...';
+          successEl.classList.add('show');
+          
+          setTimeout(() => {
+            window.location.href = 'app.html';
+          }, 1000);
+        } else {
+          errorEl.textContent = response.error || 'Login failed';
+          errorEl.classList.add('show');
+        }
+      } catch (err) {
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Login';
+      }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('register-name').value;
+      const email = document.getElementById('register-email').value;
+      const phone = document.getElementById('register-phone').value;
+      const password = document.getElementById('register-password').value;
+      const role = document.getElementById('register-role').value;
+      const btn = document.getElementById('register-btn');
+      
+      const errorEl = document.getElementById('login-error');
+      const successEl = document.getElementById('login-success');
+      
+      errorEl.classList.remove('show');
+      successEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Registering...';
+      
+      try {
+        const response = await api.register({ email, phone, password, name, role });
+        
+        if (response.success) {
+          successEl.textContent = 'Registration successful! Please login.';
+          successEl.classList.add('show');
+          
+          document.querySelector('.tab[data-tab="login"]').click();
+        } else {
+          errorEl.textContent = response.error || 'Registration failed';
+          errorEl.classList.add('show');
+        }
+      } catch (err) {
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Register';
+      }
+    });
+
+    if (auth.isLoggedIn()) {
+      window.location.href = 'app.html';
+    }
+  </script>
+</body>
+</html>

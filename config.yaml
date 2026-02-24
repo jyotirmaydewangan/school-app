@@ -1,0 +1,73 @@
+# Project Configuration
+# All hardcoded values should be configured here
+
+project:
+  # Prefix used for Cloudflare Worker/App names
+  # Example: "myapp" -> "myapp-worker-{TENANT}" and "myapp-app-{TENANT}"
+  namePrefix: "finance"
+  
+  # Prefix for localStorage/sessionStorage keys
+  storagePrefix: "school_app"
+
+defaults:
+  # App display name
+  appName: "My Finance"
+  
+  # Theme colors (can be overridden per tenant)
+  theme:
+    primaryColor: "#2563eb"
+    secondaryColor: "#1e40af"
+    accentColor: "#3b82f6"
+    backgroundColor: "#f8fafc"
+    textColor: "#1e293b"
+  
+  # Default user role for new registrations
+  defaultRole: "student"
+  
+  # Session configuration
+  sessionTimeoutMinutes: 30
+  
+  # Rate limiting (0 to disable)
+  rateLimitPerMinute: 60
+  
+  # Cache TTL in seconds
+  cacheTtlSeconds: 300
+  
+  # Allow new user registrations
+  allowRegistration: true
+  
+  # Contact email shown in app
+  contactEmail: ""
+  
+  # Logo and favicon URLs (leave empty to hide)
+  logoUrl: ""
+  faviconUrl: ""
+  
+  # Show "Powered by" footer
+  showPoweredBy: false
+
+# Cache configuration by resource type (in seconds)
+cache:
+  users: 300
+  config: 3600
+  roles: 600
+  attendance: 300
+  noticeboard: 600
+  timetable: 3600
+  marks: 300
+  default: 60
+
+# Default roles and permissions
+roles:
+  admin:
+    permissions: ["*"]
+    isActive: true
+  teacher:
+    permissions: ["read:students", "write:grades"]
+    isActive: true
+  parent:
+    permissions: ["read:own_child"]
+    isActive: true
+  student:
+    permissions: ["read:own_grades"]
+    isActive: true

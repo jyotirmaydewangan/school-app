@@ -1,0 +1,5 @@
+# .gitignore example
+.DS_Store
+node_modules/
+.env
+tenants/

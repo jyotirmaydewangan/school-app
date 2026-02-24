@@ -1,0 +1,9 @@
+name = "school-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR5kPVIe5fhcnznZCR8i-80pt0Mupd7iQax6iK9FrC7RiBgDbNYHMszCznSZlFdGekSA/exec"
+
+[env.production]
+vars = { SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR5kPVIe5fhcnznZCR8i-80pt0Mupd7iQax6iK9FrC7RiBgDbNYHMszCznSZlFdGekSA/exec" }
