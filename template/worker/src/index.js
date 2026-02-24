@@ -48,23 +48,26 @@ const Router = {
       async handlePostReadRequest(request, action, urlObj, tenantId) {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
+        const requestBody = await request.clone().text();
+
+        const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, requestBody);
 
         if (this.kvHandler.isEnabled() && isCacheable) {
-          const cached = await this.kvHandler.get(tenantId, action, {});
+          const cached = await this.kvHandler.getByKey(cacheKey);
           
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
-              this.refreshPostInBackground(tenantId, action, request);
+              this.refreshPostInBackground(tenantId, action, request, cacheKey);
               return this.kvHandler.buildResponse(cached.data, true);
             }
             return this.kvHandler.buildResponse(cached.data, false);
           }
         }
 
-        return this.proxyToBackend(request, action, 'POST', isCacheable, urlObj, tenantId, {});
+        return this.proxyToBackend(request, action, 'POST', isCacheable, urlObj, tenantId, queryParams, requestBody);
       },
 
-      async refreshPostInBackground(tenantId, action, originalRequest) {
+      async refreshPostInBackground(tenantId, action, originalRequest, cacheKey) {
         try {
           const scriptUrl = this.env.SCRIPT_URL;
           if (!scriptUrl) return;
@@ -85,7 +88,11 @@ const Router = {
           const response = await fetch(apiUrl, fetchOptions);
           if (response.ok) {
             const data = await response.json();
-            await this.kvHandler.set(tenantId, action, data, {});
+            if (cacheKey) {
+              await this.kvHandler.setByKey(cacheKey, data, action);
+            } else {
+              await this.kvHandler.set(tenantId, action, data, {});
+            }
           }
         } catch (e) {
           // Silent fail for background refresh
@@ -151,14 +158,14 @@ const Router = {
         return response;
       },
 
-      async proxyToBackend(request, action, method, isCacheable, urlObj, tenantId, queryParams = {}) {
+      async proxyToBackend(request, action, method, isCacheable, urlObj, tenantId, queryParams = {}, requestBody = null) {
         const scriptUrl = this.env.SCRIPT_URL;
         if (!scriptUrl) {
           return this.responseHandler.noBackend();
         }
 
         const headers = this.buildHeaders(request);
-        const body = await RequestParser.parseBody(request);
+        const body = requestBody || await RequestParser.parseBody(request);
         const token = AuthMiddleware.extractToken(request);
         const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
 
@@ -179,7 +186,12 @@ const Router = {
           if (isCacheable && response.ok && (method === 'GET' || CacheConfig.isPostReadAction(action))) {
             const data = await response.clone().json();
             if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
-              await this.kvHandler.set(tenantId, action, data, queryParams);
+              const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, bodyWithToken || body);
+              if (cacheKey.includes(':verify:') || cacheKey.includes(':getAttendance:') || cacheKey.includes(':getTimetable:') || cacheKey.includes(':getMarks:')) {
+                await this.kvHandler.setByKey(cacheKey, data, action);
+              } else {
+                await this.kvHandler.set(tenantId, action, data, queryParams);
+              }
             }
           }
 

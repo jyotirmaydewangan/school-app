@@ -50,70 +50,6 @@ export const KVCacheHandler = {
     return this.buildCacheKey(tenantId, action, {});
   },
 
-  async getByKey(key) {
-    if (!this.isEnabled()) {
-      return null;
-    }
-
-    console.log(`[KV] GetByKey: ${key}`);
-    
-    try {
-      const cached = await this.kv.get(key, 'json');
-      if (cached && cached.data) {
-        const now = Date.now();
-        const staleAt = cached.staleAt || 0;
-        const expiresAt = cached.expiresAt || 0;
-        
-        console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
-        
-        const data = cached.data;
-        const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
-        
-        if (isEmpty) {
-          console.log('[KV] Cached data is empty, treating as miss');
-          await this.kv.delete(key);
-          return null;
-        }
-        
-        return {
-          data: cached.data,
-          isStale: now > staleAt && now < expiresAt,
-          isExpired: now >= expiresAt
-        };
-      } else {
-        console.log('[KV] Cache miss for key:', key);
-      }
-    } catch (e) {
-      console.error('KV getByKey error:', e.message);
-    }
-    return null;
-  },
-
-  async setByKey(key, data, action) {
-    if (!this.isEnabled()) {
-      console.log('[KV] SetByKey - KV not enabled');
-      return;
-    }
-
-    const ttl = CacheConfig.getTTL(action);
-    const now = Date.now();
-    const staleWhileRevalidate = Math.floor(ttl * 0.5);
-    
-    const cacheEntry = {
-      data,
-      createdAt: now,
-      expiresAt: now + (ttl * 1000),
-      staleAt: now + ((ttl - staleWhileRevalidate) * 1000)
-    };
-
-    try {
-      await this.kv.put(key, JSON.stringify(cacheEntry), { expirationTtl: ttl + 60 });
-      console.log(`[KV] Cached key: ${key} with TTL: ${ttl}s`);
-    } catch (e) {
-      console.error('KV setByKey error:', e.message);
-    }
-  },
-
   async get(tenantId, action, queryParams = {}) {
     if (!this.isEnabled()) {
       console.log('[KV] Get - KV not enabled');
@@ -178,6 +114,70 @@ export const KVCacheHandler = {
       console.log(`[KV] Cached key: ${key} with TTL: ${ttl}s`);
     } catch (e) {
       console.error('KV set error:', e.message);
+    }
+  },
+
+  async getByKey(key) {
+    if (!this.isEnabled()) {
+      return null;
+    }
+
+    console.log(`[KV] GetByKey: ${key}`);
+    
+    try {
+      const cached = await this.kv.get(key, 'json');
+      if (cached && cached.data) {
+        const now = Date.now();
+        const staleAt = cached.staleAt || 0;
+        const expiresAt = cached.expiresAt || 0;
+        
+        console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
+        
+        const data = cached.data;
+        const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
+        
+        if (isEmpty) {
+          console.log('[KV] Cached data is empty, treating as miss');
+          await this.kv.delete(key);
+          return null;
+        }
+        
+        return {
+          data: cached.data,
+          isStale: now > staleAt && now < expiresAt,
+          isExpired: now >= expiresAt
+        };
+      } else {
+        console.log('[KV] Cache miss for key:', key);
+      }
+    } catch (e) {
+      console.error('KV getByKey error:', e.message);
+    }
+    return null;
+  },
+
+  async setByKey(key, data, action) {
+    if (!this.isEnabled()) {
+      console.log('[KV] SetByKey - KV not enabled');
+      return;
+    }
+
+    const ttl = CacheConfig.getTTL(action);
+    const now = Date.now();
+    const staleWhileRevalidate = Math.floor(ttl * 0.5);
+    
+    const cacheEntry = {
+      data,
+      createdAt: now,
+      expiresAt: now + (ttl * 1000),
+      staleAt: now + ((ttl - staleWhileRevalidate) * 1000)
+    };
+
+    try {
+      await this.kv.put(key, JSON.stringify(cacheEntry), { expirationTtl: ttl + 60 });
+      console.log(`[KV] Cached key: ${key} with TTL: ${ttl}s`);
+    } catch (e) {
+      console.error('KV setByKey error:', e.message);
     }
   },
 
