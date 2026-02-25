@@ -5,9 +5,43 @@ const SHEET_NAMES = Object.freeze({
   ROLES: 'roles'
 });
 
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Initialize')
+    .addItem('Setup Sheets', 'SheetService.initializeAll')
+    .addItem('Seed Roles', 'forceSeedRoles')
+    .addToUi();
+  SheetService.initializeAll();
+}
+
+function forceSeedRoles() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('roles');
+  if (!sheet) {
+    return { success: false, error: 'roles sheet not found' };
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const existingRoles = data.slice(1).map(row => row[1]).filter(r => r && r.toString().trim() !== '');
+  
+  const rolesToAdd = {
+    admin: { permissions: ['*'], isActive: true },
+    teacher: { permissions: ['read:students', 'write:grades'], isActive: true },
+    parent: { permissions: ['read:own_child'], isActive: true },
+    student: { permissions: ['read:own_grades'], isActive: true }
+  };
+  
+  Object.entries(rolesToAdd).forEach(function([roleName, roleData]) {
+    if (!existingRoles.includes(roleName)) {
+      sheet.appendRow([Utilities.getUuid(), roleName, JSON.stringify(roleData.permissions), roleData.isActive]);
+    }
+  });
+  
+  return { success: true, message: 'Roles seeded', existingRoles: existingRoles };
+}
+
 function getRolePermissions() {
   try {
-    if (TENANT_CONFIG.ROLES) {
+    if (typeof TENANT_CONFIG !== 'undefined' && TENANT_CONFIG.ROLES && typeof TENANT_CONFIG.ROLES === 'object' && Object.keys(TENANT_CONFIG.ROLES).length > 0) {
       return TENANT_CONFIG.ROLES;
     }
   } catch (e) {}
@@ -38,9 +72,14 @@ function getSessionTimeout() {
 const SheetService = {
   getSheet(name) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      Logger.log('Error: Could not get active spreadsheet. Is the script bound correctly?');
+      throw new Error('Could not get active spreadsheet. Please ensure the script is bound to a Google Sheet.');
+    }
     let sheet = ss.getSheetByName(name);
     
     if (!sheet) {
+      Logger.log('Creating missing sheet: ' + name);
       sheet = ss.insertSheet(name);
       this.initializeSheet(name, sheet);
     }
@@ -57,30 +96,36 @@ const SheetService = {
   },
 
   initializeAll() {
+    Logger.log('Starting SheetService.initializeAll()');
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      Logger.log('Error: ss is null');
+      return { success: false, error: 'Could not get active spreadsheet' };
+    }
+
     const sheetNames = [SHEET_NAMES.CONFIG, SHEET_NAMES.USERS, SHEET_NAMES.SESSIONS, SHEET_NAMES.ROLES];
     
     sheetNames.forEach(name => {
       let sheet = ss.getSheetByName(name);
       if (!sheet) {
+        Logger.log('Inserting sheet: ' + name);
         sheet = ss.insertSheet(name);
         this.initializeSheet(name, sheet);
       }
     });
     
-    this.getSheet(SHEET_NAMES.ROLES);
+    const rolesSheet = ss.getSheetByName(SHEET_NAMES.ROLES);
+    this.seedDefaultRoles(rolesSheet);
     
-    const configSheet = this.getSheet(SHEET_NAMES.CONFIG);
-    const configData = configSheet.getDataRange().getValues();
-    if (configData.length <= 1) {
-      configSheet.appendRow(['session_timeout_minutes', getSessionTimeout()]);
-      configSheet.appendRow(['app_url', '']);
-    }
+    const configSheet = ss.getSheetByName(SHEET_NAMES.CONFIG);
+    this.seedDefaultConfig(configSheet);
     
+    Logger.log('Initialization complete');
     return { success: true, message: 'All sheets initialized' };
   },
 
   initializeSheet(name, sheet) {
+    Logger.log('Initializing schema for: ' + name);
     const schemas = {
       [SHEET_NAMES.USERS]: ['id', 'email', 'phone', 'password_hash', 'role', 'name', 'created_at', 'updated_at'],
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
@@ -90,31 +135,78 @@ const SheetService = {
     
     if (schemas[name]) {
       sheet.appendRow(schemas[name]);
+      SpreadsheetApp.flush(); // Essential to ensure headers are there before potentially seeding
     }
   },
 
   seedDefaultRoles(sheet) {
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) {
+    if (!sheet) {
+      Logger.log('seedDefaultRoles: No sheet provided');
+      return;
+    }
+    let data = sheet.getDataRange().getValues();
+    if (!data || data.length === 0 || (data.length === 1 && (!data[0][0] || data[0][0] === ''))) {
+      Logger.log('seedDefaultRoles: Sheet empty, adding headers');
+      sheet.appendRow(['role_id', 'role_name', 'permissions', 'is_active']);
+      SpreadsheetApp.flush();
+      data = sheet.getDataRange().getValues();
+    }
+    
+    const existingRoles = data.slice(1)
+      .filter(row => row && row[1] && String(row[1]).trim() !== '')
+      .map(row => String(row[1]).trim());
+    
+    Logger.log('existingRoles: ' + JSON.stringify(existingRoles));
+    
+    if (existingRoles.length === 0) {
+      Logger.log('seedDefaultRoles: Seeding default roles');
       const roles = getRolePermissions();
-      const defaults = Object.entries(roles).map(function(entry) {
-        const roleName = entry[0];
-        const roleData = entry[1];
-        return [Utilities.getUuid(), roleName, JSON.stringify(roleData.permissions), roleData.isActive];
-      });
-      defaults.forEach(function(row) {
-        sheet.appendRow(row);
-      });
+      if (roles && Object.keys(roles).length > 0) {
+        const defaults = Object.entries(roles).map(function(entry) {
+          const roleName = entry[0];
+          const roleData = entry[1];
+          return [Utilities.getUuid(), roleName, JSON.stringify(roleData.permissions), roleData.isActive];
+        });
+        // Batch append rows using setValues if possible, but appendRow is fine for seeding
+        defaults.forEach(function(row) {
+          sheet.appendRow(row);
+        });
+      } else {
+        Logger.log('No roles to seed');
+      }
     }
   },
 
   seedDefaultConfig(sheet) {
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) {
-      const defaults = [
-        ['protected_role', 'admin,teacher,parent,student']
-      ];
-      defaults.forEach(row => sheet.appendRow(row));
+    if (!sheet) {
+      Logger.log('seedDefaultConfig: No sheet provided');
+      return;
+    }
+    let data = sheet.getDataRange().getValues();
+    if (!data || data.length === 0 || (data.length === 1 && (!data[0][0] || data[0][0] === ''))) {
+      Logger.log('seedDefaultConfig: Sheet empty, adding headers');
+      sheet.appendRow(['key', 'value']);
+      SpreadsheetApp.flush();
+      data = sheet.getDataRange().getValues();
+    }
+    
+    const existingKeys = data.slice(1)
+      .filter(row => row && row[0] && String(row[0]).trim() !== '')
+      .map(row => String(row[0]).trim());
+    
+    Logger.log('existingKeys: ' + JSON.stringify(existingKeys));
+    
+    if (!existingKeys.includes('protected_role')) {
+      Logger.log('Adding protected_role');
+      sheet.appendRow(['protected_role', 'admin']);
+    }
+    if (!existingKeys.includes('session_timeout_minutes')) {
+      Logger.log('Adding session_timeout_minutes');
+      sheet.appendRow(['session_timeout_minutes', getSessionTimeout()]);
+    }
+    if (!existingKeys.includes('app_url')) {
+      Logger.log('Adding app_url');
+      sheet.appendRow(['app_url', '']);
     }
   }
 };

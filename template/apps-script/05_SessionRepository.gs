@@ -46,8 +46,8 @@ const SessionRepository = {
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === sessionId) {
-        sheet.getRange(i + 1, 4).setValue(expiresAt);
-        sheet.getRange(i + 1, 5).setValue(now);
+        // Update both expires_at (col 4) and last_activity (col 5) in one go
+        sheet.getRange(i + 1, 4, 1, 2).setValues([[expiresAt, now]]);
         return true;
       }
     }

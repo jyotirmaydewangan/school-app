@@ -161,10 +161,11 @@ function syncTemplateFiles(tenantName, options = {}) {
     const configFiles = [
       { file: 'apps-script/config.gs', replacements: {
         '{TENANT}': tenantName,
-        '{APP_NAME}': defaults.defaults?.appName || 'My School',
-        '{ALLOW_REGISTRATION}': defaults.defaults?.allowRegistration !== false ? 'true' : 'false',
-        '{DEFAULT_ROLE}': defaults.defaults?.defaultRole || 'student',
-        '{SESSION_TIMEOUT}': String(defaults.defaults?.sessionTimeoutMinutes || 30)
+        '{APP_NAME}': defaults.appName || 'My School',
+        '{ALLOW_REGISTRATION}': defaults.allowRegistration !== false ? 'true' : 'false',
+        '{DEFAULT_ROLE}': defaults.defaultRole || 'student',
+        '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 30),
+        '{ROLES_JSON}': JSON.stringify(getRoles() || {})
       }},
       { file: 'public/js/config.js', replacements },
       { file: 'public/js/auth.js', replacements },

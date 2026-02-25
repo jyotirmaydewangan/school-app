@@ -60,9 +60,11 @@ const RoleRepository = {
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === roleId) {
-        if (roleData.role_name) sheet.getRange(i + 1, 2).setValue(roleData.role_name);
-        if (roleData.permissions) sheet.getRange(i + 1, 3).setValue(JSON.stringify(roleData.permissions));
-        if (roleData.is_active !== undefined) sheet.getRange(i + 1, 4).setValue(roleData.is_active);
+        const row = i + 1;
+        // Batch updates if possible
+        if (roleData.role_name) sheet.getRange(row, 2).setValue(roleData.role_name);
+        if (roleData.permissions) sheet.getRange(row, 3).setValue(JSON.stringify(roleData.permissions));
+        if (roleData.is_active !== undefined) sheet.getRange(row, 4).setValue(roleData.is_active);
         return true;
       }
     }

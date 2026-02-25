@@ -91,11 +91,19 @@ const UserRepository = {
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === userId) {
-        if (userData.name) sheet.getRange(i + 1, 6).setValue(userData.name);
-        if (userData.phone !== undefined) sheet.getRange(i + 1, 3).setValue(userData.phone || '');
-        if (userData.role) sheet.getRange(i + 1, 5).setValue(userData.role);
-        if (userData.password_hash) sheet.getRange(i + 1, 4).setValue(userData.password_hash);
-        sheet.getRange(i + 1, 8).setValue(Utils.getCurrentTimestamp());
+        const row = i + 1;
+        const now = Utils.getCurrentTimestamp();
+        
+        // Batch updates to reduce API calls
+        // Columns: 3:phone, 4:password_hash, 5:role, 6:name, 8:updated_at
+        if (userData.phone !== undefined) sheet.getRange(row, 3).setValue(userData.phone || '');
+        if (userData.password_hash) sheet.getRange(row, 4).setValue(userData.password_hash);
+        if (userData.role) sheet.getRange(row, 5).setValue(userData.role);
+        if (userData.name) sheet.getRange(row, 6).setValue(userData.name);
+        
+        // Always update the timestamp
+        sheet.getRange(row, 8).setValue(now);
+        
         return this.findById(userId);
       }
     }

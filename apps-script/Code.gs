@@ -15,6 +15,9 @@ function doGet(e) {
       case 'getConfig':
         result = { success: true, config: ConfigService.getAll() };
         break;
+      case 'init':
+        result = SheetService.initializeAll();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -81,6 +84,9 @@ function doPost(e) {
         break;
       case 'deleteUser':
         result = UserHandler.deleteUser(token, postData);
+        break;
+      case 'init':
+        result = SheetService.initializeAll();
         break;
       default:
         result = { success: false, error: 'Unknown action' };
