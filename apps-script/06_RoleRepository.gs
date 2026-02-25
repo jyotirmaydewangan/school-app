@@ -87,8 +87,12 @@ const RoleRepository = {
   },
 
   isProtected(roleName) {
-    const protectedRoles = ['admin', 'teacher', 'parent', 'student'];
-    return protectedRoles.includes(roleName);
+    const protectedRole = ConfigService.get('protected_role');
+    if (!protectedRole) {
+      return false;
+    }
+    const protectedRoles = protectedRole.split(',').map(r => r.trim().toLowerCase());
+    return protectedRoles.includes(roleName.toLowerCase());
   },
 
   mapToRole(row) {

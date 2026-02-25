@@ -26,6 +26,10 @@ const SheetService = {
       this.seedDefaultRoles(sheet);
     }
     
+    if (name === SHEET_NAMES.CONFIG) {
+      this.seedDefaultConfig(sheet);
+    }
+    
     return sheet;
   },
 
@@ -50,6 +54,16 @@ const SheetService = {
         [Utilities.getUuid(), 'teacher', JSON.stringify(['read:students', 'write:grades']), true],
         [Utilities.getUuid(), 'parent', JSON.stringify(['read:own_child']), true],
         [Utilities.getUuid(), 'student', JSON.stringify(['read:own_grades']), true]
+      ];
+      defaults.forEach(row => sheet.appendRow(row));
+    }
+  },
+
+  seedDefaultConfig(sheet) {
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      const defaults = [
+        ['protected_role', 'admin,teacher,parent,student']
       ];
       defaults.forEach(row => sheet.appendRow(row));
     }

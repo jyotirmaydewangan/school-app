@@ -48,6 +48,10 @@ const SheetService = {
     if (name === SHEET_NAMES.ROLES) {
       this.seedDefaultRoles(sheet);
     }
+
+    if (name === SHEET_NAMES.CONFIG) {
+      this.seedDefaultConfig(sheet);
+    }
     
     return sheet;
   },
@@ -101,6 +105,16 @@ const SheetService = {
       defaults.forEach(function(row) {
         sheet.appendRow(row);
       });
+    }
+  },
+
+  seedDefaultConfig(sheet) {
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      const defaults = [
+        ['protected_role', 'admin,teacher,parent,student']
+      ];
+      defaults.forEach(row => sheet.appendRow(row));
     }
   }
 };
