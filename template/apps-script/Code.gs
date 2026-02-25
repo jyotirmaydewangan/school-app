@@ -76,6 +76,15 @@ function doPost(e) {
       case 'updateUserRole':
         result = RoleHandler.updateUserRole(token, postData);
         break;
+      case 'createUser':
+        result = UserHandler.createUser(token, postData);
+        break;
+      case 'updateUser':
+        result = UserHandler.updateUser(token, postData);
+        break;
+      case 'deleteUser':
+        result = UserHandler.deleteUser(token, postData);
+        break;
       case 'init':
         result = SheetService.initializeAll();
         break;

@@ -5,7 +5,8 @@ const {
   getTenantDir,
   replaceInFile,
   log,
-  runCommand
+  runCommand,
+  getDefaults
 } = require('./utils');
 
 async function deployAppsScript(tenantName) {
@@ -45,7 +46,7 @@ async function deployAppsScript(tenantName) {
   log('Syncing template files to tenant folder...', 'info');
   const templateFiles = ['Code.gs', '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs', 
                         '04_UserRepository.gs', '05_SessionRepository.gs', '06_RoleRepository.gs',
-                        '07_AuthHandler.gs', '08_RoleHandler.gs', 'config.gs', 'appsscript.json'];
+                        '07_AuthHandler.gs', '08_RoleHandler.gs', '09_UserHandler.gs', 'config.gs', 'appsscript.json'];
   
   templateFiles.forEach(file => {
     const src = path.join(templateDir, file);
@@ -55,6 +56,25 @@ async function deployAppsScript(tenantName) {
     }
   });
   log('✓ Template files synced', 'success');
+
+  // Run placeholder replacements on config files
+  const defaults = require('./utils').getDefaults();
+  const rolesJson = JSON.stringify(Object.entries(defaults.roles || {}).map(([name, data]) => ({
+    role_name: name,
+    permissions: data.permissions || [],
+    is_active: data.isActive !== false
+  })));
+  
+  const replacements = {
+    '{TENANT}': tenantName,
+    '{APP_NAME}': defaults.appName || 'My School',
+    '{ALLOW_REGISTRATION}': defaults.allowRegistration !== false ? 'true' : 'false',
+    '{DEFAULT_ROLE}': defaults.defaultRole || 'student',
+    '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 30)
+  };
+  
+  replaceInFile(path.join(appsScriptDir, 'config.gs'), replacements);
+  log('✓ Config placeholders replaced', 'success');
 
   const claspJsonPath = path.join(appsScriptDir, '.clasp.json');
   if (!fs.existsSync(claspJsonPath)) {

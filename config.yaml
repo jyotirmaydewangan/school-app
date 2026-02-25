@@ -79,12 +79,16 @@ roles:
   admin:
     permissions: ["*"]
     isActive: true
+    pages: ["dashboard", "users", "admissions", "academic", "finance", "communication", "settings"]
   teacher:
-    permissions: ["read:students", "write:grades"]
+    permissions: ["read:students", "write:grades", "read:attendance", "write:attendance"]
     isActive: true
+    pages: ["dashboard", "academic"]
   parent:
-    permissions: ["read:own_child"]
+    permissions: ["read:own_child", "read:fees", "read:notices"]
     isActive: true
+    pages: ["dashboard", "communication"]
   student:
-    permissions: ["read:own_grades"]
+    permissions: ["read:own_grades", "read:own_attendance", "read:timetable"]
     isActive: true
+    pages: ["dashboard", "academic"]

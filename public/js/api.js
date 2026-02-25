@@ -118,6 +118,27 @@ const api = {
       method: 'POST',
       body: JSON.stringify({ token, ...data })
     });
+  },
+
+  async createUser(token, data) {
+    return this.request('/createUser', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateUser(token, data) {
+    return this.request('/updateUser', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteUser(token, data) {
+    return this.request('/deleteUser', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
   }
 };
 

@@ -85,6 +85,36 @@ const UserRepository = {
     return false;
   },
 
+  update(userId, userData) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        if (userData.name) sheet.getRange(i + 1, 6).setValue(userData.name);
+        if (userData.phone !== undefined) sheet.getRange(i + 1, 3).setValue(userData.phone || '');
+        if (userData.role) sheet.getRange(i + 1, 5).setValue(userData.role);
+        if (userData.password_hash) sheet.getRange(i + 1, 4).setValue(userData.password_hash);
+        sheet.getRange(i + 1, 8).setValue(Utils.getCurrentTimestamp());
+        return this.findById(userId);
+      }
+    }
+    return null;
+  },
+
+  delete(userId) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        sheet.deleteRow(i + 1);
+        return true;
+      }
+    }
+    return false;
+  },
+
   existsByEmail(email) {
     return this.findByEmail(email) !== null;
   },

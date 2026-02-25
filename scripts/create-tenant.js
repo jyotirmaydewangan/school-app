@@ -10,7 +10,8 @@ const {
   getProjectPrefix,
   getDefaults,
   getRolesJson,
-  getKVConfig
+  getKVConfig,
+  getCacheConfig
 } = require('./utils');
 
 function createTenant(tenantName) {
@@ -43,6 +44,7 @@ function createTenant(tenantName) {
   const rolesJson = getRolesJson();
   const storagePrefix = defaults.storagePrefix || getProjectPrefix() + '_app';
   const kvConfig = getKVConfig();
+  const cacheConfig = getCacheConfig();
   
   const replacements = {
     '{TENANT}': tenantName,
@@ -52,6 +54,14 @@ function createTenant(tenantName) {
     '{SESSION_TIMEOUT}': defaults.sessionTimeoutMinutes || 30,
     '{RATE_LIMIT}': defaults.rateLimitPerMinute || 60,
     '{CACHE_TTL}': defaults.cacheTtlSeconds || 300,
+    '{CACHE_TTL_USERS}': cacheConfig.users || 2592000,
+    '{CACHE_TTL_CONFIG}': cacheConfig.config || 2592000,
+    '{CACHE_TTL_ROLES}': cacheConfig.roles || 2592000,
+    '{CACHE_TTL_ATTENDANCE}': cacheConfig.attendance || 604800,
+    '{CACHE_TTL_NOTICEBOARD}': cacheConfig.noticeboard || 604800,
+    '{CACHE_TTL_TIMETABLE}': cacheConfig.timetable || 2592000,
+    '{CACHE_TTL_MARKS}': cacheConfig.marks || 604800,
+    '{CACHE_TTL_VERIFY}': cacheConfig.verify || 900,
     '{ALLOW_REGISTRATION}': String(defaults.allowRegistration !== false),
     '{PRIMARY_COLOR}': defaults.theme?.primaryColor || '#2563eb',
     '{SECONDARY_COLOR}': defaults.theme?.secondaryColor || '#1e40af',

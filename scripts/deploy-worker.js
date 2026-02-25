@@ -110,8 +110,11 @@ function deployWorker(tenantName, args = []) {
   const tomlPath = path.join(tenantDir, 'worker', 'wrangler.toml');
   let tomlContent = fs.readFileSync(tomlPath, 'utf8');
   
-  if (!tomlContent.includes('SCRIPT_URL')) {
-    tomlContent += '\nSCRIPT_URL = "' + webAppUrl + '"';
+  if (!tomlContent.includes('SCRIPT_URL = "')) {
+    tomlContent = tomlContent.replace(
+      '[vars]',
+      '[vars]\nSCRIPT_URL = "' + webAppUrl + '"'
+    );
     fs.writeFileSync(tomlPath, tomlContent);
   } else {
     tomlContent = tomlContent.replace(/SCRIPT_URL = "[^"]*"/, `SCRIPT_URL = "${webAppUrl}"`);

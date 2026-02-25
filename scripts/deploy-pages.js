@@ -2,8 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const {
   getTenantDir,
+  TEMPLATE_DIR,
+  replaceInFile,
   log,
-  runCommand
+  runCommand,
+  getDefaults
 } = require('./utils');
 
 function deployPages(tenantName, args = []) {
@@ -14,6 +17,9 @@ function deployPages(tenantName, args = []) {
   }
 
   const tenantDir = getTenantDir(tenantName);
+  const templatePublicDir = path.join(TEMPLATE_DIR, 'public');
+  const configJsPath = path.join(tenantDir, 'public', 'js', 'config.js');
+  const backupPath = path.join(tenantDir, 'public', 'js', 'config.js.backup');
   
   if (!fs.existsSync(tenantDir)) {
     log(`Error: Tenant "${tenantName}" not found at ${tenantDir}`, 'error');
@@ -21,27 +27,106 @@ function deployPages(tenantName, args = []) {
     process.exit(1);
   }
 
-  const configJsPath = path.join(tenantDir, 'public', 'js', 'config.js');
-  const configContent = fs.readFileSync(configJsPath, 'utf8');
+  // Step 1: Backup current config.js if exists
+  let backedUpApiUrl = '';
+  let backedUpRoles = '';
+  if (fs.existsSync(configJsPath)) {
+    const content = fs.readFileSync(configJsPath, 'utf8');
+    fs.writeFileSync(backupPath, content);
+    const apiMatch = content.match(/API_URL:\s*"([^"]+)"/);
+    backedUpApiUrl = apiMatch ? apiMatch[1] : '';
+    // Don't backup empty ROLES - use defaults from config.yaml
+  }
+
+  log('Syncing template public files...', 'info');
   
-  const apiUrlMatch = configContent.match(/API_URL: "([^"]*)"/);
-  const apiUrl = apiUrlMatch?.[1];
+  // Step 2: Sync files (skip config.js - handle specially)
+  const filesToSync = ['index.html', 'app.html', 'password-hash-tool.html'];
+  const dirsToSync = ['js'];
   
-  if (!apiUrl) {
-    log('Error: API_URL is not set in public/js/config.js', 'error');
-    log('Run: node scripts/deploy-worker.js ' + tenantName + ' first', 'info');
-    process.exit(1);
+  filesToSync.forEach(file => {
+    const src = path.join(templatePublicDir, file);
+    const dest = path.join(tenantDir, 'public', file);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+    }
+  });
+  
+  dirsToSync.forEach(dir => {
+    const srcDir = path.join(templatePublicDir, dir);
+    const destDir = path.join(tenantDir, 'public', dir);
+    if (fs.existsSync(srcDir) && fs.existsSync(destDir)) {
+      fs.readdirSync(srcDir).forEach(f => {
+        if (f !== 'config.js') {
+          fs.copyFileSync(path.join(srcDir, f), path.join(destDir, f));
+        }
+      });
+    }
+  });
+  log('✓ Public template files synced', 'success');
+
+  // Step 3: Replace placeholders in config.js
+  const defaults = getDefaults();
+  const replacements = {
+    '{TENANT}': tenantName,
+    '{PROJECT_PREFIX}': defaults.project?.namePrefix || 'school',
+    '{APP_NAME}': defaults.defaults?.appName || 'My School',
+    '{DEFAULT_ROLE}': defaults.defaults?.defaultRole || 'student',
+    '{SESSION_TIMEOUT}': String(defaults.defaults?.sessionTimeoutMinutes || 30),
+    '{RATE_LIMIT}': String(defaults.defaults?.rateLimitPerMinute || 60),
+    '{CACHE_TTL}': String(defaults.defaults?.cacheTtlSeconds || 300),
+    '{ALLOW_REGISTRATION}': String(defaults.defaults?.allowRegistration !== false),
+    '{PRIMARY_COLOR}': defaults.defaults?.theme?.primaryColor || '#2563eb',
+    '{SECONDARY_COLOR}': defaults.defaults?.theme?.secondaryColor || '#1e40af',
+    '{CONTACT_EMAIL}': defaults.defaults?.contactEmail || '',
+    '{LOGO_URL}': defaults.defaults?.logoUrl || '',
+    '{FAVICON_URL}': defaults.defaults?.faviconUrl || '',
+    '{SHOW_POWERED_BY}': String(defaults.defaults?.showPoweredBy || false),
+    '{ROLES_JSON}': JSON.stringify(Object.entries(defaults.defaults?.roles || {}).map(([name, data]) => ({
+      role_name: name,
+      permissions: data.permissions || [],
+      is_active: data.isActive !== false
+    }))),
+    '{API_URL_PLACEHOLDER}': backedUpApiUrl || ''
+  };
+
+  // Now replace placeholders in the synced config.js
+  // Note: {ROLES_JSON} will be replaced with actual roles from config.yaml
+  replaceInFile(configJsPath, replacements);
+  replaceInFile(path.join(tenantDir, 'public', 'js', 'auth.js'), replacements);
+  log('✓ Config placeholders replaced', 'success');
+
+  // Only merge API_URL from backup (don't touch ROLES - keep from template/config.yaml)
+  if (backedUpApiUrl) {
+    let content = fs.readFileSync(configJsPath, 'utf8');
+    content = content.replace(/API_URL:\s*"[^"]*"/, `API_URL: "${backedUpApiUrl}"`);
+    fs.writeFileSync(configJsPath, content);
+    log('✓ Merged API_URL from backup', 'success');
+  }
+
+  // Clean up backup
+  if (fs.existsSync(backupPath)) {
+    fs.unlinkSync(backupPath);
+  }
+
+  // Check API_URL - warn if not set
+  const finalContent = fs.readFileSync(configJsPath, 'utf8');
+  const apiMatch = finalContent.match(/API_URL:\s*"([^"]+)"/);
+  const apiUrl = apiMatch ? apiMatch[1] : '';
+  
+  if (!apiUrl || apiUrl.startsWith('{')) {
+    log('⚠ Warning: API_URL not set properly in config.js', 'warn');
+    log('  Please edit public/js/config.js and set API_URL to your Worker URL', 'warn');
   }
 
   log(`Deploying Pages for tenant: ${tenantName}`, 'info');
-  log(`  API URL: ${apiUrl}`, 'info');
+  log(`  API URL: ${apiUrl || '(not set)'}`, 'info');
 
-  const publicDir = path.join(tenantDir, 'public');
-  
-  const configTomlPath = path.join(publicDir, 'wrangler.toml');
+  // Get project name from wrangler.toml
+  const wranglerTomlPath = path.join(tenantDir, 'public', 'wrangler.toml');
   let projectName = tenantName;
-  if (fs.existsSync(configTomlPath)) {
-    const tomlContent = fs.readFileSync(configTomlPath, 'utf8');
+  if (fs.existsSync(wranglerTomlPath)) {
+    const tomlContent = fs.readFileSync(wranglerTomlPath, 'utf8');
     const nameMatch = tomlContent.match(/name\s*=\s*"([^"]+)"/);
     if (nameMatch) {
       projectName = nameMatch[1];
@@ -49,14 +134,13 @@ function deployPages(tenantName, args = []) {
   }
 
   log(`Creating Pages project if needed...`, 'info');
-  runCommand(`wrangler pages project create ${projectName} --production-branch main`, publicDir);
+  runCommand(`wrangler pages project create ${projectName} --production-branch main`, path.join(tenantDir, 'public'));
   
   const wranglerArgs = args.length > 0 ? args.join(' ') : `pages deploy . --project-name ${projectName}`;
-  
   const command = 'wrangler ' + wranglerArgs;
   log(`  Running: ${command}`, 'info');
 
-  const result = runCommand(command, publicDir);
+  const result = runCommand(command, path.join(tenantDir, 'public'));
   
   if (!result.success) {
     log(`Error deploying pages: ${result.error}`, 'error');
@@ -64,7 +148,6 @@ function deployPages(tenantName, args = []) {
   }
 
   const output = result.output;
-  
   const urlMatch = output.match(/https:\/\/[a-zA-Z0-9_.-]+\.pages\.dev/);
   
   if (urlMatch) {
