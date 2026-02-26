@@ -1,5 +1,7 @@
 import { CacheConfig } from './CacheConfig.js';
 
+export const CACHE_VERSION = 'v2';
+
 export const KVCacheHandler = {
   kv: null,
   env: null,
@@ -20,7 +22,7 @@ export const KVCacheHandler = {
   },
 
   buildCacheKey(tenantId, action, queryParams = {}) {
-    let key = `cache:${tenantId}:${action}`;
+    let key = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
     const sortedParams = Object.keys(queryParams).sort();
     if (sortedParams.length > 0) {
       const paramStr = sortedParams.map(k => `${k}=${queryParams[k]}`).join('&');
@@ -39,12 +41,12 @@ export const KVCacheHandler = {
   },
 
   buildCacheKeyWithUser(tenantId, action, requestBody) {
-    const userSpecificActions = ['verify', 'getAttendance', 'getTimetable', 'getMarks'];
-    
+    const userSpecificActions = ['verify', 'getAttendance', 'getTimetable', 'getMarks', 'getUsers'];
+
     if (userSpecificActions.includes(action)) {
       const token = this.extractTokenFromBody(requestBody);
       if (token) {
-        return `cache:${tenantId}:${action}:${token}`;
+        return `cache:${CACHE_VERSION}:${tenantId}:${action}:${token}`;
       }
     }
     return this.buildCacheKey(tenantId, action, {});
@@ -58,25 +60,25 @@ export const KVCacheHandler = {
 
     const key = this.buildCacheKey(tenantId, action, queryParams);
     console.log(`[KV] Get key: ${key}`);
-    
+
     try {
       const cached = await this.kv.get(key, 'json');
       if (cached && cached.data) {
         const now = Date.now();
         const staleAt = cached.staleAt || 0;
         const expiresAt = cached.expiresAt || 0;
-        
+
         console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
-        
+
         const data = cached.data;
         const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
-        
+
         if (isEmpty) {
           console.log('[KV] Cached data is empty, treating as miss');
           await this.kv.delete(key);
           return null;
         }
-        
+
         return {
           data: cached.data,
           isStale: now > staleAt && now < expiresAt,
@@ -101,7 +103,7 @@ export const KVCacheHandler = {
     const ttl = CacheConfig.getTTL(action);
     const now = Date.now();
     const staleWhileRevalidate = Math.floor(ttl * 0.5);
-    
+
     const cacheEntry = {
       data,
       createdAt: now,
@@ -123,25 +125,25 @@ export const KVCacheHandler = {
     }
 
     console.log(`[KV] GetByKey: ${key}`);
-    
+
     try {
       const cached = await this.kv.get(key, 'json');
       if (cached && cached.data) {
         const now = Date.now();
         const staleAt = cached.staleAt || 0;
         const expiresAt = cached.expiresAt || 0;
-        
+
         console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
-        
+
         const data = cached.data;
         const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
-        
+
         if (isEmpty) {
           console.log('[KV] Cached data is empty, treating as miss');
           await this.kv.delete(key);
           return null;
         }
-        
+
         return {
           data: cached.data,
           isStale: now > staleAt && now < expiresAt,
@@ -165,7 +167,7 @@ export const KVCacheHandler = {
     const ttl = CacheConfig.getTTL(action);
     const now = Date.now();
     const staleWhileRevalidate = Math.floor(ttl * 0.5);
-    
+
     const cacheEntry = {
       data,
       createdAt: now,
@@ -185,15 +187,15 @@ export const KVCacheHandler = {
     if (!this.isEnabled()) return;
 
     const prefix = `cache:${tenantId}:${action}`;
-    
+
     try {
       const list = await this.kv.list({ prefix });
       const keys = list.keys.map(k => k.name);
-      
+
       for (const key of keys) {
         await this.kv.delete(key);
       }
-      
+
       if (keys.length > 0) {
         console.log(`[KV] Invalidated ${keys.length} keys for ${action}`);
       }

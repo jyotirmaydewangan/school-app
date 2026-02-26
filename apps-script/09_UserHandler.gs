@@ -1,18 +1,9 @@
 const UserHandler = {
   createUser(token, data) {
-    if (!token) {
-      return { success: false, error: 'Token is required' };
-    }
+    const auth = requireAdmin(token);
+    if (!auth.success) return auth;
     
-    const session = SessionRepository.findByToken(token);
-    if (!session || !Utils.isValidSession(session)) {
-      return { success: false, error: 'Invalid or expired session' };
-    }
-    
-    const currentUser = UserRepository.findById(session[1]);
-    if (!currentUser || currentUser.role !== 'admin') {
-      return { success: false, error: 'Admin access required' };
-    }
+    const currentUser = auth.user;
     
     if (!data.email || !data.password || !data.name) {
       return { success: false, error: 'Email, password, and name are required' };
@@ -45,19 +36,10 @@ const UserHandler = {
   },
 
   updateUser(token, data) {
-    if (!token) {
-      return { success: false, error: 'Token is required' };
-    }
+    const auth = requireAdmin(token);
+    if (!auth.success) return auth;
     
-    const session = SessionRepository.findByToken(token);
-    if (!session || !Utils.isValidSession(session)) {
-      return { success: false, error: 'Invalid or expired session' };
-    }
-    
-    const currentUser = UserRepository.findById(session[1]);
-    if (!currentUser || currentUser.role !== 'admin') {
-      return { success: false, error: 'Admin access required' };
-    }
+    const currentUser = auth.user;
     
     if (!data.user_id) {
       return { success: false, error: 'User ID is required' };
@@ -88,19 +70,10 @@ const UserHandler = {
   },
 
   deleteUser(token, data) {
-    if (!token) {
-      return { success: false, error: 'Token is required' };
-    }
+    const auth = requireAdmin(token);
+    if (!auth.success) return auth;
     
-    const session = SessionRepository.findByToken(token);
-    if (!session || !Utils.isValidSession(session)) {
-      return { success: false, error: 'Invalid or expired session' };
-    }
-    
-    const currentUser = UserRepository.findById(session[1]);
-    if (!currentUser || currentUser.role !== 'admin') {
-      return { success: false, error: 'Admin access required' };
-    }
+    const currentUser = auth.user;
     
     if (!data.user_id) {
       return { success: false, error: 'User ID is required' };

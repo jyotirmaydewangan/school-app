@@ -4,7 +4,6 @@ import { AuthMiddleware } from './middleware/AuthMiddleware.js';
 import { CacheConfig } from './cache/CacheConfig.js';
 import { KVCacheHandler } from './cache/KVCacheHandler.js';
 import { ResponseHandler } from './utils/ResponseHandler.js';
-
 globalThis.workerEnv = {};
 
 const Router = {
@@ -48,13 +47,16 @@ const Router = {
       async handlePostReadRequest(request, action, urlObj, tenantId) {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
-        const requestBody = await request.clone().text();
 
-        const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, requestBody);
+        const body = await RequestParser.parseBody(request);
+        const token = AuthMiddleware.extractToken(request);
+        const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
+
+        const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, bodyWithToken);
 
         if (this.kvHandler.isEnabled() && isCacheable) {
           const cached = await this.kvHandler.getByKey(cacheKey);
-          
+
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
               this.refreshPostInBackground(tenantId, action, request, cacheKey);
@@ -64,7 +66,7 @@ const Router = {
           }
         }
 
-        return this.proxyToBackend(request, action, 'POST', isCacheable, urlObj, tenantId, queryParams, requestBody);
+        return this.proxyToBackend(request, action, 'POST', isCacheable, urlObj, tenantId, queryParams, bodyWithToken);
       },
 
       async refreshPostInBackground(tenantId, action, originalRequest, cacheKey) {
@@ -79,7 +81,7 @@ const Router = {
 
           const fetchOptions = {
             method: 'POST',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json'
             },
             body: bodyWithToken
@@ -105,7 +107,7 @@ const Router = {
 
         if (this.kvHandler.isEnabled() && isCacheable) {
           const cached = await this.kvHandler.get(tenantId, action, queryParams);
-          
+
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
               this.refreshInBackground(tenantId, action, queryParams, request);
@@ -128,7 +130,7 @@ const Router = {
 
           const fetchOptions = {
             method: 'GET',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
               'Authorization': token ? `Bearer ${token}` : ''
             }
@@ -182,12 +184,12 @@ const Router = {
 
         try {
           const response = await fetch(apiUrl, fetchOptions);
-          
+
           if (isCacheable && response.ok && (method === 'GET' || CacheConfig.isPostReadAction(action))) {
             const data = await response.clone().json();
-            if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
+            if (data && data.success !== false && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
               const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, bodyWithToken || body);
-              if (cacheKey.includes(':verify:') || cacheKey.includes(':getAttendance:') || cacheKey.includes(':getTimetable:') || cacheKey.includes(':getMarks:')) {
+              if (cacheKey.includes(':verify:') || cacheKey.includes(':getAttendance:') || cacheKey.includes(':getTimetable:') || cacheKey.includes(':getMarks:') || cacheKey.includes(':getUsers:')) {
                 await this.kvHandler.setByKey(cacheKey, data, action);
               } else {
                 await this.kvHandler.set(tenantId, action, data, queryParams);
@@ -204,8 +206,8 @@ const Router = {
       buildHeaders(request) {
         const headers = {};
         request.headers.forEach((value, key) => {
-          if (key.toLowerCase() !== 'host' && 
-              key.toLowerCase() !== 'if-none-match') {
+          if (key.toLowerCase() !== 'host' &&
+            key.toLowerCase() !== 'if-none-match') {
             headers[key] = value;
           }
         });
@@ -219,7 +221,7 @@ export default {
   async fetch(request, env) {
     const tenantId = env.TENANT_ID || 'unknown';
     console.log(`[${tenantId}] ${request.method} ${request.url}`);
-    
+
     const router = Router.create(env);
     return await router.route(request);
   }

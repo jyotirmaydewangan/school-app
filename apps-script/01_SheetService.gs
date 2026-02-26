@@ -2,7 +2,17 @@ const SHEET_NAMES = Object.freeze({
   CONFIG: 'config',
   USERS: 'users',
   SESSIONS: 'sessions',
-  ROLES: 'roles'
+  ROLES: 'roles',
+  STUDENTS: 'students',
+  PARENT_STUDENTS: 'parent_students',
+  SUBJECTS: 'subjects',
+  EXAMS: 'exams',
+  MARKS: 'marks',
+  TIMETABLE: 'timetable',
+  SYLLABUS: 'syllabus',
+  RESOURCES: 'resources',
+  CLASS_INDEX: 'class_index',
+  CLASSES: 'classes'
 });
 
 function onOpen() {
@@ -77,7 +87,22 @@ const SheetService = {
       return { success: false, error: 'Could not get active spreadsheet' };
     }
 
-    const sheetNames = [SHEET_NAMES.CONFIG, SHEET_NAMES.USERS, SHEET_NAMES.SESSIONS, SHEET_NAMES.ROLES];
+    const sheetNames = [
+      SHEET_NAMES.CONFIG, 
+      SHEET_NAMES.USERS, 
+      SHEET_NAMES.SESSIONS, 
+      SHEET_NAMES.ROLES,
+      SHEET_NAMES.STUDENTS,
+      SHEET_NAMES.PARENT_STUDENTS,
+      SHEET_NAMES.SUBJECTS,
+      SHEET_NAMES.EXAMS,
+      SHEET_NAMES.MARKS,
+      SHEET_NAMES.TIMETABLE,
+      SHEET_NAMES.SYLLABUS,
+      SHEET_NAMES.RESOURCES,
+      SHEET_NAMES.CLASS_INDEX,
+      SHEET_NAMES.CLASSES
+    ];
     
     sheetNames.forEach(name => {
       let sheet = ss.getSheetByName(name);
@@ -109,15 +134,25 @@ const SheetService = {
   initializeSheet(name, sheet) {
     Logger.log('Initializing schema for: ' + name);
     const schemas = {
-      [SHEET_NAMES.USERS]: ['id', 'email', 'phone', 'password_hash', 'role', 'name', 'created_at', 'updated_at'],
+      [SHEET_NAMES.USERS]: ['id', 'email', 'phone', 'password_hash', 'role', 'name', 'is_approved', 'rejected_at', 'created_at', 'updated_at'],
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
       [SHEET_NAMES.CONFIG]: ['key', 'value'],
-      [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'is_active']
+      [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'is_active'],
+      [SHEET_NAMES.STUDENTS]: ['id', 'user_id', 'admission_no', 'name', 'class', 'section', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at'],
+      [SHEET_NAMES.PARENT_STUDENTS]: ['id', 'parent_id', 'student_id', 'linked_at'],
+      [SHEET_NAMES.SUBJECTS]: ['id', 'name', 'class', 'teacher_id', 'created_at'],
+      [SHEET_NAMES.EXAMS]: ['id', 'name', 'class', 'section', 'subject_id', 'date', 'max_marks', 'created_at'],
+      [SHEET_NAMES.MARKS]: ['id', 'exam_id', 'student_id', 'marks_obtained', 'created_at'],
+      [SHEET_NAMES.TIMETABLE]: ['id', 'class', 'section', 'day', 'period', 'start_time', 'end_time', 'subject_id', 'teacher_id', 'room'],
+      [SHEET_NAMES.SYLLABUS]: ['id', 'class', 'subject_id', 'topic', 'description', 'status', 'created_at'],
+      [SHEET_NAMES.RESOURCES]: ['id', 'class', 'subject_id', 'title', 'type', 'drive_file_id', 'drive_url', 'created_at'],
+      [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class', 'section', 'admission_no', 'name'],
+      [SHEET_NAMES.CLASSES]: ['id', 'name', 'section', 'stream', 'academic_year', 'is_active', 'created_at']
     };
     
     if (schemas[name]) {
       sheet.appendRow(schemas[name]);
-      SpreadsheetApp.flush(); // Essential to ensure headers are there before potentially seeding
+      SpreadsheetApp.flush();
     }
   },
 
@@ -189,6 +224,10 @@ const SheetService = {
     if (!existingKeys.includes('app_url')) {
       Logger.log('Adding app_url');
       sheet.appendRow(['app_url', '']);
+    }
+    if (!existingKeys.includes('jwt_secret')) {
+      Logger.log('Adding jwt_secret');
+      sheet.appendRow(['jwt_secret', 'sh-h-h-secret-' + Utilities.getUuid().substring(0, 8)]);
     }
   }
 };

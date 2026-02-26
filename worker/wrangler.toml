@@ -1,9 +1,26 @@
-name = "school-api"
+name = "{PROJECT_PREFIX}-worker-{TENANT}"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+[[kv_namespaces]]
+binding = "{KV_BINDING}"
+id = "{KV_NAMESPACE_ID}"
+preview_id = ""
+
 [vars]
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR5kPVIe5fhcnznZCR8i-80pt0Mupd7iQax6iK9FrC7RiBgDbNYHMszCznSZlFdGekSA/exec"
+TENANT_ID = "{TENANT}"
+SESSION_TIMEOUT_MINUTES = {SESSION_TIMEOUT}
+RATE_LIMIT_PER_MINUTE = {RATE_LIMIT}
+CACHE_TTL_USERS = {CACHE_TTL_USERS}
+CACHE_TTL_CONFIG = {CACHE_TTL_CONFIG}
+CACHE_TTL_ROLES = {CACHE_TTL_ROLES}
+CACHE_TTL_ATTENDANCE = {CACHE_TTL_ATTENDANCE}
+CACHE_TTL_NOTICEBOARD = {CACHE_TTL_NOTICEBOARD}
+CACHE_TTL_TIMETABLE = {CACHE_TTL_TIMETABLE}
+CACHE_TTL_MARKS = {CACHE_TTL_MARKS}
+CACHE_TTL_VERIFY = {CACHE_TTL_VERIFY}
+ENABLE_RATE_LIMIT = false
+ENABLE_KV_CACHE = true
 
 [env.production]
-vars = { SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR5kPVIe5fhcnznZCR8i-80pt0Mupd7iQax6iK9FrC7RiBgDbNYHMszCznSZlFdGekSA/exec" }
+vars = { TENANT_ID = "{TENANT}" }

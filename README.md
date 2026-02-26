@@ -226,20 +226,19 @@ Headers: { "Authorization": "Bearer <token>" }
 ```
 school-app/
 ├── scripts/
-│   ├── create-tenant.js          # Create tenant folder
+│   ├── create-tenant.js          # Create tenant folder from root source
 │   ├── deploy-apps-script.js     # Deploy Apps Script
 │   ├── deploy-worker.js          # Deploy Worker
 │   ├── deploy-pages.js           # Deploy Pages
 │   └── utils.js                 # Shared utilities
-├── template/                     # Tenant templates
 ├── tenants/                      # Deployed tenants
 │   └── <tenant>/
-│       ├── worker/              # Worker code
-│       ├── public/              # Static files
-│       └── apps-script/         # Apps Script code
-├── apps-script/                 # Root Apps Script
-├── worker/                      # Root Worker
-└── public/                      # Root Static files
+│       ├── worker/              # Tenant worker code
+│       ├── public/              # Tenant static files
+│       └── apps-script/         # Tenant Apps Script code
+├── apps-script/                 # Source Apps Script (Template)
+├── worker/                      # Source Worker (Template)
+└── public/                      # Source Static files (Template)
 ```
 
 ---

@@ -41,7 +41,7 @@ async function deployAppsScript(tenantName) {
   }
 
   const appsScriptDir = path.join(tenantDir, 'apps-script');
-  const templateDir = path.join(ROOT_DIR, 'template', 'apps-script');
+  const templateDir = path.join(ROOT_DIR, 'apps-script');
 
   log('Syncing template files to tenant folder...', 'info');
   const templateFiles = ['Code.gs', '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs',
@@ -73,6 +73,7 @@ async function deployAppsScript(tenantName) {
   };
 
   replaceInFile(path.join(appsScriptDir, 'config.gs'), replacements);
+  replaceInFile(path.join(appsScriptDir, 'appsscript.json'), replacements);
   log('✓ Config placeholders replaced', 'success');
 
   const claspJsonPath = path.join(appsScriptDir, '.clasp.json');

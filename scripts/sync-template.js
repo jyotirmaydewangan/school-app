@@ -15,7 +15,7 @@ const {
 
 function syncTemplateFiles(tenantName, options = {}) {
   const { dryRun = false, verbose = false } = options;
-  
+
   if (!tenantName) {
     log('Error: Tenant name is required', 'error');
     log('Usage: node scripts/sync-template.js <tenant-name> [--dry-run]', 'info');
@@ -23,7 +23,7 @@ function syncTemplateFiles(tenantName, options = {}) {
   }
 
   const tenantDir = getTenantDir(tenantName);
-  
+
   if (!fs.existsSync(tenantDir)) {
     log(`Error: Tenant "${tenantName}" not found at ${tenantDir}`, 'error');
     log('Run: node scripts/create-tenant.js <tenant-name> first', 'info');
@@ -32,7 +32,7 @@ function syncTemplateFiles(tenantName, options = {}) {
 
   const defaults = getDefaults();
   const kvConfig = getKVConfig();
-  
+
   let existingWorkerUrl = '';
   const workerTomlPath = path.join(tenantDir, 'worker', 'wrangler.toml');
   if (fs.existsSync(workerTomlPath)) {
@@ -80,7 +80,7 @@ function syncTemplateFiles(tenantName, options = {}) {
 
   function syncDir(srcDir, destDir, files, description) {
     if (verbose) log(`Syncing ${description}...`, 'info');
-    
+
     if (!fs.existsSync(srcDir)) {
       if (verbose) log(`  Source dir not found: ${srcDir}`, 'warn');
       return;
@@ -93,7 +93,7 @@ function syncTemplateFiles(tenantName, options = {}) {
     files.forEach(file => {
       const src = path.join(srcDir, file);
       const dest = path.join(destDir, file);
-      
+
       if (fs.existsSync(src)) {
         if (dryRun) {
           syncResults.push({ action: 'copy', from: src, to: dest });
@@ -109,7 +109,7 @@ function syncTemplateFiles(tenantName, options = {}) {
 
   function syncDirRecursive(srcDir, destDir, description, ignorePatterns = []) {
     if (verbose) log(`Syncing ${description}...`, 'info');
-    
+
     if (!fs.existsSync(srcDir)) {
       if (verbose) log(`  Source dir not found: ${srcDir}`, 'warn');
       return;
@@ -160,20 +160,15 @@ function syncTemplateFiles(tenantName, options = {}) {
     const envApiUrl = process.env.API_URL || '';
 
     const configFiles = [
-      { file: 'apps-script/config.gs', replacements: {
-        '{TENANT}': tenantName,
-        '{APP_NAME}': defaults.appName || 'My School',
-        '{ALLOW_REGISTRATION}': defaults.allowRegistration !== false ? 'true' : 'false',
-        '{DEFAULT_ROLE}': defaults.defaultRole || 'student',
-        '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 30),
-        '{ROLES_JSON}': JSON.stringify(getRoles() || {})
-      }},
+      { file: 'apps-script/config.gs', replacements },
       { file: 'public/js/config.js', replacements },
       { file: 'public/js/auth.js', replacements },
-      { file: 'public/wrangler.toml', replacements: {
-        '{PROJECT_PREFIX}': defaults.project?.namePrefix || 'school',
-        '{TENANT}': tenantName
-      }},
+      {
+        file: 'public/wrangler.toml', replacements: {
+          '{PROJECT_PREFIX}': defaults.project?.namePrefix || 'school',
+          '{TENANT}': tenantName
+        }
+      },
       { file: 'worker/wrangler.toml', replacements }
     ];
 
@@ -213,36 +208,36 @@ function syncTemplateFiles(tenantName, options = {}) {
     const backupContent = fs.readFileSync(configPath, 'utf8');
     const apiMatch = backupContent.match(/API_URL:\s*"([^"]+)"/);
     backedUpApiUrl = apiMatch ? apiMatch[1] : '';
-    const rolesMatch = backupContent.match(/ROLES:\s*(\[[^\]]+\])/);
+    const rolesMatch = backupContent.match(/ROLES:\s*({[\s\S]*?}|\[[\s\S]*?\])/);
     backedUpRoles = rolesMatch ? rolesMatch[1] : '';
     fs.writeFileSync(configBackupPath, backupContent);
   }
 
   // Sync Apps Script files
   syncDir(
-    path.join(TEMPLATE_DIR, 'apps-script'),
+    path.join(ROOT_DIR, 'apps-script'),
     path.join(tenantDir, 'apps-script'),
-    ['Code.gs', '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs', 
-     '04_UserRepository.gs', '05_SessionRepository.gs', '06_RoleRepository.gs',
-     '07_AuthHandler.gs', '08_RoleHandler.gs', '09_UserHandler.gs', 
-     'config.gs', 'appsscript.json'],
+    ['Code.gs', '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs',
+      '04_UserRepository.gs', '05_SessionRepository.gs', '06_RoleRepository.gs',
+      '07_AuthHandler.gs', '08_RoleHandler.gs', '09_UserHandler.gs',
+      'config.gs', 'appsscript.json'],
     'Apps Script files'
   );
 
   // Sync Worker files recursively (ignore package files, copy wrangler.toml)
   syncDirRecursive(
-    path.join(TEMPLATE_DIR, 'worker'),
+    path.join(ROOT_DIR, 'worker'),
     path.join(tenantDir, 'worker'),
     'Worker files',
-    ['package.json', 'package-lock.json']
+    ['package.json', 'package-lock.json', '.wrangler']
   );
 
   // Sync Public files recursively (ignore config files)
   syncDirRecursive(
-    path.join(TEMPLATE_DIR, 'public'),
+    path.join(ROOT_DIR, 'public'),
     path.join(tenantDir, 'public'),
     'Public files',
-    ['config.js', 'auth.js', 'api.js', 'wrangler.toml']
+    ['wrangler.toml']
   );
 
   // Replace placeholders in config files
@@ -259,7 +254,7 @@ function syncTemplateFiles(tenantName, options = {}) {
       }
       // Replace ROLES
       if (backedUpRoles) {
-        content = content.replace(/ROLES:\s*(\[[^\]]+\])/, `ROLES: ${backedUpRoles}`);
+        content = content.replace(/ROLES:\s*({[\s\S]*?}|\[[\s\S]*?\])/, `ROLES: ${backedUpRoles}`);
       }
       fs.writeFileSync(newConfigPath, content);
       if (verbose) log(`  ✓ Merged: restored API_URL and/or ROLES from backup`, 'success');

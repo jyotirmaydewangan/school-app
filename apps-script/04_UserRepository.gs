@@ -57,6 +57,8 @@ const UserRepository = {
     const id = Utils.generateId();
     const now = Utils.getCurrentTimestamp();
     
+    const isApproved = userData.role === 'admin' || userData.is_approved === true;
+    
     sheet.appendRow([
       id,
       userData.email,
@@ -64,6 +66,8 @@ const UserRepository = {
       userData.password_hash,
       userData.role || 'student',
       userData.name,
+      isApproved,
+      '',
       now,
       now
     ]);
@@ -127,6 +131,118 @@ const UserRepository = {
     return this.findByEmail(email) !== null;
   },
 
+  findPending(options = {}) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const pendingUsers = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        const isApproved = data[i][6];
+        const rejectedAt = data[i][7];
+        if (!isApproved && !rejectedAt) {
+          pendingUsers.push(this.mapRowToUser(headers, data[i]));
+        }
+      }
+    }
+    
+    let filtered = pendingUsers;
+    
+    if (options.role) {
+      filtered = filtered.filter(u => u.role === options.role);
+    }
+    
+    const total = filtered.length;
+    
+    if (options.limit && options.limit > 0) {
+      const offset = options.offset || 0;
+      filtered = filtered.slice(offset, offset + options.limit);
+    }
+    
+    return {
+      users: filtered,
+      total: total
+    };
+  },
+
+  findRejected(options = {}) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const rejectedUsers = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        const isApproved = data[i][6];
+        const rejectedAt = data[i][7];
+        if (!isApproved && rejectedAt) {
+          rejectedUsers.push(this.mapRowToUser(headers, data[i]));
+        }
+      }
+    }
+    
+    const total = rejectedUsers.length;
+    
+    if (options.limit && options.limit > 0) {
+      const offset = options.offset || 0;
+      return rejectedUsers.slice(offset, offset + options.limit);
+    }
+    
+    return {
+      users: rejectedUsers,
+      total: total
+    };
+  },
+
+  approveUser(userId) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        sheet.getRange(i + 1, 7).setValue(true);
+        sheet.getRange(i + 1, 8).setValue('');
+        sheet.getRange(i + 1, 10).setValue(Utils.getCurrentTimestamp());
+        return this.findById(userId);
+      }
+    }
+    return null;
+  },
+
+  rejectUser(userId) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    const now = Utils.getCurrentTimestamp();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === userId) {
+        sheet.getRange(i + 1, 7).setValue(false);
+        sheet.getRange(i + 1, 8).setValue(now);
+        sheet.getRange(i + 1, 10).setValue(now);
+        return this.findById(userId);
+      }
+    }
+    return null;
+  },
+
+  countPending() {
+    const sheet = SheetService.getSheet(SHEET_NAMES.USERS);
+    const data = sheet.getDataRange().getValues();
+    let count = 0;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        const isApproved = data[i][6];
+        const rejectedAt = data[i][7];
+        if (!isApproved && !rejectedAt) {
+          count++;
+        }
+      }
+    }
+    return count;
+  },
+
   mapToUser(row) {
     return {
       id: row[0],
@@ -135,8 +251,10 @@ const UserRepository = {
       password_hash: row[3],
       role: row[4],
       name: row[5],
-      created_at: row[6],
-      updated_at: row[7]
+      is_approved: row[6],
+      rejected_at: row[7],
+      created_at: row[8],
+      updated_at: row[9]
     };
   },
 

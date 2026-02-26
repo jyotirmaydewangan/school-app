@@ -22,7 +22,7 @@ function createTenant(tenantName) {
   }
 
   const tenantDir = getTenantDir(tenantName);
-  
+
   if (require('fs').existsSync(tenantDir)) {
     log(`Error: Tenant "${tenantName}" already exists at ${tenantDir}`, 'error');
     process.exit(1);
@@ -33,19 +33,13 @@ function createTenant(tenantName) {
   ensureDir(TENANTS_DIR);
   ensureDir(tenantDir);
 
-  if (!require('fs').existsSync(TEMPLATE_DIR)) {
-    log(`Error: Template directory not found: ${TEMPLATE_DIR}`, 'error');
-    log('Please create the template folder first', 'info');
-    process.exit(1);
-  }
-
   const defaults = getDefaults();
   const projectPrefix = getProjectPrefix();
   const rolesJson = getRolesJson();
   const storagePrefix = defaults.storagePrefix || getProjectPrefix() + '_app';
   const kvConfig = getKVConfig();
   const cacheConfig = getCacheConfig();
-  
+
   const replacements = {
     '{TENANT}': tenantName,
     '{PROJECT_PREFIX}': projectPrefix,
@@ -76,7 +70,9 @@ function createTenant(tenantName) {
     '{KV_BINDING}': kvConfig.binding || 'DATA_CACHE'
   };
 
-  copyDir(TEMPLATE_DIR, tenantDir);
+  copyDir(require('path').join(ROOT_DIR, 'apps-script'), require('path').join(tenantDir, 'apps-script'));
+  copyDir(require('path').join(ROOT_DIR, 'worker'), require('path').join(tenantDir, 'worker'));
+  copyDir(require('path').join(ROOT_DIR, 'public'), require('path').join(tenantDir, 'public'));
 
   const tomlPath = require('path').join(tenantDir, 'worker', 'wrangler.toml');
   replaceInFile(tomlPath, replacements);
@@ -89,9 +85,6 @@ function createTenant(tenantName) {
 
   const authJsPath = require('path').join(tenantDir, 'public', 'js', 'auth.js');
   replaceInFile(authJsPath, replacements);
-
-  const configGsPath = require('path').join(tenantDir, 'apps-script', 'config.gs');
-  replaceInFile(configGsPath, replacements);
 
   const scriptIdPath = require('path').join(tenantDir, 'apps-script', 'SCRIPT_ID.txt');
   require('fs').writeFileSync(scriptIdPath, '# Add your Apps Script ID here\n');

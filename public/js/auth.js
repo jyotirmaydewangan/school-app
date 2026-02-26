@@ -127,14 +127,9 @@ const auth = {
     const user = this.getUser();
     if (!user) return false;
     
-    const rolePermissions = {
-      admin: ['*'],
-      teacher: ['read:students', 'write:grades'],
-      parent: ['read:own_child'],
-      student: ['read:own_grades']
-    };
+    const rolePermissions = {ROLES_JSON};
     
-    const permissions = rolePermissions[user.role] || [];
+    const permissions = rolePermissions[user.role]?.permissions || [];
     return permissions.includes('*') || permissions.includes(permission);
   }
 };

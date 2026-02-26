@@ -3,7 +3,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
+const TEMPLATE_DIR = ROOT_DIR;
 const TENANTS_DIR = path.join(ROOT_DIR, 'tenants');
 const CONFIG_FILE = path.join(ROOT_DIR, 'config.yaml');
 
@@ -113,9 +113,14 @@ function replacePlaceholders(content, replacements) {
 function replaceInFile(filePath, replacements) {
   if (!fs.existsSync(filePath)) return false;
   let content = fs.readFileSync(filePath, 'utf8');
+  const oldContent = content;
   content = replacePlaceholders(content, replacements);
-  fs.writeFileSync(filePath, content);
-  return true;
+
+  if (content !== oldContent) {
+    fs.writeFileSync(filePath, content);
+    return true;
+  }
+  return false;
 }
 
 function ensureDir(dir) {
@@ -142,8 +147,8 @@ function log(message, type = 'info') {
 function runCommand(command, cwd) {
   const { execSync } = require('child_process');
   try {
-    const output = execSync(command, { 
-      cwd: cwd || ROOT_DIR, 
+    const output = execSync(command, {
+      cwd: cwd || ROOT_DIR,
       encoding: 'utf8',
       stdio: 'pipe',
       env: { ...process.env, CI: 'true' }

@@ -79,16 +79,16 @@ roles:
   admin:
     permissions: ["*"]
     isActive: true
-    pages: ["dashboard", "users", "admissions", "academic", "finance", "communication", "settings"]
+    pages: ["dashboard", "students", "attendance", "exams", "marks", "timetable", "curriculum", "users", "settings"]
   teacher:
-    permissions: ["read:students", "write:grades", "read:attendance", "write:attendance"]
+    permissions: ["read:students", "write:students", "read:attendance", "write:attendance", "read:marks", "write:marks", "read:timetable", "write:timetable", "read:syllabus", "write:syllabus", "read:resources", "write:resources", "read:subjects", "write:subjects"]
     isActive: true
-    pages: ["dashboard", "academic"]
+    pages: ["dashboard", "students", "attendance", "exams", "marks", "timetable", "curriculum"]
   parent:
-    permissions: ["read:own_child", "read:fees", "read:notices"]
+    permissions: ["read:own_child", "read:child_attendance", "read:child_marks", "read:child_timetable", "read:notices"]
     isActive: true
-    pages: ["dashboard", "communication"]
+    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum", "communication"]
   student:
-    permissions: ["read:own_grades", "read:own_attendance", "read:timetable"]
+    permissions: ["read:own_grades", "read:own_attendance", "read:own_timetable"]
     isActive: true
-    pages: ["dashboard", "academic"]
+    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum"]
