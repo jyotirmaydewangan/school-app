@@ -52,11 +52,20 @@ const AuthHandler = {
       return { success: false, error: 'Invalid credentials' };
     }
     
-    const session = SessionRepository.create({ userId: user.id });
+    const timeoutMinutes = ConfigService.get('session_timeout_minutes', 60);
+    const jwtPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name
+    };
+    
+    const token = Utils.createJWT(jwtPayload, timeoutMinutes);
     
     return {
       success: true,
-      token: session.token,
+      token: token,
+      expiresIn: timeoutMinutes * 60,
       user: {
         id: user.id,
         email: user.email,
@@ -84,31 +93,27 @@ const AuthHandler = {
       return { success: false, error: 'Token is required', valid: false };
     }
     
-    const session = SessionRepository.findByToken(token);
-    if (!session) {
-      return { success: false, error: 'Session not found', valid: false };
+    const jwtResult = Utils.verifyJWT(token);
+    
+    if (!jwtResult.valid) {
+      return { 
+        success: false, 
+        error: jwtResult.error, 
+        valid: false,
+        expired: jwtResult.expired || false
+      };
     }
     
-    if (!Utils.isValidSession(session)) {
-      return { success: false, error: 'Session expired', valid: false };
-    }
-    
-    SessionRepository.updateActivity(session[0]);
-    
-    const user = UserRepository.findById(session[1]);
-    if (!user) {
-      return { success: false, error: 'User not found', valid: false };
-    }
+    const payload = jwtResult.payload;
     
     return {
       success: true,
       valid: true,
       user: {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        name: user.name,
-        role: user.role
+        id: payload.userId,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role
       }
     };
   },

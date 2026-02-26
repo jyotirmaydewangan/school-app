@@ -4,192 +4,168 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>School App - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      width: 100%;
-      max-width: 400px;
-      overflow: hidden;
-    }
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .tab {
-      flex: 1;
-      padding: 16px;
-      text-align: center;
-      cursor: pointer;
-      background: #f5f5f5;
-      border: none;
-      font-size: 16px;
-      font-weight: 500;
-      color: #666;
-      transition: all 0.3s;
-    }
-    .tab.active {
-      background: white;
-      color: #667eea;
-      border-bottom: 2px solid #667eea;
-    }
-    .form-container {
-      padding: 30px;
-    }
-    .form {
-      display: none;
-    }
-    .form.active {
-      display: block;
-    }
-    h2 {
-      margin-bottom: 24px;
-      color: #333;
-      text-align: center;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      color: #555;
-      font-weight: 500;
-    }
-    input, select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: border-color 0.3s;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #5568d3;
-    }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .error {
-      background: #fee;
-      color: #c00;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      display: none;
-    }
-    .error.show {
-      display: block;
-    }
-    .success {
-      background: #efe;
-      color: #060;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      display: none;
-    }
-    .success.show {
-      display: block;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="tabs">
-      <button class="tab active" data-tab="login">Login</button>
-      <button class="tab" data-tab="register">Register</button>
+<body class="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <!-- Logo/Brand -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl backdrop-blur-sm mb-4">
+        <i class="fas fa-graduation-cap text-3xl text-white"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-white"><script>document.write(window.TENANT_CONFIG?.APP_NAME || 'School App');</script></h1>
     </div>
-    
-    <div class="form-container">
-      <div id="login-error" class="error"></div>
-      <div id="login-success" class="success"></div>
-      
-      <form id="login-form" class="form active">
-        <h2>Welcome Back</h2>
-        
-        <div class="form-group">
-          <label for="login-email">Email</label>
-          <input type="email" id="login-email" required placeholder="Enter your email">
+
+    <!-- Login Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-100">
+        <button id="tab-login" class="tab-btn flex-1 px-6 py-4 text-center font-medium text-gray-600 hover:bg-gray-50 transition border-b-2 border-indigo-600 text-indigo-600" data-tab="login">
+          <i class="fas fa-sign-in-alt mr-2"></i>Login
+        </button>
+        <button id="tab-register" class="tab-btn flex-1 px-6 py-4 text-center font-medium text-gray-500 hover:bg-gray-50 transition border-b-2 border-transparent" data-tab="register">
+          <i class="fas fa-user-plus mr-2"></i>Register
+        </button>
+      </div>
+
+      <!-- Forms -->
+      <div class="p-6 sm:p-8">
+        <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2">
+          <i class="fas fa-exclamation-circle"></i>
+          <span></span>
         </div>
-        
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" required placeholder="Enter your password">
+        <div id="login-success" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-600 text-sm flex items-center gap-2">
+          <i class="fas fa-check-circle"></i>
+          <span></span>
         </div>
-        
-        <button type="submit" id="login-btn">Login</button>
-      </form>
-      
-      <form id="register-form" class="form">
-        <h2>Create Account</h2>
-        
-        <div class="form-group">
-          <label for="register-name">Full Name</label>
-          <input type="text" id="register-name" required placeholder="Enter your name">
-        </div>
-        
-        <div class="form-group">
-          <label for="register-email">Email</label>
-          <input type="email" id="register-email" required placeholder="Enter your email">
-        </div>
-        
-        <div class="form-group">
-          <label for="register-phone">Phone (Optional)</label>
-          <input type="tel" id="register-phone" placeholder="Enter your phone">
-        </div>
-        
-        <div class="form-group">
-          <label for="register-password">Password</label>
-          <input type="password" id="register-password" required placeholder="Create a password" minlength="6">
-        </div>
-        
-        <div class="form-group">
-          <label for="register-role">Role</label>
-          <select id="register-role">
-            <option value="student">Student</option>
-            <option value="parent">Parent</option>
-            <option value="teacher">Teacher</option>
-          </select>
-        </div>
-        
-        <button type="submit" id="register-btn">Register</button>
-      </form>
+
+        <!-- Login Form -->
+        <form id="login-form" class="space-y-5">
+          <div>
+            <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-envelope text-gray-400"></i>
+              </div>
+              <input type="email" id="login-email" required placeholder="Enter your email" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-lock text-gray-400"></i>
+              </div>
+              <input type="password" id="login-password" required placeholder="Enter your password" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <button type="submit" id="login-btn" class="w-full px-4 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition transform hover:scale-[1.02] active:scale-[0.98]">
+            <i class="fas fa-sign-in-alt mr-2"></i>Login
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="space-y-4 hidden">
+          <div>
+            <label for="register-name" class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user text-gray-400"></i>
+              </div>
+              <input type="text" id="register-name" required placeholder="Enter your name" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-envelope text-gray-400"></i>
+              </div>
+              <input type="email" id="register-email" required placeholder="Enter your email" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label for="register-phone" class="block text-sm font-medium text-gray-700 mb-1.5">Phone (Optional)</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-phone text-gray-400"></i>
+              </div>
+              <input type="tel" id="register-phone" placeholder="Enter your phone" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-lock text-gray-400"></i>
+              </div>
+              <input type="password" id="register-password" required placeholder="Create a password" minlength="6" 
+                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label for="register-role" class="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user-tag text-gray-400"></i>
+              </div>
+              <select id="register-role" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white">
+                <option value="student">Student</option>
+                <option value="parent">Parent</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
+          </div>
+          
+          <button type="submit" id="register-btn" class="w-full px-4 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition transform hover:scale-[1.02] active:scale-[0.98]">
+            <i class="fas fa-user-plus mr-2"></i>Register
+          </button>
+        </form>
+      </div>
     </div>
+
+    <!-- Footer -->
+    <p class="text-center text-white/60 text-sm mt-6">
+      &copy; <script>document.write(new Date().getFullYear())</script> <script>document.write(window.TENANT_CONFIG?.APP_NAME || 'School App');</script>
+    </p>
   </div>
 
   <script src="js/config.js"></script>
@@ -199,23 +175,30 @@
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script>
-    
-    const tabs = document.querySelectorAll('.tab');
-    const forms = document.querySelectorAll('.form');
-    
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const tabName = tab.dataset.tab;
-        
-        tabs.forEach(t => t.classList.remove('active'));
-        forms.forEach(f => f.classList.remove('active'));
-        
-        tab.classList.add('active');
-        document.getElementById(`${tabName}-form`).classList.add('active');
-        
-        document.getElementById('login-error').classList.remove('show');
-        document.getElementById('login-success').classList.remove('show');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const forms = {
+      login: document.getElementById('login-form'),
+      register: document.getElementById('register-form')
+    };
+
+    function switchTab(tabName) {
+      tabBtns.forEach(btn => {
+        const isActive = btn.dataset.tab === tabName;
+        btn.classList.toggle('border-indigo-600', isActive);
+        btn.classList.toggle('text-indigo-600', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-gray-500', !isActive);
       });
+      
+      forms.login.classList.toggle('hidden', tabName !== 'login');
+      forms.register.classList.toggle('hidden', tabName !== 'register');
+      
+      document.getElementById('login-error').classList.add('hidden');
+      document.getElementById('login-success').classList.add('hidden');
+    }
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -228,34 +211,34 @@
       const errorEl = document.getElementById('login-error');
       const successEl = document.getElementById('login-success');
       
-      errorEl.classList.remove('show');
-      successEl.classList.remove('show');
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
       btn.disabled = true;
-      btn.textContent = 'Logging in...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Logging in...';
       
       try {
         const response = await api.login(email, password);
         
         if (response.success) {
-          auth.setToken(response.token);
+          auth.setToken(response.token, response.expiresIn);
           auth.setUser(response.user);
           
-          successEl.textContent = 'Login successful! Redirecting...';
-          successEl.classList.add('show');
+          successEl.querySelector('span').textContent = 'Login successful! Redirecting...';
+          successEl.classList.remove('hidden');
           
           setTimeout(() => {
             window.location.href = 'app.html';
           }, 1000);
         } else {
-          errorEl.textContent = response.error || 'Login failed';
-          errorEl.classList.add('show');
+          errorEl.querySelector('span').textContent = response.error || 'Login failed';
+          errorEl.classList.remove('hidden');
         }
       } catch (err) {
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.classList.add('show');
+        errorEl.querySelector('span').textContent = 'Connection error. Please try again.';
+        errorEl.classList.remove('hidden');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Login';
+        btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login';
       }
     });
 
@@ -272,29 +255,30 @@
       const errorEl = document.getElementById('login-error');
       const successEl = document.getElementById('login-success');
       
-      errorEl.classList.remove('show');
-      successEl.classList.remove('show');
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
       btn.disabled = true;
-      btn.textContent = 'Registering...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Registering...';
       
       try {
         const response = await api.register({ email, phone, password, name, role });
         
         if (response.success) {
-          successEl.textContent = 'Registration successful! Please login.';
-          successEl.classList.add('show');
+          successEl.querySelector('span').textContent = 'Registration successful! Please login.';
+          successEl.classList.remove('hidden');
           
-          document.querySelector('.tab[data-tab="login"]').click();
+          switchTab('login');
+          document.getElementById('login-email').value = email;
         } else {
-          errorEl.textContent = response.error || 'Registration failed';
-          errorEl.classList.add('show');
+          errorEl.querySelector('span').textContent = response.error || 'Registration failed';
+          errorEl.classList.remove('hidden');
         }
       } catch (err) {
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.classList.add('show');
+        errorEl.querySelector('span').textContent = 'Connection error. Please try again.';
+        errorEl.classList.remove('hidden');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Register';
+        btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Register';
       }
     });
 

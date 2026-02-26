@@ -722,10 +722,32 @@
         return;
       }
 
+      const cachedUser = auth.getUser();
+      
+      if (!auth.isTokenExpired()) {
+        if (cachedUser) {
+          window.currentUser = cachedUser;
+          document.getElementById('user-name').textContent = cachedUser.name;
+          document.getElementById('user-role').textContent = cachedUser.role;
+          document.getElementById('user-role-text').textContent = cachedUser.role;
+          document.getElementById('welcome-message').textContent = `Welcome, ${cachedUser.name}!`;
+          document.getElementById('app-title').textContent = window.TENANT_CONFIG?.APP_NAME || 'School App';
+          RoleAccess.init();
+          return;
+        }
+      }
+
       try {
-        const response = await api.verify(token);
+        let response = auth.getCachedVerification();
         
-        if (!response.valid) {
+        if (!response) {
+          response = await api.verify(token);
+          if (response.valid) {
+            auth.setCachedVerification(response);
+          }
+        }
+        
+        if (!response || !response.valid) {
           auth.logout();
           window.location.href = 'index.html';
           return;
@@ -741,11 +763,20 @@
         document.getElementById('welcome-message').textContent = `Welcome, ${user.name}!`;
         document.getElementById('app-title').textContent = window.TENANT_CONFIG?.APP_NAME || 'School App';
 
-        // Initialize RBAC - show/hide pages based on role
         RoleAccess.init();
 
       } catch (err) {
-        showError('Failed to verify session');
+        if (cachedUser) {
+          window.currentUser = cachedUser;
+          document.getElementById('user-name').textContent = cachedUser.name;
+          document.getElementById('user-role').textContent = cachedUser.role;
+          document.getElementById('user-role-text').textContent = cachedUser.role;
+          document.getElementById('welcome-message').textContent = `Welcome, ${cachedUser.name}!`;
+          document.getElementById('app-title').textContent = window.TENANT_CONFIG?.APP_NAME || 'School App';
+          RoleAccess.init();
+        } else {
+          showError('Failed to verify session');
+        }
       }
     }
 

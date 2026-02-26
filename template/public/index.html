@@ -220,7 +220,7 @@
         const response = await api.login(email, password);
         
         if (response.success) {
-          auth.setToken(response.token);
+          auth.setToken(response.token, response.expiresIn);
           auth.setUser(response.user);
           
           successEl.querySelector('span').textContent = 'Login successful! Redirecting...';

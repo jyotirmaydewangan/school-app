@@ -67,7 +67,8 @@ async function deployAppsScript(tenantName) {
     '{APP_NAME}': defaults.appName || 'My School',
     '{ALLOW_REGISTRATION}': defaults.allowRegistration !== false ? 'true' : 'false',
     '{DEFAULT_ROLE}': defaults.defaultRole || 'student',
-    '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 30),
+    '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 60),
+    '{JWT_SECRET}': require('crypto').randomBytes(32).toString('hex'),
     '{ROLES_JSON}': rolesJson
   };
 
