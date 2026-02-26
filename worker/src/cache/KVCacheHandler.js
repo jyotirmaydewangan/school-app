@@ -1,4 +1,4 @@
-import { CacheConfig } from './CacheConfig.js';
+import { CacheConfig, CACHE_SCOPES } from './CacheConfig.js';
 
 export const CACHE_VERSION = 'v2';
 
@@ -21,35 +21,25 @@ export const KVCacheHandler = {
     return isEnabled;
   },
 
-  buildCacheKey(tenantId, action, queryParams = {}) {
+  buildKeyForAction(tenantId, action, context = {}) {
+    const scope = CacheConfig.getScope(action);
+    const { token, queryParams = {} } = context;
+
     let key = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
+
+    if (scope === CACHE_SCOPES.USER || scope === CACHE_SCOPES.SESSION) {
+      if (token) {
+        key += `:${token}`;
+      }
+    }
+
     const sortedParams = Object.keys(queryParams).sort();
     if (sortedParams.length > 0) {
       const paramStr = sortedParams.map(k => `${k}=${queryParams[k]}`).join('&');
       key += `?${paramStr}`;
     }
+
     return key;
-  },
-
-  extractTokenFromBody(body) {
-    try {
-      const parsed = JSON.parse(body);
-      return parsed?.token || null;
-    } catch {
-      return null;
-    }
-  },
-
-  buildCacheKeyWithUser(tenantId, action, requestBody) {
-    const userSpecificActions = ['verify', 'getAttendance', 'getTimetable', 'getMarks', 'getUsers'];
-
-    if (userSpecificActions.includes(action)) {
-      const token = this.extractTokenFromBody(requestBody);
-      if (token) {
-        return `cache:${CACHE_VERSION}:${tenantId}:${action}:${token}`;
-      }
-    }
-    return this.buildCacheKey(tenantId, action, {});
   },
 
   async get(tenantId, action, queryParams = {}) {
@@ -58,7 +48,7 @@ export const KVCacheHandler = {
       return null;
     }
 
-    const key = this.buildCacheKey(tenantId, action, queryParams);
+    const key = this.buildKeyForAction(tenantId, action, { queryParams });
     console.log(`[KV] Get key: ${key}`);
 
     try {
@@ -99,7 +89,7 @@ export const KVCacheHandler = {
       return;
     }
 
-    const key = this.buildCacheKey(tenantId, action, queryParams);
+    const key = this.buildKeyForAction(tenantId, action, { queryParams });
     const ttl = CacheConfig.getTTL(action);
     const now = Date.now();
     const staleWhileRevalidate = Math.floor(ttl * 0.5);
@@ -186,7 +176,7 @@ export const KVCacheHandler = {
   async invalidate(tenantId, action) {
     if (!this.isEnabled()) return;
 
-    const prefix = `cache:${tenantId}:${action}`;
+    const prefix = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
 
     try {
       const list = await this.kv.list({ prefix });

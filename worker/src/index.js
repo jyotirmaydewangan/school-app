@@ -52,7 +52,11 @@ const Router = {
         const token = AuthMiddleware.extractToken(request);
         const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
 
-        const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, bodyWithToken);
+        const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
+          token,
+          queryParams,
+          body: bodyWithToken
+        });
 
         if (this.kvHandler.isEnabled() && isCacheable) {
           const cached = await this.kvHandler.getByKey(cacheKey);
@@ -106,7 +110,10 @@ const Router = {
         const queryParams = Object.fromEntries(urlObj.searchParams);
 
         if (this.kvHandler.isEnabled() && isCacheable) {
-          const cached = await this.kvHandler.get(tenantId, action, queryParams);
+          const token = AuthMiddleware.extractToken(request);
+          const cached = await this.kvHandler.getByKey(
+            this.kvHandler.buildKeyForAction(tenantId, action, { token, queryParams })
+          );
 
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
@@ -188,12 +195,12 @@ const Router = {
           if (isCacheable && response.ok && (method === 'GET' || CacheConfig.isPostReadAction(action))) {
             const data = await response.clone().json();
             if (data && data.success !== false && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
-              const cacheKey = this.kvHandler.buildCacheKeyWithUser(tenantId, action, bodyWithToken || body);
-              if (cacheKey.includes(':verify:') || cacheKey.includes(':getAttendance:') || cacheKey.includes(':getTimetable:') || cacheKey.includes(':getMarks:') || cacheKey.includes(':getUsers:')) {
-                await this.kvHandler.setByKey(cacheKey, data, action);
-              } else {
-                await this.kvHandler.set(tenantId, action, data, queryParams);
-              }
+              const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
+                token,
+                queryParams,
+                body: bodyWithToken || body
+              });
+              await this.kvHandler.setByKey(cacheKey, data, action);
             }
           }
 
