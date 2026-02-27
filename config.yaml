@@ -46,48 +46,36 @@ defaults:
   # Show "Powered by" footer
   showPoweredBy: false
 
-# Cache configuration by resource type (in seconds)
-# 2592000 = 1 month, 604800 = 1 week, 900 = 15 min
+# Cache configuration Defaults (in seconds)
 cache:
-  users: 2592000
-  config: 2592000
-  roles: 2592000
-  attendance: 604800
-  noticeboard: 604800
-  timetable: 2592000
-  marks: 604800
-  verify: 900
-  default: 60
+  default: 2592000 # 1 month
 
 # KV Store Cache Settings
 kvCache:
-  # Enable KV-based caching (requires KV namespace)
   enabled: true
-  
-  # Stale-while-revalidate: serve stale data while refreshing
-  # Value is percentage of TTL (e.g., 50 = serve stale for 50% of TTL after expiry check)
   staleWhileRevalidatePercent: 50
 
 # Cloudflare KV Namespace
-# Create with: wrangler kv namespace create DATA_CACHE
 kv:
   namespaceId: "58169d47324f4b98ae96b19ff9379693"
   binding: "DATA_CACHE"
 
 # Default roles and permissions
+# permissions: ["*"] means full access
+# pages: ["*"] means visible in navigation
 roles:
   admin:
     permissions: ["*"]
     isActive: true
-    pages: ["dashboard", "students", "attendance", "exams", "marks", "timetable", "curriculum", "users", "settings"]
+    pages: ["*"]
   teacher:
-    permissions: ["read:students", "write:students", "read:attendance", "write:attendance", "read:marks", "write:marks", "read:timetable", "write:timetable", "read:syllabus", "write:syllabus", "read:resources", "write:resources", "read:subjects", "write:subjects"]
+    permissions: ["read:students", "write:students", "read:attendance", "write:attendance", "read:marks", "write:marks", "read:timetable", "write:timetable", "read:curriculum", "write:curriculum"]
     isActive: true
     pages: ["dashboard", "students", "attendance", "exams", "marks", "timetable", "curriculum"]
   parent:
-    permissions: ["read:own_child", "read:child_attendance", "read:child_marks", "read:child_timetable", "read:notices"]
+    permissions: ["read:own_child", "read:child_attendance", "read:child_marks", "read:child_timetable"]
     isActive: true
-    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum", "communication"]
+    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum"]
   student:
     permissions: ["read:own_grades", "read:own_attendance", "read:own_timetable"]
     isActive: true

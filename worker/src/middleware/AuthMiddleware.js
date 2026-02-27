@@ -1,7 +1,10 @@
 export const AuthMiddleware = {
   extractToken(request) {
     const authHeader = request.headers.get('Authorization');
-    return authHeader?.replace('Bearer ', '') || null;
+    if (authHeader) return authHeader.replace('Bearer ', '');
+
+    const url = new URL(request.url);
+    return url.searchParams.get('token') || null;
   },
 
   addTokenToBody(body, token) {

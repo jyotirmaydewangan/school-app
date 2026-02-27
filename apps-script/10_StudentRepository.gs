@@ -11,12 +11,12 @@ const StudentRepository = {
       return obj;
     }).filter(s => s.id && s.name);
     
-    if (options.class) {
-      students = students.filter(s => String(s.class) === String(options.class));
+    if (options.class_id) {
+      students = students.filter(s => String(s.class_id) === String(options.class_id));
     }
     
-    if (options.section) {
-      students = students.filter(s => String(s.section) === String(options.section));
+    if (options.section_id) {
+      students = students.filter(s => String(s.section_id) === String(options.section_id));
     }
     
     if (options.status) {
@@ -65,20 +65,6 @@ const StudentRepository = {
     return null;
   },
 
-  findByParentPhone(phone) {
-    const sheet = SheetService.getSheet(SHEET_NAMES.STUDENTS);
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    
-    return data.slice(1).filter(row => {
-      return String(row[5]) === String(phone) || String(row[6]) === String(phone);
-    }).map(row => {
-      const obj = {};
-      headers.forEach((h, j) => obj[h] = row[j]);
-      return obj;
-    });
-  },
-
   create(data) {
     const sheet = SheetService.getSheet(SHEET_NAMES.STUDENTS);
     const id = Utilities.getUuid();
@@ -89,8 +75,8 @@ const StudentRepository = {
       data.user_id || '',
       data.admission_no || '',
       data.name || '',
-      data.class || '',
-      data.section || '',
+      data.class_id || '',
+      data.section_id || '',
       data.parent_phone1 || '',
       data.parent_phone2 || '',
       data.status || 'pending',
@@ -101,9 +87,11 @@ const StudentRepository = {
     sheet.appendRow(row);
     SpreadsheetApp.flush();
     
+    const student = { id, ...data, status: data.status || 'pending', created_at: now };
+    this.autoLinkParent(student);
     this.updateClassIndex();
     
-    return { id, ...data, status: data.status || 'pending', created_at: now };
+    return student;
   },
 
   update(id, data) {
@@ -114,7 +102,7 @@ const StudentRepository = {
     
     for (let i = 1; i < values.length; i++) {
       if (values[i][0] === id) {
-        const updateFields = ['name', 'class', 'section', 'parent_phone1', 'parent_phone2', 'status'];
+        const updateFields = ['name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status'];
         
         updateFields.forEach(field => {
           const colIndex = headers.indexOf(field);
@@ -128,9 +116,11 @@ const StudentRepository = {
         dataRange.setValues(values);
         SpreadsheetApp.flush();
         
+        const student = this.findById(id);
+        this.autoLinkParent(student);
         this.updateClassIndex();
         
-        return this.findById(id);
+        return student;
       }
     }
     return null;
@@ -147,69 +137,21 @@ const StudentRepository = {
         SpreadsheetApp.flush();
         
         this.updateClassIndex();
-        
         return { success: true };
       }
     }
     return { success: false, error: 'Student not found' };
   },
 
-  importFromCSV(csvData) {
-    const rows = csvData.split('\n').map(row => row.split(','));
-    const results = { success: 0, failed: 0, errors: [] };
+  autoLinkParent(student) {
+    if (!student.parent_phone1 && !student.parent_phone2) return;
     
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const requiredFields = ['name', 'class'];
+    const phones = [student.parent_phone1, student.parent_phone2].filter(p => p);
+    const parents = UserRepository.findAll().users.filter(u => u.role === 'parent' && phones.includes(String(u.phone)));
     
-    for (let i = 1; i < rows.length; i++) {
-      try {
-        const row = rows[i];
-        if (!row || row.length < 2 || !row[0].trim()) continue;
-        
-        const data = {};
-        headers.forEach((h, j) => {
-          data[h] = row[j] ? row[j].trim() : '';
-        });
-        
-        const missing = requiredFields.filter(f => !data[f]);
-        if (missing.length > 0) {
-          results.failed++;
-          results.errors.push(`Row ${i + 1}: Missing required fields: ${missing.join(', ')}`);
-          continue;
-        }
-        
-        const existing = this.findByAdmissionNo(data.admission_no);
-        if (existing) {
-          results.failed++;
-          results.errors.push(`Row ${i + 1}: Admission number already exists`);
-          continue;
-        }
-        
-        this.create(data);
-        results.success++;
-      } catch (e) {
-        results.failed++;
-        results.errors.push(`Row ${i + 1}: ${e.message}`);
-      }
-    }
-    
-    return results;
-  },
-
-  getClasses() {
-    const sheet = SheetService.getSheet(SHEET_NAMES.STUDENTS);
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const classCol = headers.indexOf('class');
-    
-    const classes = new Set();
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][classCol]) {
-        classes.add(data[i][classCol]);
-      }
-    }
-    
-    return Array.from(classes).sort();
+    parents.forEach(parent => {
+      ParentStudentRepository.link(parent.id, student.id);
+    });
   },
 
   updateClassIndex() {
@@ -221,12 +163,12 @@ const StudentRepository = {
       const sheet = SheetService.getSheet(SHEET_NAMES.CLASS_INDEX);
       sheet.clear();
       
-      sheet.appendRow(['student_id', 'class', 'section', 'admission_no', 'name']);
+      sheet.appendRow(['student_id', 'class_id', 'section_id', 'admission_no', 'name']);
       
       const rows = students.map(s => [
         s.id,
-        s.class,
-        s.section,
+        s.class_id,
+        s.section_id,
         s.admission_no,
         s.name
       ]);
@@ -239,10 +181,6 @@ const StudentRepository = {
     } finally {
       lock.releaseLock();
     }
-  },
-
-  getStudentsByClass(className, section = null) {
-    return this.findAll({ class: className, section: section, status: 'approved' });
   }
 };
 
@@ -300,29 +238,6 @@ const ParentStudentRepository = {
       }
     }
     return { success: false, error: 'Link not found' };
-  },
-
-  autoLinkByPhone() {
-    const students = StudentRepository.findAll({ status: 'approved' }).students;
-    const parentUserIds = UserRepository.findAll().users.filter(u => u.role === 'parent').map(u => u.id);
-    const linked = 0;
-    
-    parentUserIds.forEach(parentId => {
-      const parent = UserRepository.findById(parentId);
-      if (!parent || !parent.phone) return;
-      
-      const matchingStudents = students.filter(s => 
-        String(s.parent_phone1) === String(parent.phone) || 
-        String(s.parent_phone2) === String(parent.phone)
-      );
-      
-      matchingStudents.forEach(student => {
-        const result = this.link(parentId, student.id);
-        if (result.success) linked++;
-      });
-    });
-    
-    return { linked };
   }
 };
 

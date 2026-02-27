@@ -12,7 +12,9 @@ const SHEET_NAMES = Object.freeze({
   SYLLABUS: 'syllabus',
   RESOURCES: 'resources',
   CLASS_INDEX: 'class_index',
-  CLASSES: 'classes'
+  CLASSES: 'classes',
+  SCHOOLS: 'schools',
+  SECTIONS: 'sections'
 });
 
 function onOpen() {
@@ -101,7 +103,9 @@ const SheetService = {
       SHEET_NAMES.SYLLABUS,
       SHEET_NAMES.RESOURCES,
       SHEET_NAMES.CLASS_INDEX,
-      SHEET_NAMES.CLASSES
+      SHEET_NAMES.CLASSES,
+      SHEET_NAMES.SCHOOLS,
+      SHEET_NAMES.SECTIONS
     ];
     
     sheetNames.forEach(name => {
@@ -138,16 +142,12 @@ const SheetService = {
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
       [SHEET_NAMES.CONFIG]: ['key', 'value'],
       [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'is_active'],
-      [SHEET_NAMES.STUDENTS]: ['id', 'user_id', 'admission_no', 'name', 'class', 'section', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at'],
-      [SHEET_NAMES.PARENT_STUDENTS]: ['id', 'parent_id', 'student_id', 'linked_at'],
-      [SHEET_NAMES.SUBJECTS]: ['id', 'name', 'class', 'teacher_id', 'created_at'],
-      [SHEET_NAMES.EXAMS]: ['id', 'name', 'class', 'section', 'subject_id', 'date', 'max_marks', 'created_at'],
-      [SHEET_NAMES.MARKS]: ['id', 'exam_id', 'student_id', 'marks_obtained', 'created_at'],
-      [SHEET_NAMES.TIMETABLE]: ['id', 'class', 'section', 'day', 'period', 'start_time', 'end_time', 'subject_id', 'teacher_id', 'room'],
-      [SHEET_NAMES.SYLLABUS]: ['id', 'class', 'subject_id', 'topic', 'description', 'status', 'created_at'],
       [SHEET_NAMES.RESOURCES]: ['id', 'class', 'subject_id', 'title', 'type', 'drive_file_id', 'drive_url', 'created_at'],
       [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class', 'section', 'admission_no', 'name'],
-      [SHEET_NAMES.CLASSES]: ['id', 'name', 'section', 'stream', 'academic_year', 'is_active', 'created_at']
+      [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
+      [SHEET_NAMES.SCHOOLS]: ['id', 'name', 'code', 'address', 'contact', 'created_at'],
+      [SHEET_NAMES.SECTIONS]: ['id', 'class_id', 'name', 'room', 'class_teacher_id', 'created_at'],
+      [SHEET_NAMES.STUDENTS]: ['id', 'user_id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at']
     };
     
     if (schemas[name]) {

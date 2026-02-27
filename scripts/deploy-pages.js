@@ -6,7 +6,8 @@ const {
   replaceInFile,
   log,
   runCommand,
-  getDefaults
+  getDefaults,
+  getRoles
 } = require('./utils');
 
 function deployPages(tenantName, args = []) {
@@ -20,7 +21,7 @@ function deployPages(tenantName, args = []) {
   const templatePublicDir = path.join(TEMPLATE_DIR, 'public');
   const configJsPath = path.join(tenantDir, 'public', 'js', 'config.js');
   const backupPath = path.join(tenantDir, 'public', 'js', 'config.js.backup');
-  
+
   if (!fs.existsSync(tenantDir)) {
     log(`Error: Tenant "${tenantName}" not found at ${tenantDir}`, 'error');
     log('Run: node scripts/create-tenant.js <tenant-name> first', 'info');
@@ -39,11 +40,11 @@ function deployPages(tenantName, args = []) {
   }
 
   log('Syncing template public files...', 'info');
-  
+
   // Step 2: Sync files (skip config.js - handle specially)
   const filesToSync = ['index.html', 'app.html', 'password-hash-tool.html'];
   const dirsToSync = ['js'];
-  
+
   filesToSync.forEach(file => {
     const src = path.join(templatePublicDir, file);
     const dest = path.join(tenantDir, 'public', file);
@@ -51,7 +52,7 @@ function deployPages(tenantName, args = []) {
       fs.copyFileSync(src, dest);
     }
   });
-  
+
   dirsToSync.forEach(dir => {
     const srcDir = path.join(templatePublicDir, dir);
     const destDir = path.join(tenantDir, 'public', dir);
@@ -67,6 +68,7 @@ function deployPages(tenantName, args = []) {
 
   // Step 3: Replace placeholders in config.js
   const defaults = getDefaults();
+  const roles = getRoles();
   const replacements = {
     '{TENANT}': tenantName,
     '{PROJECT_PREFIX}': defaults.project?.namePrefix || 'school',
@@ -82,11 +84,15 @@ function deployPages(tenantName, args = []) {
     '{LOGO_URL}': defaults.defaults?.logoUrl || '',
     '{FAVICON_URL}': defaults.defaults?.faviconUrl || '',
     '{SHOW_POWERED_BY}': String(defaults.defaults?.showPoweredBy || false),
-    '{ROLES_JSON}': JSON.stringify(Object.entries(defaults.defaults?.roles || {}).map(([name, data]) => ({
-      role_name: name,
-      permissions: data.permissions || [],
-      is_active: data.isActive !== false
-    }))),
+    '{ROLES_JSON}': JSON.stringify(Object.fromEntries(Object.entries(roles).map(([name, data]) => [
+      name,
+      {
+        role_name: name,
+        permissions: data.permissions || [],
+        pages: data.pages || [],
+        is_active: data.isActive !== false
+      }
+    ]))),
     '{API_URL_PLACEHOLDER}': backedUpApiUrl || ''
   };
 
@@ -113,7 +119,7 @@ function deployPages(tenantName, args = []) {
   const finalContent = fs.readFileSync(configJsPath, 'utf8');
   const apiMatch = finalContent.match(/API_URL:\s*"([^"]+)"/);
   const apiUrl = apiMatch ? apiMatch[1] : '';
-  
+
   if (!apiUrl || apiUrl.startsWith('{')) {
     log('⚠ Warning: API_URL not set properly in config.js', 'warn');
     log('  Please edit public/js/config.js and set API_URL to your Worker URL', 'warn');
@@ -135,13 +141,13 @@ function deployPages(tenantName, args = []) {
 
   log(`Creating Pages project if needed...`, 'info');
   runCommand(`wrangler pages project create ${projectName} --production-branch main`, path.join(tenantDir, 'public'));
-  
+
   const wranglerArgs = args.length > 0 ? args.join(' ') : `pages deploy . --project-name ${projectName}`;
   const command = 'wrangler ' + wranglerArgs;
   log(`  Running: ${command}`, 'info');
 
   const result = runCommand(command, path.join(tenantDir, 'public'));
-  
+
   if (!result.success) {
     log(`Error deploying pages: ${result.error}`, 'error');
     process.exit(1);
@@ -149,7 +155,7 @@ function deployPages(tenantName, args = []) {
 
   const output = result.output;
   const urlMatch = output.match(/https:\/\/[a-zA-Z0-9_.-]+\.pages\.dev/);
-  
+
   if (urlMatch) {
     const pagesUrl = urlMatch[0];
     log(`\n✓ Pages deployed!`, 'success');

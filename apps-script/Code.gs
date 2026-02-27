@@ -94,6 +94,12 @@ function doGet(e) {
       case 'getDashboardStats':
         result = handleGetDashboardStats(params.token);
         break;
+      case 'getSchools':
+        result = handleGetSchools(params.token, params);
+        break;
+      case 'getSections':
+        result = handleGetSections(params.token, params);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -235,6 +241,24 @@ function doPost(e) {
         break;
       case 'autoLinkParents':
         result = handleAutoLinkParents(token, postData);
+        break;
+      case 'createSchool':
+        result = handleCreateSchool(token, postData);
+        break;
+      case 'updateSchool':
+        result = handleUpdateSchool(token, postData);
+        break;
+      case 'deleteSchool':
+        result = handleDeleteSchool(token, postData);
+        break;
+      case 'createSection':
+        result = handleCreateSection(token, postData);
+        break;
+      case 'updateSection':
+        result = handleUpdateSection(token, postData);
+        break;
+      case 'deleteSection':
+        result = handleDeleteSection(token, postData);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -1080,6 +1104,81 @@ function handleGetMyTimetable(token) {
   }
   
   const timetable = TimetableRepository.getWeeklyTimetable(className, section || '');
-  
+
   return { success: true, timetable: timetable };
+}
+
+// --- School Handlers ---
+
+function handleGetSchools(token, params) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+  
+  const options = {};
+  if (params.id) return { success: true, school: SchoolRepository.findById(params.id) };
+  
+  const schools = SchoolRepository.findAll();
+  return { success: true, schools };
+}
+
+function handleCreateSchool(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.name) return { success: false, error: 'School name is required' };
+  
+  const school = SchoolRepository.create(data);
+  return { success: true, school };
+}
+
+function handleUpdateSchool(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  const school = SchoolRepository.update(data.id, data);
+  return school ? { success: true, school } : { success: false, error: 'School not found' };
+}
+
+function handleDeleteSchool(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  const deleted = SchoolRepository.delete(data.id);
+  return deleted ? { success: true } : { success: false, error: 'School not found' };
+}
+
+// --- Section Handlers ---
+
+function handleGetSections(token, params) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+  
+  const sections = params.class_id ? SectionRepository.findByClassId(params.class_id) : SectionRepository.findAll();
+  return { success: true, sections };
+}
+
+function handleCreateSection(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.class_id || !data.name) return { success: false, error: 'Class ID and Name are required' };
+  
+  const section = SectionRepository.create(data);
+  return { success: true, section };
+}
+
+function handleUpdateSection(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  const section = SectionRepository.update(data.id, data);
+  return section ? { success: true, section } : { success: false, error: 'Section not found' };
+}
+
+function handleDeleteSection(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  const deleted = SectionRepository.delete(data.id);
+  return deleted ? { success: true } : { success: false, error: 'Section not found' };
 }

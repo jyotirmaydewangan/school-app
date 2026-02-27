@@ -64,10 +64,11 @@ const Router = {
           } catch (e) { }
         }
 
+        const isBroad = CacheConfig.isBroad(action);
         const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
           token,
-          queryParams,
-          body: bodyWithToken
+          queryParams: isBroad ? {} : queryParams, // Broad caching uses a generic key
+          body: isBroad ? null : bodyWithToken    // Broad caching excludes specific body filters from key
         });
 
         if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
@@ -77,12 +78,17 @@ const Router = {
             if (cached.isStale) {
               this.refreshPostInBackground(tenantId, action, request, cacheKey);
             }
-            const result = this.kvHandler.buildResponse(cached.data, cached.isStale);
+
+            // Apply Worker-side filtering for Broad Master Lists
+            const filteredData = isBroad ? this.kvHandler.filterData(cached.data, queryParams) : cached.data;
+            const result = this.kvHandler.buildResponse(filteredData, cached.isStale);
+
             return new Response(JSON.stringify(result), {
               status: 200,
               headers: {
                 'Content-Type': 'application/json',
                 'X-Cache': cached.isStale ? 'STALE' : 'HIT',
+                'X-Cache-Key': isBroad ? 'MASTER' : 'DATA',
                 ...CorsMiddleware.buildHeaders()
               }
             });
@@ -113,10 +119,12 @@ const Router = {
           const response = await fetch(apiUrl, fetchOptions);
           if (response.ok) {
             const data = await response.json();
-            if (cacheKey) {
-              await this.kvHandler.setByKey(cacheKey, data, action);
-            } else {
-              await this.kvHandler.set(tenantId, action, data, {});
+            if (data && data.success !== false) {
+              if (cacheKey) {
+                await this.kvHandler.setByKey(cacheKey, data, action);
+              } else {
+                await this.kvHandler.set(tenantId, action, data, {});
+              }
             }
           }
         } catch (e) {
@@ -133,20 +141,30 @@ const Router = {
 
         if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
           const token = AuthMiddleware.extractToken(request);
-          const cached = await this.kvHandler.getByKey(
-            this.kvHandler.buildKeyForAction(tenantId, action, { token, queryParams })
-          );
+          const isBroad = CacheConfig.isBroad(action);
+
+          const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
+            token,
+            queryParams: isBroad ? {} : queryParams
+          });
+
+          const cached = await this.kvHandler.getByKey(cacheKey);
 
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
               this.refreshInBackground(tenantId, action, queryParams, request);
             }
-            const result = this.kvHandler.buildResponse(cached.data, cached.isStale);
+
+            // Apply Worker-side filtering for Broad Master Lists
+            const filteredData = isBroad ? this.kvHandler.filterData(cached.data, queryParams) : cached.data;
+            const result = this.kvHandler.buildResponse(filteredData, cached.isStale);
+
             return new Response(JSON.stringify(result), {
               status: 200,
               headers: {
                 'Content-Type': 'application/json',
                 'X-Cache': cached.isStale ? 'STALE' : 'HIT',
+                'X-Cache-Key': isBroad ? 'MASTER' : 'DATA',
                 ...CorsMiddleware.buildHeaders()
               }
             });
@@ -175,8 +193,10 @@ const Router = {
           const response = await fetch(apiUrl, fetchOptions);
           if (response.ok) {
             const data = await response.json();
-            await this.kvHandler.set(tenantId, action, data, queryParams);
-            console.log(`[KV] Background refresh completed for ${action}`);
+            if (data && data.success !== false) {
+              await this.kvHandler.set(tenantId, action, data, queryParams);
+              console.log(`[KV] Background refresh completed for ${action}`);
+            }
           }
         } catch (e) {
           console.error(`[KV] Background refresh failed: ${e.message}`);
@@ -244,8 +264,6 @@ const Router = {
         const token = AuthMiddleware.extractToken(request);
         const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
 
-        const apiUrl = RequestParser.buildApiUrl(scriptUrl, action, urlObj.searchParams);
-
         const fetchOptions = {
           method,
           headers: { 'Content-Type': 'application/json', ...headers }
@@ -256,17 +274,50 @@ const Router = {
         }
 
         try {
+          // Broad Caching: If action is broad, strip domain filters but PRESERVE authentication token
+          const isBroad = isCacheable && (method === 'GET' || CacheConfig.isPostReadAction(action)) && CacheConfig.isBroad(action);
+
+          let backendParams;
+          if (isBroad) {
+            backendParams = new URLSearchParams();
+            const tokenInQuery = urlObj.searchParams.get('token');
+            if (tokenInQuery) backendParams.set('token', tokenInQuery);
+          } else {
+            backendParams = urlObj.searchParams;
+          }
+
+          const apiUrl = RequestParser.buildApiUrl(scriptUrl, action, backendParams);
           const response = await fetch(apiUrl, fetchOptions);
 
           if (isCacheable && response.ok && (method === 'GET' || CacheConfig.isPostReadAction(action))) {
             const data = await response.clone().json();
-            if (data && data.success !== false && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
+
+            // STRICTER GUARD: Never cache if success is false or if it looks like an error
+            const isValidData = data && data.success !== false && !data.error;
+            const hasData = Array.isArray(data) ? data.length > 0 : (data && Object.keys(data).length > 0);
+
+            if (isValidData && hasData) {
               const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
                 token,
-                queryParams,
-                body: bodyWithToken || body
+                queryParams: isBroad ? {} : queryParams,
+                body: isBroad ? null : (bodyWithToken || body)
               });
               await this.kvHandler.setByKey(cacheKey, data, action);
+            }
+
+            // If it was a broad fetch and it's valid, return filtered version
+            if (isBroad && isValidData) {
+              const filteredData = this.kvHandler.filterData(data, queryParams);
+              const result = this.kvHandler.buildResponse(filteredData, false);
+              return new Response(JSON.stringify(result), {
+                status: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Cache': 'MISS',
+                  'X-Cache-Key': 'MASTER_POPULATED',
+                  ...CorsMiddleware.buildHeaders()
+                }
+              });
             }
           }
 

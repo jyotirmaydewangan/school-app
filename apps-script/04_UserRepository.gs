@@ -72,7 +72,12 @@ const UserRepository = {
       now
     ]);
     
-    return this.findById(id);
+    const user = this.findById(id);
+    if (user && user.role === 'parent' && user.phone) {
+      this.autoLinkStudentsByPhone(user);
+    }
+    
+    return user;
   },
 
   updateRole(userId, newRole) {
@@ -108,10 +113,27 @@ const UserRepository = {
         // Always update the timestamp
         sheet.getRange(row, 8).setValue(now);
         
-        return this.findById(userId);
+        const user = this.findById(userId);
+        if (user && user.role === 'parent' && user.phone) {
+          this.autoLinkStudentsByPhone(user);
+        }
+        
+        return user;
       }
     }
     return null;
+  },
+
+  autoLinkStudentsByPhone(parent) {
+    if (!parent.phone) return;
+    const students = StudentRepository.findAll().students.filter(s => 
+      String(s.parent_phone1) === String(parent.phone) || 
+      String(s.parent_phone2) === String(parent.phone)
+    );
+    
+    students.forEach(student => {
+      ParentStudentRepository.link(parent.id, student.id);
+    });
   },
 
   delete(userId) {

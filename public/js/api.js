@@ -148,8 +148,8 @@ const api = {
   async getStudents(token, options = {}) {
     const params = new URLSearchParams();
     params.append('token', token);
-    if (options.class) params.append('class', options.class);
-    if (options.section) params.append('section', options.section);
+    if (options.class_id) params.append('class_id', options.class_id);
+    if (options.section_id) params.append('section_id', options.section_id);
     if (options.status) params.append('status', options.status);
     if (options.limit) params.append('limit', options.limit);
     if (options.offset) params.append('offset', options.offset);
@@ -405,10 +405,66 @@ const api = {
     });
   },
 
-  async getClasses(token) {
+  async getClasses(token, options = {}) {
     const params = new URLSearchParams();
     params.append('token', token);
+    if (options.school_id) params.append('school_id', options.school_id);
     return this.request('/getClasses?' + params.toString());
+  },
+
+  async getSchools(token) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    return this.request('/getSchools?' + params.toString());
+  },
+
+  async createSchool(token, data) {
+    return this.request('/createSchool', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateSchool(token, data) {
+    return this.request('/updateSchool', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteSchool(token, id) {
+    return this.request('/deleteSchool', {
+      method: 'POST',
+      body: JSON.stringify({ token, id })
+    });
+  },
+
+  async getSections(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.class_id) params.append('class_id', options.class_id);
+    return this.request('/getSections?' + params.toString());
+  },
+
+  async createSection(token, data) {
+    return this.request('/createSection', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateSection(token, data) {
+    return this.request('/updateSection', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteSection(token, id) {
+    return this.request('/deleteSection', {
+      method: 'POST',
+      body: JSON.stringify({ token, id })
+    });
   },
 
   async getLinkedStudents(token) {

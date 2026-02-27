@@ -182,6 +182,13 @@
             </a>
           </li>
           <li>
+            <a href="#" data-section="setup"
+              class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
+              <i class="fas fa-magic w-5 text-center"></i>
+              <span>School Setup</span>
+            </a>
+          </li>
+          <li>
             <a href="#" data-section="approvals"
               class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
               <i class="fas fa-user-check w-5 text-center"></i>
@@ -231,6 +238,174 @@
           <i class="fas fa-exclamation-circle"></i>
           <span id="error-message"></span>
         </div>
+
+        <!-- School Setup Section (Wizard) -->
+        <section id="setup" class="content-section">
+          <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Setup Wizard</h1>
+              <p class="text-gray-500 mt-1">Guided flow to setup your school hierarchy</p>
+            </div>
+          </div>
+
+          <!-- Wizard Steps Indicator -->
+          <div class="mb-8 overflow-x-auto pb-4">
+            <div class="flex items-center min-w-[600px]">
+              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(1)">
+                <div id="step-1-icon"
+                  class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2">
+                  1</div>
+                <span class="text-sm font-medium text-gray-800">School Identity</span>
+              </div>
+              <div class="h-0.5 bg-gray-200 flex-1 -mt-8"></div>
+              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(2)">
+                <div id="step-2-icon"
+                  class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2">
+                  2</div>
+                <span class="text-sm font-medium text-gray-500">Define Grades</span>
+              </div>
+              <div class="h-0.5 bg-gray-200 flex-1 -mt-8"></div>
+              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(3)">
+                <div id="step-3-icon"
+                  class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2">
+                  3</div>
+                <span class="text-sm font-medium text-gray-500">Split Sections</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 1: School Identity -->
+          <div id="setup-step-1" class="setup-step-container">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-2xl mx-auto">
+              <h3 class="text-lg font-bold mb-4">School Details</h3>
+              <form id="school-setup-form" class="space-y-4">
+                <input type="hidden" id="setup-school-id">
+                <div class="grid grid-cols-1 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+                    <input type="text" id="setup-school-name" required
+                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Short Code</label>
+                    <input type="text" id="setup-school-code" placeholder="e.g. S-ABC"
+                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <textarea id="setup-school-address" rows="3"
+                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Details</label>
+                    <input type="text" id="setup-school-contact"
+                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                  </div>
+                </div>
+                <div class="flex justify-end pt-4">
+                  <button type="submit"
+                    class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Save
+                    & Continue</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Step 2: Define Grades (Classes) -->
+          <div id="setup-step-2" class="setup-step-container hidden">
+            <!-- Content for Grade Definitions -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold">Manage Grades (Classes)</h3>
+                <button onclick="showGradeModal()"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                  <i class="fas fa-plus mr-2"></i>Add Grade
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead>
+                    <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                      <th class="px-4 py-3">Grade Name</th>
+                      <th class="px-4 py-3">Academic Year</th>
+                      <th class="px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="setup-grades-table" class="divide-y divide-gray-100 italic text-gray-400">
+                    <tr>
+                      <td colspan="3" class="px-4 py-8 text-center">Loading grades...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex justify-between pt-8">
+                <button onclick="setSetupStep(1)"
+                  class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">Back</button>
+                <button onclick="setSetupStep(3)"
+                  class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Next:
+                  Split Sections</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Split Sections -->
+          <div id="setup-step-3" class="setup-step-container hidden">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-5xl mx-auto">
+              <div class="flex flex-col sm:flex-row gap-4 justify-between mb-6">
+                <div>
+                  <h3 class="text-lg font-bold">Define Sections for Grades</h3>
+                  <p class="text-sm text-gray-500">Select a grade to manage its sections</p>
+                </div>
+                <div class="w-48">
+                  <select id="setup-grade-selector" onchange="loadSetupSections()"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                    <option value="">Select Grade</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="id=" setup-sections-content">
+                <div id="setup-sections-empty" class="text-center py-12">
+                  <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-layer-group text-gray-300 text-2xl"></i>
+                  </div>
+                  <p class="text-gray-500">Select a grade from the dropdown to start adding sections</p>
+                </div>
+
+                <div id="setup-sections-list" class="hidden">
+                  <div class="flex justify-end mb-4">
+                    <button onclick="showSectionModal()"
+                      class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                      <i class="fas fa-plus mr-1"></i>Add Section
+                    </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                      <thead>
+                        <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                          <th class="px-4 py-3">Section Name</th>
+                          <th class="px-4 py-3">Room</th>
+                          <th class="px-4 py-3">Teacher</th>
+                          <th class="px-4 py-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="setup-sections-table" class="divide-y divide-gray-100">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex justify-between pt-8">
+                <button onclick="setSetupStep(2)"
+                  class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">Back</button>
+                <button onclick="navigateTo('students')"
+                  class="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">Setup
+                  Complete: Go to Students</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Dashboard Section -->
         <section id="dashboard" class="content-section active">
@@ -795,7 +970,7 @@
     <div id="classModal" class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 id="classModalTitle" class="text-lg font-semibold text-gray-800">Add New Class</h3>
+          <h3 id="classModalTitle" class="text-lg font-semibold text-gray-800">Add New Grade</h3>
           <button onclick="closeClassModal()" class="text-gray-400 hover:text-gray-600 transition">
             <i class="fas fa-times text-lg"></i>
           </button>
@@ -804,13 +979,8 @@
           <input type="hidden" id="editClassId">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Class Name *</label>
-              <input type="text" id="className" required placeholder="e.g., Class 10"
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Section</label>
-              <input type="text" id="classSection" placeholder="e.g., A, B"
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Grade Name *</label>
+              <input type="text" id="className" required placeholder="e.g., Grade 10"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
             </div>
             <div>
@@ -828,16 +998,11 @@
               <input type="text" id="classAcademicYear" placeholder="e.g., 2025-26"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
             </div>
-            <div class="flex items-center gap-2">
-              <input type="checkbox" id="classIsActive" checked
-                class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
-              <label for="classIsActive" class="text-sm text-gray-700">Active</label>
-            </div>
           </div>
           <div class="mt-6 flex gap-3">
             <button type="submit"
               class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
-              Save Class
+              Save Grade
             </button>
             <button type="button" onclick="closeClassModal()"
               class="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
@@ -980,13 +1145,17 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Class *</label>
-                <input type="text" id="studentClass" required placeholder="e.g., 10"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                <select id="studentClass" required onchange="onStudentClassChange()"
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white text-sm">
+                  <option value="">Select Class</option>
+                </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Section</label>
-                <input type="text" id="studentSection" placeholder="e.g., A"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Section *</label>
+                <select id="studentSection" required
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white text-sm">
+                  <option value="">Select Section</option>
+                </select>
               </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1316,6 +1485,49 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         </form>
       </div>
     </div>
+    <!-- Section Modal -->
+    <div id="sectionModal"
+      class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 id="sectionModalTitle" class="text-lg font-semibold text-gray-800">Add Section</h3>
+          <button onclick="closeSectionModal()" class="text-gray-400 hover:text-gray-600 transition">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+        <form id="sectionForm" class="p-6">
+          <input type="hidden" id="editSectionId">
+          <input type="hidden" id="sectionClassId">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Section Name *</label>
+              <input type="text" id="sectionName" required placeholder="e.g., A"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Room</label>
+              <input type="text" id="sectionRoom" placeholder="e.g., Room 101"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Class Teacher ID</label>
+              <input type="text" id="sectionClassTeacherId" placeholder="Teacher User ID"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+          </div>
+          <div class="mt-6 flex gap-3">
+            <button type="submit"
+              class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
+              Save Section
+            </button>
+            <button type="button" onclick="closeSectionModal()"
+              class="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="js/config.js"></script>
     <script>
@@ -1329,6 +1541,15 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       let currentPage = 1;
       const usersPerPage = 12;
       let searchTimeout = null;
+      let setupStep = 1;
+      let setupSchool = null;
+      let setupGrades = [];
+      let setupSections = [];
+      let studentsData = [];
+      let examsData = [];
+      let subjectsData = [];
+      let currentAttendanceData = [];
+      let configData = null;
 
       function initNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
@@ -1360,13 +1581,20 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           section.classList.toggle('active', section.id === sectionId);
         });
 
-        if (sectionId === 'classes') {
-          loadClasses();
-        } else if (sectionId === 'approvals') {
-          loadPendingApprovals();
-        } else if (sectionId === 'dashboard') {
-          loadDashboardStats();
+        if (sectionId === 'users') loadUsers();
+        if (sectionId === 'students') loadStudents();
+        if (sectionId === 'subjects') loadSubjects();
+        if (sectionId === 'attendance') {
+          document.getElementById('attendance-date').valueAsDate = new Date();
+          loadAttendanceClass();
         }
+        if (sectionId === 'exams') loadExams();
+        if (sectionId === 'timetable') loadTimetable();
+        if (sectionId === 'curriculum') loadCurriculum();
+        if (sectionId === 'classes') loadClasses();
+        if (sectionId === 'approvals') loadPendingApprovals();
+        if (sectionId === 'setup') loadSetupWizard();
+        if (sectionId === 'dashboard') loadDashboardStats();
       }
 
       function toggleSidebar() {
@@ -1390,35 +1618,249 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         overlay.classList.add('hidden');
       }
 
+      // --- School Setup Wizard Logic ---
+      window.loadSetupWizard = async function () {
+        const token = auth.getToken();
+        try {
+          const res = await api.getSchools(token);
+          if (res.success && res.schools && res.schools.length > 0) {
+            const school = res.schools[0];
+            setupSchool = school;
+            document.getElementById('setup-school-id').value = school.id;
+            document.getElementById('setup-school-name').value = school.name;
+            document.getElementById('setup-school-code').value = school.code || '';
+            document.getElementById('setup-school-address').value = school.address || '';
+            document.getElementById('setup-school-contact').value = school.contact || '';
+          }
+          setSetupStep(setupStep);
+        } catch (e) { showError("Failed to load school setup"); }
+      }
+
+      window.setSetupStep = function (step) {
+        setupStep = step;
+        document.querySelectorAll('.setup-step-container').forEach(c => c.classList.add('hidden'));
+        const target = document.getElementById(`setup-step-${step}`);
+        if (target) target.classList.remove('hidden');
+
+        for (let i = 1; i <= 3; i++) {
+          const icon = document.getElementById(`step-${i}-icon`);
+          if (!icon) continue;
+          const label = icon.nextElementSibling;
+          if (i < step) {
+            icon.innerHTML = '<i class="fas fa-check"></i>';
+            icon.className = 'w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold mb-2';
+            label.className = 'text-sm font-medium text-green-600';
+          } else if (i === step) {
+            icon.innerHTML = i;
+            icon.className = 'w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2';
+            label.className = 'text-sm font-medium text-gray-800';
+          } else {
+            icon.innerHTML = i;
+            icon.className = 'w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2';
+            label.className = 'text-sm font-medium text-gray-500';
+          }
+        }
+        if (step === 2) loadSetupGrades();
+        if (step === 3) populateSetupGradeSelector();
+      }
+
+      document.getElementById('school-setup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = auth.getToken();
+        const id = document.getElementById('setup-school-id').value;
+        const data = {
+          name: document.getElementById('setup-school-name').value,
+          code: document.getElementById('setup-school-code').value,
+          address: document.getElementById('setup-school-address').value,
+          contact: document.getElementById('setup-school-contact').value
+        };
+        try {
+          let res = id ? await api.updateSchool(token, { id, ...data }) : await api.createSchool(token, data);
+          if (res.success) {
+            setupSchool = res.school;
+            document.getElementById('setup-school-id').value = setupSchool.id;
+            setSetupStep(2);
+          } else alert(res.error || "Failed to save school");
+        } catch (err) { alert("Error saving school details"); }
+      });
+
+      window.loadSetupGrades = async function () {
+        const token = auth.getToken();
+        const table = document.getElementById('setup-grades-table');
+        try {
+          const res = await api.getClasses(token);
+          if (res.success) {
+            setupGrades = res.classes;
+            renderSetupGradesTable();
+            populateStudentClassPicker();
+          }
+        } catch (e) { table.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">Failed to load grades</td></tr>'; }
+      }
+
+      function renderSetupGradesTable() {
+        const table = document.getElementById('setup-grades-table');
+        if (setupGrades.length === 0) {
+          table.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">No grades defined yet.</td></tr>';
+          return;
+        }
+        table.innerHTML = setupGrades.map(g => `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(g.name)}</td>
+            <td class="px-4 py-3 text-gray-500">${escapeHtml(g.academic_year || '-')}</td>
+            <td class="px-4 py-3 text-sm">
+              <button onclick="showGradeModal('${g.id}')" class="text-indigo-600 hover:text-indigo-800 mr-3">Edit</button>
+              <button onclick="deleteGrade('${g.id}')" class="text-red-500 hover:text-red-700">Delete</button>
+            </td>
+          </tr>`).join('');
+      }
+
+      window.deleteGrade = async function (id) {
+        if (!confirm("Delete this grade? All sections will be detached.")) return;
+        try {
+          const res = await api.deleteClass(auth.getToken(), id);
+          if (res.success) loadSetupGrades();
+        } catch (e) { alert("Error deleting grade"); }
+      }
+
+      window.populateSetupGradeSelector = function () {
+        const select = document.getElementById('setup-grade-selector');
+        const current = select.value;
+        select.innerHTML = '<option value="">Select Grade</option>' +
+          setupGrades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        select.value = current;
+      }
+
+      window.loadSetupSections = async function () {
+        const classId = document.getElementById('setup-grade-selector').value;
+        if (!classId) {
+          document.getElementById('setup-sections-empty').classList.remove('hidden');
+          document.getElementById('setup-sections-list').classList.add('hidden');
+          return;
+        }
+        document.getElementById('setup-sections-empty').classList.add('hidden');
+        document.getElementById('setup-sections-list').classList.remove('hidden');
+        try {
+          const res = await api.getSections(auth.getToken(), { class_id: classId });
+          if (res.success) {
+            setupSections = res.sections;
+            document.getElementById('setup-sections-table').innerHTML = setupSections.length === 0
+              ? '<tr><td colspan="4" class="px-4 py-8 text-center">No sections defined yet.</td></tr>'
+              : setupSections.map(s => `
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(s.name)}</td>
+                  <td class="px-4 py-3 text-gray-500">${escapeHtml(s.room || '-')}</td>
+                  <td class="px-4 py-3 text-gray-500">${escapeHtml(s.class_teacher_id || '-')}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <button onclick="showSectionModal('${s.id}')" class="text-indigo-600 hover:text-indigo-800 mr-3">Edit</button>
+                    <button onclick="deleteSection('${s.id}')" class="text-red-500 hover:text-red-700">Delete</button>
+                  </td>
+                </tr>`).join('');
+          }
+        } catch (e) { alert("Error loading sections"); }
+      }
+
+      window.showSectionModal = function (id) {
+        const classId = document.getElementById('setup-grade-selector').value;
+        document.getElementById('sectionModal').classList.add('show');
+        document.getElementById('sectionClassId').value = classId;
+        if (id) {
+          const s = setupSections.find(sec => sec.id === id);
+          document.getElementById('sectionModalTitle').textContent = 'Edit Section';
+          document.getElementById('editSectionId').value = id;
+          document.getElementById('sectionName').value = s.name;
+          document.getElementById('sectionRoom').value = s.room || '';
+          document.getElementById('sectionClassTeacherId').value = s.class_teacher_id || '';
+        } else {
+          document.getElementById('sectionModalTitle').textContent = 'Add Section';
+          document.getElementById('editSectionId').value = '';
+          document.getElementById('sectionName').value = '';
+          document.getElementById('sectionRoom').value = '';
+          document.getElementById('sectionClassTeacherId').value = '';
+        }
+      }
+
+      window.closeSectionModal = function () { document.getElementById('sectionModal').classList.remove('show'); }
+
+      document.getElementById('sectionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          class_id: document.getElementById('sectionClassId').value,
+          name: document.getElementById('sectionName').value,
+          room: document.getElementById('sectionRoom').value,
+          class_teacher_id: document.getElementById('sectionClassTeacherId').value
+        };
+        const id = document.getElementById('editSectionId').value;
+        try {
+          const res = id ? await api.updateSection(auth.getToken(), { id, ...data }) : await api.createSection(auth.getToken(), data);
+          if (res.success) { closeSectionModal(); loadSetupSections(); }
+        } catch (e) { alert("Error saving section"); }
+      });
+
+      window.deleteSection = async function (id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+          const res = await api.deleteSection(auth.getToken(), id);
+          if (res.success) loadSetupSections();
+        } catch (e) { alert("Error deleting section"); }
+      }
+
+      // Student Hierarchical Selection
+      window.populateStudentClassPicker = function () {
+        const select = document.getElementById('studentClass');
+        if (!select) return;
+        const current = select.value;
+        select.innerHTML = '<option value="">Select Class</option>' +
+          setupGrades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        select.value = current;
+      }
+
+      window.onStudentClassChange = async function () {
+        const classId = document.getElementById('studentClass').value;
+        const sectionSelect = document.getElementById('studentSection');
+        if (!classId) { sectionSelect.innerHTML = '<option value="">Select Section</option>'; return; }
+        sectionSelect.innerHTML = '<option value="">Loading...</option>';
+        try {
+          const res = await api.getSections(auth.getToken(), { class_id: classId });
+          if (res.success) {
+            sectionSelect.innerHTML = '<option value="">Select Section</option>' +
+              res.sections.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+          }
+        } catch (e) { sectionSelect.innerHTML = '<option value="">Error</option>'; }
+      }
+
       // RBAC System
       const RoleAccess = {
         getRoleConfig(roleName) {
+          if (!roleName) return {};
           const roles = window.TENANT_CONFIG?.ROLES || {};
-          return roles[roleName] || {};
+          const normalized = roleName.toLowerCase();
+          // Try exact match first, then lowercase match
+          return roles[roleName] || roles[normalized] || {};
         },
 
         hasPermission(permission) {
           const user = window.currentUser;
-          if (!user) return false;
+          if (!user || !user.role) return false;
 
           const roleConfig = this.getRoleConfig(user.role);
           const permissions = roleConfig.permissions || [];
 
-          // Admin has full access
-          if (permissions.includes('*')) return true;
+          // Admin role by name or wildcard permission
+          if (user.role.toLowerCase() === 'admin' || permissions.includes('*')) return true;
 
           return permissions.includes(permission);
         },
 
         hasPageAccess(pageName) {
+          if (!pageName) return true; // Default visible if no page specified
           const user = window.currentUser;
-          if (!user) return false;
+          if (!user || !user.role) return false;
 
           const roleConfig = this.getRoleConfig(user.role);
           const pages = roleConfig.pages || [];
 
-          // Admin has full access
-          if (pages.includes('*')) return true;
+          // Admin role by name or wildcard page access
+          if (user.role.toLowerCase() === 'admin' || pages.includes('*')) return true;
 
           return pages.includes(pageName);
         },
@@ -1432,7 +1874,9 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           // Show/hide nav items based on page access
           document.querySelectorAll('.nav-item').forEach(item => {
             const page = item.dataset.section;
-            if (!this.hasPageAccess(page)) {
+            if (this.hasPageAccess(page)) {
+              item.classList.remove('hidden');
+            } else {
               item.classList.add('hidden');
             }
           });
@@ -1443,17 +1887,19 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           document.getElementById('student-dashboard').classList.add('hidden');
           document.getElementById('parent-dashboard').classList.add('hidden');
 
-          if (user.role === 'admin') {
+          const role = (user.role || '').toLowerCase();
+
+          if (role === 'admin') {
             document.getElementById('admin-stats').classList.remove('hidden');
             document.getElementById('admin-panel').classList.remove('hidden');
             document.getElementById('roles-panel').classList.remove('hidden');
             loadUsers(auth.getToken());
             loadRoles(auth.getToken());
-          } else if (user.role === 'teacher') {
+          } else if (role === 'teacher') {
             document.getElementById('teacher-dashboard').classList.remove('hidden');
-          } else if (user.role === 'student') {
+          } else if (role === 'student') {
             document.getElementById('student-dashboard').classList.remove('hidden');
-          } else if (user.role === 'parent') {
+          } else if (role === 'parent') {
             document.getElementById('parent-dashboard').classList.remove('hidden');
           }
         }
@@ -2268,10 +2714,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
     <!-- Module-specific JavaScript -->
     <script>
       // Global data stores
-      let studentsData = [];
-      let subjectsData = [];
-      let examsData = [];
-      let currentAttendanceData = [];
       let timetableData = {};
       let curriculumData = [];
 
@@ -2289,7 +2731,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
         try {
           const response = await api.getStudents(token, {
-            class: classFilter || undefined,
+            class_id: classFilter || undefined,
             status: statusFilter || undefined,
             ...options
           });
@@ -2299,7 +2741,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           if (response.success) {
             studentsData = response.students || [];
             renderStudentsTable(studentsData);
-            populateClassDropdown(response.students);
+            populateClassFilter();
             SyncTracker.monitor('students', studentsData, () => loadStudents());
           } else {
             showError(response.error || 'Failed to load students');
@@ -2310,6 +2752,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         }
       }
 
+      function populateClassFilter() {
+        const select = document.getElementById('student-class-filter');
+        const current = select.value;
+        select.innerHTML = '<option value="">All Classes</option>' +
+          setupGrades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        select.value = current;
+      }
+
       function renderStudentsTable(students) {
         const content = document.getElementById('students-content');
 
@@ -2318,10 +2768,13 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           return;
         }
 
-        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admission No</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody class="divide-y divide-gray-100">';
+        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admission No</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade/Section</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody class="divide-y divide-gray-100">';
 
         students.forEach(s => {
           const statusClass = s.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
+          const grade = setupGrades.find(g => g.id === s.class_id);
+          const className = grade ? grade.name : (s.class || '-');
+          const sectionName = s.section || s.section_id || '';
 
           const syncStatus = s._sync ? s._sync.status : 'synced';
           const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
@@ -2334,7 +2787,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           html += `<tr class="hover:bg-gray-50 ${isPending ? 'opacity-60' : ''}">
           <td class="px-4 py-3">${escapeHtml(s.admission_no || '-')}</td>
           <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}${syncBadge}</td>
-          <td class="px-4 py-3">${escapeHtml(s.class)}${s.section ? '-' + escapeHtml(s.section) : ''}</td>
+          <td class="px-4 py-3">${escapeHtml(className)}${sectionName ? ' - ' + escapeHtml(sectionName) : ''}</td>
           <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${s.status}</span></td>
           <td class="px-4 py-3">
             <div class="flex gap-2">
@@ -2362,8 +2815,9 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         select.value = current;
       }
 
-      window.showStudentModal = function (studentId) {
+      window.showStudentModal = async function (studentId) {
         document.getElementById('studentModal').classList.add('show');
+        populateStudentClassPicker();
 
         if (studentId) {
           const student = studentsData.find(s => s.id === studentId);
@@ -2372,8 +2826,12 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             document.getElementById('editStudentId').value = studentId;
             document.getElementById('studentAdmissionNo').value = student.admission_no || '';
             document.getElementById('studentName').value = student.name || '';
-            document.getElementById('studentClass').value = student.class || '';
-            document.getElementById('studentSection').value = student.section || '';
+            document.getElementById('studentClass').value = student.class_id || '';
+
+            // Wait for sections to load before setting the value
+            await onStudentClassChange();
+            document.getElementById('studentSection').value = student.section_id || '';
+
             document.getElementById('studentParentPhone1').value = student.parent_phone1 || '';
             document.getElementById('studentParentPhone2').value = student.parent_phone2 || '';
           }
@@ -2383,7 +2841,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           document.getElementById('studentAdmissionNo').value = '';
           document.getElementById('studentName').value = '';
           document.getElementById('studentClass').value = '';
-          document.getElementById('studentSection').value = '';
+          document.getElementById('studentSection').innerHTML = '<option value="">Select Section</option>';
           document.getElementById('studentParentPhone1').value = '';
           document.getElementById('studentParentPhone2').value = '';
         }
@@ -2439,8 +2897,8 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const data = {
           admission_no: document.getElementById('studentAdmissionNo').value,
           name: document.getElementById('studentName').value,
-          class: document.getElementById('studentClass').value,
-          section: document.getElementById('studentSection').value,
+          class_id: document.getElementById('studentClass').value,
+          section_id: document.getElementById('studentSection').value,
           parent_phone1: document.getElementById('studentParentPhone1').value,
           parent_phone2: document.getElementById('studentParentPhone2').value
         };

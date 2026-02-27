@@ -1,6 +1,6 @@
 import { CacheConfig, CACHE_SCOPES } from './CacheConfig.js';
 
-export const CACHE_VERSION = 'v3';
+export const CACHE_VERSION = 'v6';
 
 export const KVCacheHandler = {
   kv: null,
@@ -23,30 +23,58 @@ export const KVCacheHandler = {
 
   buildKeyForAction(tenantId, action, context = {}) {
     const scope = CacheConfig.getScope(action);
-    const { token, queryParams = {} } = context;
+    const isBroad = CacheConfig.isBroad(action);
+    const { token, queryParams = {}, body = null } = context;
 
     let key = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
 
+    // 1. Scope handling
     if (scope === CACHE_SCOPES.USER || scope === CACHE_SCOPES.SESSION) {
       if (token) {
-        // Use a short hash of the token if user/session scope is required
-        // For now, we'll just append it, but we MUST exclude it from queryParams below
-        key += `:${token.substring(token.length - 8)}`;
+        // Use a short, stable suffix from the token
+        key += `:u${token.substring(token.length - 8)}`;
       }
     }
 
-    // Filter out redundant/sensitive params from the key
-    const ignoredParams = ['token', 'action', 'tenantId', 't'];
-    const filteredParams = Object.keys(queryParams)
-      .filter(k => !ignoredParams.includes(k))
-      .sort();
+    // 2. Data Key handling (Broad vs Specific)
+    if (!isBroad) {
+      // For non-broad actions, we still need uniqueness but NO raw query params in the key.
+      // We'll create a stable hash of the parameters.
+      const ignoredParams = ['token', 'action', 'tenantId', 't', 'cache', 'force'];
+      const filteredParams = Object.keys(queryParams)
+        .filter(k => !ignoredParams.includes(k))
+        .sort();
 
-    if (filteredParams.length > 0) {
-      const paramStr = filteredParams.map(k => `${k}=${queryParams[k]}`).join('&');
-      key += `?${paramStr}`;
+      let paramBits = '';
+      if (filteredParams.length > 0) {
+        paramBits = filteredParams.map(k => `${k}=${queryParams[k]}`).join('&');
+      }
+
+      // Also consider body if present
+      if (body && typeof body === 'string') {
+        paramBits += '|' + body;
+      } else if (body && typeof body === 'object') {
+        paramBits += '|' + JSON.stringify(body);
+      }
+
+      if (paramBits) {
+        // Simple stable hash for the key bit
+        const hash = this._simpleHash(paramBits);
+        key += `:h${hash}`;
+      }
     }
 
     return key;
+  },
+
+  _simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
   },
 
   async get(tenantId, action, queryParams = {}) {
@@ -93,6 +121,12 @@ export const KVCacheHandler = {
   async set(tenantId, action, data, queryParams = {}) {
     if (!this.isEnabled()) {
       console.log('[KV] Set - KV not enabled');
+      return;
+    }
+
+    // Safety: Never cache error responses or invalid objects
+    if (!data || data.success === false || data.error) {
+      console.warn(`[KV] Refused to cache error response for action: ${action}`);
       return;
     }
 
@@ -158,6 +192,12 @@ export const KVCacheHandler = {
   async setByKey(key, data, action) {
     if (!this.isEnabled()) {
       console.log('[KV] SetByKey - KV not enabled');
+      return;
+    }
+
+    // Safety: Never cache error responses or invalid objects
+    if (!data || data.success === false || data.error) {
+      console.warn(`[KV] Refused to cache error response for key: ${key}`);
       return;
     }
 
@@ -485,5 +525,41 @@ export const KVCacheHandler = {
       isFromCache: true,
       isStale: isStale
     };
+  },
+
+  filterData(data, queryParams) {
+    if (!data || !queryParams || Object.keys(queryParams).length === 0) return data;
+
+    const ignoredParams = ['token', 'action', 'tenantId', 't', 'cache', 'force'];
+    const filters = Object.fromEntries(
+      Object.entries(queryParams).filter(([k]) => !ignoredParams.includes(k))
+    );
+
+    if (Object.keys(filters).length === 0) return data;
+
+    const filterList = (list) => {
+      return list.filter(item => {
+        return Object.entries(filters).every(([key, value]) => {
+          if (item[key] === undefined) return true; // Property doesn't exist on item, skip filter
+          return String(item[key]) === String(value);
+        });
+      });
+    };
+
+    if (Array.isArray(data)) {
+      return filterList(data);
+    }
+
+    if (typeof data === 'object') {
+      const filtered = { ...data };
+      for (const key in filtered) {
+        if (Array.isArray(filtered[key])) {
+          filtered[key] = filterList(filtered[key]);
+        }
+      }
+      return filtered;
+    }
+
+    return data;
   }
 };
