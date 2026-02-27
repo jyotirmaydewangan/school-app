@@ -7,11 +7,12 @@ import { ResponseHandler } from './utils/ResponseHandler.js';
 globalThis.workerEnv = {};
 
 const Router = {
-  create(env) {
+  create(env, ctx) {
     globalThis.workerEnv = env;
     const kvHandler = KVCacheHandler.init(env);
     return {
       env,
+      ctx,
       kvHandler,
       responseHandler: ResponseHandler.init(caches.default),
 
@@ -47,10 +48,21 @@ const Router = {
       async handlePostReadRequest(request, action, urlObj, tenantId) {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
+        const cacheHeader = request.headers.get('X-Cache-Control');
 
         const body = await RequestParser.parseBody(request);
         const token = AuthMiddleware.extractToken(request);
         const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
+
+        let forceRefresh = cacheHeader === 'no-cache';
+        if (!forceRefresh && body) {
+          try {
+            const parsed = JSON.parse(body);
+            if (parsed.cache === 'false' || parsed.force === 'true') {
+              forceRefresh = true;
+            }
+          } catch (e) { }
+        }
 
         const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
           token,
@@ -58,15 +70,22 @@ const Router = {
           body: bodyWithToken
         });
 
-        if (this.kvHandler.isEnabled() && isCacheable) {
+        if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
           const cached = await this.kvHandler.getByKey(cacheKey);
 
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
               this.refreshPostInBackground(tenantId, action, request, cacheKey);
-              return this.kvHandler.buildResponse(cached.data, true);
             }
-            return this.kvHandler.buildResponse(cached.data, false);
+            const result = this.kvHandler.buildResponse(cached.data, cached.isStale);
+            return new Response(JSON.stringify(result), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Cache': cached.isStale ? 'STALE' : 'HIT',
+                ...CorsMiddleware.buildHeaders()
+              }
+            });
           }
         }
 
@@ -108,8 +127,11 @@ const Router = {
       async handleReadRequest(request, action, method, urlObj, tenantId) {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
+        const cacheHeader = request.headers.get('X-Cache-Control');
 
-        if (this.kvHandler.isEnabled() && isCacheable) {
+        let forceRefresh = queryParams.cache === 'false' || queryParams.force === 'true' || cacheHeader === 'no-cache';
+
+        if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
           const token = AuthMiddleware.extractToken(request);
           const cached = await this.kvHandler.getByKey(
             this.kvHandler.buildKeyForAction(tenantId, action, { token, queryParams })
@@ -118,9 +140,16 @@ const Router = {
           if (cached && !cached.isExpired) {
             if (cached.isStale) {
               this.refreshInBackground(tenantId, action, queryParams, request);
-              return this.kvHandler.buildResponse(cached.data, true);
             }
-            return this.kvHandler.buildResponse(cached.data, false);
+            const result = this.kvHandler.buildResponse(cached.data, cached.isStale);
+            return new Response(JSON.stringify(result), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Cache': cached.isStale ? 'STALE' : 'HIT',
+                ...CorsMiddleware.buildHeaders()
+              }
+            });
           }
         }
 
@@ -155,7 +184,44 @@ const Router = {
       },
 
       async handleWriteRequest(request, action, method, urlObj, tenantId) {
-        const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId);
+        const bodyText = await RequestParser.parseBody(request);
+        const body = bodyText ? JSON.parse(bodyText) : {};
+
+        // Generic Mutation Handling - Applies to any action with a 'get*' invalidation pattern
+        const mutationContext = await this.kvHandler.applyMutation(tenantId, action, body);
+
+        if (mutationContext) {
+          console.log(`[Worker] Action ${action} applied optimistically to ${mutationContext.readAction}`);
+
+          const syncTask = async () => {
+            try {
+              const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId, {}, bodyText);
+              const result = await response.json();
+              await this.kvHandler.resolveMutation(tenantId, mutationContext, result);
+            } catch (e) {
+              console.error(`[Worker] Background sync failed for ${action}:`, e.message);
+              await this.kvHandler.resolveMutation(tenantId, mutationContext, { success: false, error: e.message });
+            }
+          };
+
+          if (this.ctx) {
+            this.ctx.waitUntil(syncTask());
+          } else {
+            await syncTask();
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Request submitted and is processing',
+            optimistic: true,
+            action: action
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...CorsMiddleware.buildHeaders() }
+          });
+        }
+
+        const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId, {}, bodyText);
 
         if (response.ok) {
           const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
@@ -225,11 +291,11 @@ const Router = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const tenantId = env.TENANT_ID || 'unknown';
     console.log(`[${tenantId}] ${request.method} ${request.url}`);
 
-    const router = Router.create(env);
+    const router = Router.create(env, ctx);
     return await router.route(request);
   }
 };

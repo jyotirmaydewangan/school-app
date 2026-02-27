@@ -11,7 +11,7 @@ project:
 
 defaults:
   # App display name
-  appName: "My Finance"
+  appName: "My School"
   
   # Theme colors (can be overridden per tenant)
   theme:

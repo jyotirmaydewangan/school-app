@@ -7,6 +7,10 @@ const CORS_HEADERS = Object.freeze({
 });
 
 export const CorsMiddleware = {
+  buildHeaders() {
+    return { ...CORS_HEADERS };
+  },
+
   handleOptions() {
     return new Response(null, {
       headers: CORS_HEADERS

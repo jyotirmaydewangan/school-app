@@ -4,11 +4,15 @@ const api = {
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     const token = auth.getToken();
-    
+
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers
     };
+
+    if (options.cache === 'false') {
+      headers['X-Cache-Control'] = 'no-cache';
+    }
 
     if (token && !options.noAuth) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -21,7 +25,7 @@ const api = {
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -78,7 +82,7 @@ const api = {
     params.append('token', token);
     if (options.limit) params.append('limit', options.limit);
     if (options.offset) params.append('offset', options.offset);
-    
+
     return this.request('/getUsers', {
       method: 'POST',
       body: JSON.stringify(Object.fromEntries(params))
@@ -149,7 +153,7 @@ const api = {
     if (options.status) params.append('status', options.status);
     if (options.limit) params.append('limit', options.limit);
     if (options.offset) params.append('offset', options.offset);
-    
+
     return this.request('/getStudents?' + params.toString());
   },
 
@@ -204,7 +208,7 @@ const api = {
     if (options.section) params.append('section', options.section);
     if (options.year) params.append('year', options.year);
     if (options.month) params.append('month', options.month);
-    
+
     return this.request('/getAttendance?' + params.toString());
   },
 
@@ -219,7 +223,7 @@ const api = {
     const params = new URLSearchParams();
     params.append('token', token);
     if (options.class) params.append('class', options.class);
-    
+
     return this.request('/getSubjects?' + params.toString());
   },
 
@@ -250,7 +254,7 @@ const api = {
     if (options.class) params.append('class', options.class);
     if (options.subject_id) params.append('subject_id', options.subject_id);
     if (options.date) params.append('date', options.date);
-    
+
     return this.request('/getExams?' + params.toString());
   },
 
@@ -280,7 +284,7 @@ const api = {
     params.append('token', token);
     if (options.exam_id) params.append('exam_id', options.exam_id);
     if (options.student_id) params.append('student_id', options.student_id);
-    
+
     return this.request('/getMarks?' + params.toString());
   },
 
@@ -303,7 +307,7 @@ const api = {
     params.append('token', token);
     params.append('student_id', data.student_id);
     if (data.year) params.append('year', data.year);
-    
+
     return this.request('/generateReportCard?' + params.toString());
   },
 
@@ -314,7 +318,7 @@ const api = {
     if (options.section) params.append('section', options.section);
     if (options.teacher_id) params.append('teacher_id', options.teacher_id);
     if (options.day) params.append('day', options.day);
-    
+
     return this.request('/getTimetable?' + params.toString());
   },
 
@@ -338,7 +342,7 @@ const api = {
     if (options.class) params.append('class', options.class);
     if (options.subject_id) params.append('subject_id', options.subject_id);
     if (options.status) params.append('status', options.status);
-    
+
     return this.request('/getSyllabus?' + params.toString());
   },
 
@@ -369,7 +373,7 @@ const api = {
     if (options.class) params.append('class', options.class);
     if (options.subject_id) params.append('subject_id', options.subject_id);
     if (options.type) params.append('type', options.type);
-    
+
     return this.request('/getResources?' + params.toString());
   },
 

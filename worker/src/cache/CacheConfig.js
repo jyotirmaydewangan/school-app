@@ -12,6 +12,8 @@ const CACHE_RULES = {
   'getNoticeboard': { scope: CACHE_SCOPES.GLOBAL, ttl: 604800 },
   'getTimetable': { scope: CACHE_SCOPES.GLOBAL, ttl: 2592000 },
   'getMarks': { scope: CACHE_SCOPES.USER, ttl: 604800 },
+  'getStudents': { scope: CACHE_SCOPES.GLOBAL, ttl: 2592000 },
+  'getPendingRegistrations': { scope: CACHE_SCOPES.GLOBAL, ttl: 60 },
   'verify': { scope: CACHE_SCOPES.SESSION, ttl: 900 }
 };
 
@@ -33,7 +35,13 @@ const CACHE_INVALIDATION_MAP = {
   'createTimetable': ['getTimetable'],
   'updateTimetable': ['getTimetable'],
   'createMarks': ['getMarks'],
-  'updateMarks': ['getMarks']
+  'updateMarks': ['getMarks'],
+  'createStudent': ['getStudents'],
+  'updateStudent': ['getStudents'],
+  'deleteStudent': ['getStudents'],
+  'approveStudent': ['getStudents'],
+  'approveUser': ['getPendingRegistrations', 'getUsers'],
+  'rejectUser': ['getPendingRegistrations']
 };
 
 export const CacheConfig = {
