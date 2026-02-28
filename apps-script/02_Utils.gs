@@ -13,6 +13,21 @@ const Utils = {
     return hex;
   },
 
+  hashPassword(password) {
+    const salt = Utilities.getUuid();
+    const hash = this.sha256(password + salt);
+    return salt + ':' + hash;
+  },
+
+  verifyPassword(password, storedHash) {
+    if (!storedHash || !storedHash.includes(':')) return false;
+    const parts = storedHash.split(':');
+    const salt = parts[0];
+    const expectedHash = parts[1];
+    const hash = this.sha256(password + salt);
+    return hash === expectedHash;
+  },
+
   bytesToString(bytes) {
     return bytes.map(b => String.fromCharCode(b >= 0 ? b : b + 256)).join('');
   },

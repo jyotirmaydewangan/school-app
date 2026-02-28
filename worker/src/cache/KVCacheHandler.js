@@ -1,6 +1,6 @@
 import { CacheConfig, CACHE_SCOPES } from './CacheConfig.js';
 
-export const CACHE_VERSION = 'v6';
+export const CACHE_VERSION = 'v1';
 
 export const KVCacheHandler = {
   kv: null,
