@@ -453,7 +453,8 @@ export const KVCacheHandler = {
 
     if (isDelete) {
       console.log(`[KV] Resolving DELETE for ${idField}=${itemId}`);
-      return list.filter(i => String(i[idField]) !== String(itemId));
+      const newList = list.filter(i => String(i[idField]) !== String(itemId));
+      return { newList, matchedCount: list.length - newList.length };
     }
 
     const backendEntity = (backendResponse && backendResponse[idField] !== undefined) ? backendResponse :
