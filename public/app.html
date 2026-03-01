@@ -2236,7 +2236,10 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       // ============ CLASS MANAGEMENT - SECTION MODAL ============
       let sectionsData = [];
 
-      window.openClassSections = async function (classId, className) {
+      let classPendingStatus = false;
+
+      window.openClassSections = async function (classId, className, isPending = false) {
+        classPendingStatus = isPending;
         document.getElementById('sectionModalTitle').textContent = 'Manage Sections';
         document.getElementById('sectionClassId').value = classId;
         document.getElementById('sectionClassName').textContent = className;
@@ -2263,7 +2266,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                 <span class="font-medium text-gray-800">${escapeHtml(s.name)}</span>
                 ${s.room ? `<span class="text-xs text-gray-500 ml-2"><i class="fas fa-door"></i> ${escapeHtml(s.room)}</span>` : ''}
               </div>
-              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+              <div class="flex gap-1 ${classPendingStatus ? 'opacity-50 pointer-events-none' : 'opacity-0 group-hover:opacity-100'} transition">
                 <button onclick="editSection('${s.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded" title="Edit">
                   <i class="fas fa-edit text-xs"></i>
                 </button>
@@ -3009,11 +3012,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             ? `<div class="flex flex-wrap gap-1">
                 ${sections.slice(0, 3).map(s => `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${escapeHtml(s.name)}</span>`).join('')}
                 ${sections.length > 3 ? `<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">+${sections.length - 3}</span>` : ''}
-                <button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}')" class="ml-1 px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">
+                <button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}', ${isPending})" class="ml-1 px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">
                   <i class="fas fa-plus"></i>
                 </button>
               </div>`
-            : `<button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}')" class="text-xs text-indigo-600 hover:text-indigo-800">
+            : `<button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}', ${isPending})" class="text-xs text-indigo-600 hover:text-indigo-800 ${isPending ? 'pointer-events-none opacity-50' : ''}">
                 <i class="fas fa-plus"></i> Add Section
               </button>`;
 
@@ -3457,6 +3460,10 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         document.getElementById('students-loading').classList.remove('hidden');
         document.getElementById('students-content').innerHTML = '';
 
+        if (setupGrades.length === 0) {
+          await loadSetupGrades();
+        }
+
         try {
           const response = await api.getStudents(token, {
             class_id: classFilter || undefined,
@@ -3545,7 +3552,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
       window.showStudentModal = async function (studentId) {
         document.getElementById('studentModal').classList.add('show');
-        populateStudentClassPicker();
+        if (setupGrades.length === 0) {
+          await loadSetupGrades();
+        } else {
+          populateStudentClassPicker();
+        }
 
         if (studentId) {
           const student = studentsData.find(s => s.id === studentId);
