@@ -260,6 +260,15 @@ function doPost(e) {
       case 'deleteSection':
         result = handleDeleteSection(token, postData);
         break;
+      case 'createClass':
+        result = handleCreateClass(token, postData);
+        break;
+      case 'updateClass':
+        result = handleUpdateClass(token, postData);
+        break;
+      case 'deleteClass':
+        result = handleDeleteClass(token, postData);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -838,7 +847,7 @@ function handleAutoLinkParents(token, data) {
   return ParentStudentRepository.autoLinkByPhone();
 }
 
-function handleGetClasses(token) {
+function handleGetClasses(token, params) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
   
@@ -860,8 +869,7 @@ function handleCreateClass(token, params) {
   
   const data = {
     name: params.name,
-    section: params.section,
-    stream: params.stream,
+    stream: params.stream || 'General',
     academic_year: params.academic_year,
     is_active: params.is_active !== 'false'
   };
@@ -888,7 +896,6 @@ function handleUpdateClass(token, params) {
   
   const data = {};
   if (params.name !== undefined) data.name = params.name;
-  if (params.section !== undefined) data.section = params.section;
   if (params.stream !== undefined) data.stream = params.stream;
   if (params.academic_year !== undefined) data.academic_year = params.academic_year;
   if (params.is_active !== undefined) data.is_active = params.is_active === 'true';
@@ -1118,6 +1125,7 @@ function handleGetSchools(token, params) {
   if (params.id) return { success: true, school: SchoolRepository.findById(params.id) };
   
   const schools = SchoolRepository.findAll();
+  Logger.log('Schools found: ' + JSON.stringify(schools));
   return { success: true, schools };
 }
 
@@ -1126,6 +1134,11 @@ function handleCreateSchool(token, data) {
   if (!auth.success) return auth;
   
   if (!data.name) return { success: false, error: 'School name is required' };
+  
+  const existingSchools = SchoolRepository.findAll();
+  if (existingSchools.total > 0) {
+    return { success: false, error: 'A school profile already exists. Please edit the existing school profile.' };
+  }
   
   const school = SchoolRepository.create(data);
   return { success: true, school };
@@ -1153,8 +1166,12 @@ function handleGetSections(token, params) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
   
-  const sections = params.class_id ? SectionRepository.findByClassId(params.class_id) : SectionRepository.findAll();
-  return { success: true, sections };
+  const options = {};
+  if (params && params.class_id) {
+    options.class_id = params.class_id;
+  }
+  const result = SectionRepository.findAll(options);
+  return { success: true, sections: result.sections };
 }
 
 function handleCreateSection(token, data) {

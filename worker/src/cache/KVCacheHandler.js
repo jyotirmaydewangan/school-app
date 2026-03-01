@@ -1,6 +1,6 @@
 import { CacheConfig, CACHE_SCOPES } from './CacheConfig.js';
 
-export const CACHE_VERSION = 'v1';
+export const CACHE_VERSION = 'v2';
 
 export const KVCacheHandler = {
   kv: null,
@@ -155,7 +155,7 @@ export const KVCacheHandler = {
       return null;
     }
 
-    console.log(`[KV] GetByKey: ${key}`);
+    console.warn(`[KV] GetByKey: ${key}`);
 
     try {
       const cached = await this.kv.get(key, 'json');
@@ -164,13 +164,13 @@ export const KVCacheHandler = {
         const staleAt = cached.staleAt || 0;
         const expiresAt = cached.expiresAt || 0;
 
-        console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
+        console.warn(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
 
         const data = cached.data;
         const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
 
         if (isEmpty) {
-          console.log('[KV] Cached data is empty, treating as miss');
+          console.warn('[KV] Cached data is empty, treating as miss');
           await this.kv.delete(key);
           return null;
         }
@@ -181,7 +181,7 @@ export const KVCacheHandler = {
           isExpired: now >= expiresAt
         };
       } else {
-        console.log('[KV] Cache miss for key:', key);
+        console.warn('[KV] Cache miss for key:', key);
       }
     } catch (e) {
       console.error('KV getByKey error:', e.message);
@@ -250,11 +250,20 @@ export const KVCacheHandler = {
   },
 
   async applyMutation(tenantId, writeAction, payload) {
-    if (!this.isEnabled()) return null;
+    console.warn(`[KV] ===== applyMutation START: ${writeAction} =====`);
+
+    if (!this.isEnabled()) {
+      console.warn('[KV] Cache not enabled, skipping mutation');
+      return null;
+    }
 
     const targets = CacheConfig.getInvalidatePatterns(writeAction);
+    console.warn('[KV] Mutation targets:', targets);
     const readActions = targets.filter(t => t.startsWith('get'));
-    if (readActions.length === 0) return null;
+    if (readActions.length === 0) {
+      console.warn('[KV] No read actions to invalidate, skipping mutation');
+      return null;
+    }
 
     const mutations = [];
     let hasApplied = false;
@@ -270,20 +279,33 @@ export const KVCacheHandler = {
       return acc;
     }, {});
 
+    console.warn('[KV] Filtered payload:', filteredPayload);
+    console.warn('[KV] Payload ID:', filteredPayload.id);
+
     // Determine mutation type once
     const mutationType = writeAction.toLowerCase().includes('create') ? 'CREATE' :
       writeAction.toLowerCase().includes('delete') ? 'DELETE' : 'UPDATE';
 
+    console.warn('[KV] Mutation type:', mutationType);
+
     for (const readAction of readActions) {
       const key = this.buildKeyForAction(tenantId, readAction);
+      console.warn('[KV] Looking for cache key:', key);
       const cached = await this.getByKey(key);
-      if (!cached || !cached.data) continue;
+      console.warn('[KV] Cached data for', readAction + ':', cached ? 'found' : 'not found');
+      if (!cached || !cached.data) {
+        console.warn('[KV] No cached data found, cannot apply mutation');
+        continue;
+      }
+
+      console.warn('[KV] Cached data structure:', JSON.stringify(cached.data).substring(0, 500));
 
       const previousData = JSON.parse(JSON.stringify(cached.data));
       let data = cached.data;
       let appliedToThisAction = false;
 
       if (Array.isArray(data)) {
+        console.warn('[KV] Data is array, length:', data.length);
         const { list: newList, applied, generatedId, idField } = this._mutateList(data, mutationType, filteredPayload);
         if (applied) {
           data = newList;
@@ -292,11 +314,28 @@ export const KVCacheHandler = {
           finalIdField = idField;
         }
       } else {
+        console.warn('[KV] Data is object, keys:', Object.keys(data));
         data = { ...data };
         for (const listKey in data) {
-          if (Array.isArray(data[listKey])) {
-            const { list: newList, applied, generatedId, idField } = this._mutateList(data[listKey], mutationType, filteredPayload);
+          console.warn('[KV] Checking key:', listKey, 'value type:', typeof data[listKey]);
+
+          // Handle nested object with schools array (e.g., { schools: { schools: [...], total: 1 } })
+          let listData = data[listKey];
+          if (listData && typeof listData === 'object' && !Array.isArray(listData) && listData.schools && Array.isArray(listData.schools)) {
+            console.warn('[KV] Found nested schools array in:', listKey);
+            const { list: newList, applied, generatedId, idField } = this._mutateList(listData.schools, mutationType, filteredPayload);
             if (applied) {
+              console.warn('[KV] Mutation applied to nested array in key:', listKey);
+              data[listKey] = { ...listData, schools: newList };
+              appliedToThisAction = true;
+              finalItemId = generatedId || finalItemId;
+              finalIdField = idField;
+            }
+          } else if (Array.isArray(listData)) {
+            console.warn('[KV] Array found in key:', listKey, 'length:', listData.length);
+            const { list: newList, applied, generatedId, idField } = this._mutateList(listData, mutationType, filteredPayload);
+            if (applied) {
+              console.warn('[KV] Mutation applied to key:', listKey);
               data[listKey] = newList;
               appliedToThisAction = true;
               finalItemId = generatedId || finalItemId;
@@ -307,15 +346,22 @@ export const KVCacheHandler = {
       }
 
       if (appliedToThisAction) {
+        console.warn('[KV] Saving mutated data back to cache');
         await this.setByKey(key, data, readAction);
         mutations.push({ key, previousData, readAction, idField: finalIdField });
         hasApplied = true;
       }
     }
 
-    if (!hasApplied) return null;
+    if (!hasApplied) {
+      console.warn('[KV] No mutation applied - data not found or ID mismatch in cache');
+      return null;
+    }
+
+    console.warn('[KV] ===== MUTATION APPLIED SUCCESSFULLY =====');
 
     const itemId = payload[finalIdField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || finalItemId;
+    console.warn(`[KV] applyMutation SUCCESS: itemId=${itemId}, idField=${finalIdField}, readActions=${mutations.map(m => m.readAction).join(',')}`);
 
     return { mutations, identityField: finalIdField, itemId };
   },
@@ -336,6 +382,7 @@ export const KVCacheHandler = {
       const { key, previousData, readAction, idField } = mut;
 
       if (backendResponse && backendResponse.success === false) {
+        console.warn(`[KV] Resolving mutation FAILED for ${key} - Rolling back to previous data`);
         await this.setByKey(key, previousData, readAction);
         continue;
       }
@@ -353,7 +400,13 @@ export const KVCacheHandler = {
       } else {
         data = { ...data };
         for (const listKey in data) {
-          if (Array.isArray(data[listKey])) {
+          // Handle nested object with schools array (e.g., { schools: { schools: [...], total: 1 } })
+          let listData = data[listKey];
+          if (listData && typeof listData === 'object' && !Array.isArray(listData) && listData.schools && Array.isArray(listData.schools)) {
+            const { newList, matchedCount } = this._resolveList(listData.schools, idField, itemId, backendResponse);
+            data[listKey] = { ...listData, schools: newList };
+            totalMatched += matchedCount;
+          } else if (Array.isArray(data[listKey])) {
             const { newList, matchedCount } = this._resolveList(data[listKey], idField, itemId, backendResponse);
             data[listKey] = newList;
             totalMatched += matchedCount;

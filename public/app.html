@@ -91,6 +91,199 @@
       background: #a1a1a1;
     }
 
+    /* Toast Notification Styles */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      min-width: 280px;
+      max-width: 400px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .toast.toast-exit {
+      animation: slideOut 0.3s ease forwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      to {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+    }
+
+    .toast-success {
+      background: #ecfdf5;
+      border-left: 4px solid #10b981;
+      color: #065f46;
+    }
+
+    .toast-error {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .toast-warning {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+
+    .toast-info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      color: #1e40af;
+    }
+
+    .toast-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .toast-close {
+      margin-left: auto;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+    }
+
+    /* Skeleton Loader */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    .skeleton-row {
+      height: 52px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-text {
+      height: 16px;
+      width: 60%;
+    }
+
+    .skeleton-text-sm {
+      height: 14px;
+      width: 40%;
+    }
+
+    /* Form Validation Styles */
+    .form-field-error {
+      border-color: #ef4444 !important;
+    }
+
+    .error-message {
+      color: #ef4444;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .form-group.error .error-message {
+      display: block;
+    }
+
+    /* Pagination Styles */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      padding: 8px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination button.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    /* Search Input */
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-input-wrapper .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+    }
+
+    .search-input-wrapper input {
+      padding-left: 40px;
+    }
+
     @media (min-width: 768px) {
       #hamburger {
         display: none !important;
@@ -100,6 +293,9 @@
 </head>
 
 <body class="bg-gray-50 min-h-screen">
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
   <!-- Mobile Overlay -->
   <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="closeSidebar()"></div>
 
@@ -239,170 +435,104 @@
           <span id="error-message"></span>
         </div>
 
-        <!-- School Setup Section (Wizard) -->
+        <!-- School Setup Section (Profile) -->
         <section id="setup" class="content-section">
           <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Setup Wizard</h1>
-              <p class="text-gray-500 mt-1">Guided flow to setup your school hierarchy</p>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">School Profile</h1>
+              <p class="text-gray-500 mt-1">Manage your school information</p>
             </div>
           </div>
 
-          <!-- Wizard Steps Indicator -->
-          <div class="mb-8 overflow-x-auto pb-4">
-            <div class="flex items-center min-w-[600px]">
-              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(1)">
-                <div id="step-1-icon"
-                  class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2">
-                  1</div>
-                <span class="text-sm font-medium text-gray-800">School Identity</span>
+          <!-- View Mode: School Profile -->
+          <div id="school-profile-view" class="hidden">
+            <div id="school-card" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-3xl mx-auto">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <h3 class="text-lg font-bold text-gray-800">School Information</h3>
+                  <span id="school-sync-badge"></span>
+                </div>
+                <button onclick="editSchoolProfile()"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                  <i class="fas fa-edit mr-2"></i>Edit
+                </button>
               </div>
-              <div class="h-0.5 bg-gray-200 flex-1 -mt-8"></div>
-              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(2)">
-                <div id="step-2-icon"
-                  class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2">
-                  2</div>
-                <span class="text-sm font-medium text-gray-500">Define Grades</span>
-              </div>
-              <div class="h-0.5 bg-gray-200 flex-1 -mt-8"></div>
-              <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="setSetupStep(3)">
-                <div id="step-3-icon"
-                  class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2">
-                  3</div>
-                <span class="text-sm font-medium text-gray-500">Split Sections</span>
+              <div id="school-card-content" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">School
+                      Name</label>
+                    <p id="view-school-name" class="text-gray-800 font-medium text-lg">-</p>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Short
+                      Code</label>
+                    <p id="view-school-code" class="text-gray-800">-</p>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Address</label>
+                  <p id="view-school-address" class="text-gray-600">-</p>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Contact
+                    Details</label>
+                  <p id="view-school-contact" class="text-gray-600">-</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Step 1: School Identity -->
-          <div id="setup-step-1" class="setup-step-container">
+          <!-- Edit/Add Mode: School Form -->
+          <div id="school-profile-form" class="hidden">
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-2xl mx-auto">
-              <h3 class="text-lg font-bold mb-4">School Details</h3>
+              <h3 id="school-form-title" class="text-lg font-bold mb-4">Add School</h3>
               <form id="school-setup-form" class="space-y-4">
                 <input type="hidden" id="setup-school-id">
                 <div class="grid grid-cols-1 gap-4">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">School Name *</label>
                     <input type="text" id="setup-school-name" required
-                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                      class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Short Code</label>
                     <input type="text" id="setup-school-code" placeholder="e.g. S-ABC"
-                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                      class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
                     <textarea id="setup-school-address" rows="3"
-                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                      class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Contact Details</label>
                     <input type="text" id="setup-school-contact"
-                      class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                      class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
                   </div>
                 </div>
-                <div class="flex justify-end pt-4">
+                <div class="flex justify-end gap-3 pt-4">
+                  <button type="button" onclick="cancelSchoolEdit()"
+                    class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">Cancel</button>
                   <button type="submit"
-                    class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Save
-                    & Continue</button>
+                    class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Save</button>
                 </div>
               </form>
             </div>
           </div>
 
-          <!-- Step 2: Define Grades (Classes) -->
-          <div id="setup-step-2" class="setup-step-container hidden">
-            <!-- Content for Grade Definitions -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-4xl mx-auto">
-              <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-bold">Manage Grades (Classes)</h3>
-                <button onclick="showGradeModal()"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
-                  <i class="fas fa-plus mr-2"></i>Add Grade
-                </button>
+          <!-- Empty State: No School -->
+          <div id="school-profile-empty" class="hidden">
+            <div class="bg-white rounded-2xl p-12 shadow-sm border border-gray-100 max-w-2xl mx-auto text-center">
+              <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-school text-indigo-400 text-3xl"></i>
               </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                  <thead>
-                    <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
-                      <th class="px-4 py-3">Grade Name</th>
-                      <th class="px-4 py-3">Academic Year</th>
-                      <th class="px-4 py-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="setup-grades-table" class="divide-y divide-gray-100 italic text-gray-400">
-                    <tr>
-                      <td colspan="3" class="px-4 py-8 text-center">Loading grades...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="flex justify-between pt-8">
-                <button onclick="setSetupStep(1)"
-                  class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">Back</button>
-                <button onclick="setSetupStep(3)"
-                  class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Next:
-                  Split Sections</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Split Sections -->
-          <div id="setup-step-3" class="setup-step-container hidden">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-5xl mx-auto">
-              <div class="flex flex-col sm:flex-row gap-4 justify-between mb-6">
-                <div>
-                  <h3 class="text-lg font-bold">Define Sections for Grades</h3>
-                  <p class="text-sm text-gray-500">Select a grade to manage its sections</p>
-                </div>
-                <div class="w-48">
-                  <select id="setup-grade-selector" onchange="loadSetupSections()"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                    <option value="">Select Grade</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="id=" setup-sections-content">
-                <div id="setup-sections-empty" class="text-center py-12">
-                  <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-layer-group text-gray-300 text-2xl"></i>
-                  </div>
-                  <p class="text-gray-500">Select a grade from the dropdown to start adding sections</p>
-                </div>
-
-                <div id="setup-sections-list" class="hidden">
-                  <div class="flex justify-end mb-4">
-                    <button onclick="showSectionModal()"
-                      class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
-                      <i class="fas fa-plus mr-1"></i>Add Section
-                    </button>
-                  </div>
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                      <thead>
-                        <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
-                          <th class="px-4 py-3">Section Name</th>
-                          <th class="px-4 py-3">Room</th>
-                          <th class="px-4 py-3">Teacher</th>
-                          <th class="px-4 py-3">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="setup-sections-table" class="divide-y divide-gray-100">
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex justify-between pt-8">
-                <button onclick="setSetupStep(2)"
-                  class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">Back</button>
-                <button onclick="navigateTo('students')"
-                  class="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">Setup
-                  Complete: Go to Students</button>
-              </div>
+              <h3 class="text-xl font-bold text-gray-800 mb-2">Setup Your School</h3>
+              <p class="text-gray-500 mb-6">Add your school information to get started</p>
+              <button onclick="showSchoolForm()"
+                class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                <i class="fas fa-plus mr-2"></i>Add School
+              </button>
             </div>
           </div>
         </section>
@@ -933,12 +1063,43 @@
                 <i class="fas fa-plus"></i> Add Class
               </button>
             </div>
+            <!-- Search and Filter Bar -->
+            <div class="p-5 sm:p-6 border-b border-gray-100 bg-gray-50">
+              <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1 search-input-wrapper">
+                  <i class="fas fa-search search-icon"></i>
+                  <input type="text" id="classSearchInput" placeholder="Search classes..."
+                    class="w-full px-4 py-2.5 pl-11 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                    oninput="debounceClassSearch(this.value)">
+                </div>
+                <select id="classStreamFilter"
+                  class="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white"
+                  onchange="applyClassFilters()">
+                  <option value="">All Streams</option>
+                  <option value="General">General</option>
+                  <option value="Science">Science</option>
+                  <option value="Commerce">Commerce</option>
+                  <option value="Arts">Arts</option>
+                </select>
+                <select id="classStatusFilter"
+                  class="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white"
+                  onchange="applyClassFilters()">
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
             <div class="p-5 sm:p-6">
               <div id="classes-loading" class="py-12 text-center text-gray-500">
                 <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
                 <p>Loading classes...</p>
               </div>
               <div id="classes-content"></div>
+              <div id="classes-empty" class="hidden py-12 text-center text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-3"></i>
+                <p>No classes found</p>
+              </div>
             </div>
           </div>
         </section>
@@ -987,16 +1148,25 @@
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream</label>
               <select id="classStream"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white">
-                <option value="">General</option>
+                <option value="General">General</option>
                 <option value="Science">Science</option>
                 <option value="Commerce">Commerce</option>
                 <option value="Arts">Arts</option>
               </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Academic Year</label>
+              <div>
+              </div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Academic Year *</label>
               <input type="text" id="classAcademicYear" placeholder="e.g., 2025-26"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Active Status</label>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="classIsActive" class="sr-only peer" checked>
+                <div
+                  class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600">
+                </div>
+              </label>
             </div>
           </div>
           <div class="mt-6 flex gap-3">
@@ -1488,44 +1658,61 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
     <!-- Section Modal -->
     <div id="sectionModal"
       class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 id="sectionModalTitle" class="text-lg font-semibold text-gray-800">Add Section</h3>
+          <h3 id="sectionModalTitle" class="text-lg font-semibold text-gray-800">Manage Sections</h3>
           <button onclick="closeSectionModal()" class="text-gray-400 hover:text-gray-600 transition">
             <i class="fas fa-times text-lg"></i>
           </button>
         </div>
-        <form id="sectionForm" class="p-6">
-          <input type="hidden" id="editSectionId">
-          <input type="hidden" id="sectionClassId">
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Section Name *</label>
-              <input type="text" id="sectionName" required placeholder="e.g., A"
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Room</label>
-              <input type="text" id="sectionRoom" placeholder="e.g., Room 101"
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Class Teacher ID</label>
-              <input type="text" id="sectionClassTeacherId" placeholder="Teacher User ID"
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
-            </div>
+        <div class="p-6">
+          <div id="sectionSelectedClass" class="mb-4 p-3 bg-indigo-50 rounded-xl">
+            <span class="text-sm text-indigo-600 font-medium">Class:</span>
+            <span id="sectionClassName" class="text-indigo-900 font-semibold ml-2"></span>
           </div>
-          <div class="mt-6 flex gap-3">
-            <button type="submit"
-              class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
-              Save Section
-            </button>
-            <button type="button" onclick="closeSectionModal()"
-              class="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
-              Cancel
-            </button>
+
+          <!-- Existing Sections List -->
+          <div id="sectionsList" class="space-y-2 mb-4 max-h-48 overflow-y-auto">
+            <!-- Sections will be populated here -->
           </div>
-        </form>
+
+          <!-- Add New Section Form -->
+          <form id="sectionForm" class="border-t border-gray-200 pt-4 mt-4">
+            <input type="hidden" id="editSectionId">
+            <input type="hidden" id="sectionClassId">
+            <div class="space-y-3">
+              <div class="flex gap-2">
+                <div class="flex-1">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Section Name *</label>
+                  <input type="text" id="sectionName" required placeholder="e.g., A"
+                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                </div>
+                <div class="flex-1">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Room</label>
+                  <input type="text" id="sectionRoom" placeholder="Room"
+                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Class Teacher</label>
+                <select id="sectionClassTeacherId"
+                  class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white">
+                  <option value="">Select Teacher</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <button type="submit" id="sectionSaveBtn"
+                class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg font-medium transition">
+                Add Section
+              </button>
+              <button type="button" onclick="resetSectionForm()"
+                class="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg font-medium hover:bg-gray-50 transition">
+                Clear
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -1541,15 +1728,244 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       let currentPage = 1;
       const usersPerPage = 12;
       let searchTimeout = null;
-      let setupStep = 1;
       let setupSchool = null;
       let setupGrades = [];
-      let setupSections = [];
       let studentsData = [];
       let examsData = [];
       let subjectsData = [];
       let currentAttendanceData = [];
       let configData = null;
+
+      // Class Management State
+      let classesData = [];
+      let filteredClasses = [];
+      let classPage = 1;
+      const classesPerPage = 10;
+      let classSearchTerm = '';
+      let classFilterStream = '';
+      let classFilterStatus = '';
+      let classSearchTimeout = null;
+
+      // ============ TOAST NOTIFICATION SYSTEM ============
+      function showToast(message, type = 'info', duration = 4000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+
+        const icons = {
+          success: '<i class="fas fa-check-circle toast-icon"></i>',
+          error: '<i class="fas fa-times-circle toast-icon"></i>',
+          warning: '<i class="fas fa-exclamation-triangle toast-icon"></i>',
+          info: '<i class="fas fa-info-circle toast-icon"></i>'
+        };
+
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+          ${icons[type] || icons.info}
+          <span class="toast-message">${escapeHtml(message)}</span>
+          <span class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+          </span>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.add('toast-exit');
+          setTimeout(() => toast.remove(), 300);
+        }, duration);
+      }
+
+      // ============ FORM VALIDATION UTILITIES ============
+      const Validation = {
+        required: (value) => {
+          if (value === null || value === undefined || String(value).trim() === '') {
+            return 'This field is required';
+          }
+          return null;
+        },
+
+        minLength: (min) => (value) => {
+          if (value && String(value).trim().length < min) {
+            return `Must be at least ${min} characters`;
+          }
+          return null;
+        },
+
+        maxLength: (max) => (value) => {
+          if (value && String(value).trim().length > max) {
+            return `Must be no more than ${max} characters`;
+          }
+          return null;
+        },
+
+        pattern: (regex, message) => (value) => {
+          if (value && !regex.test(String(value))) {
+            return message || 'Invalid format';
+          }
+          return null;
+        },
+
+        email: (value) => {
+          if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            return 'Invalid email address';
+          }
+          return null;
+        },
+
+        phone: (value) => {
+          if (value && !/^[\d\s\-+()]{10,}$/.test(value)) {
+            return 'Invalid phone number';
+          }
+          return null;
+        }
+      };
+
+      function validateField(value, validators = []) {
+        for (const validator of validators) {
+          const error = validator(value);
+          if (error) return error;
+        }
+        return null;
+      }
+
+      function showFieldError(inputId, message) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+
+        const formGroup = input.closest('.form-group') || input.parentElement;
+        formGroup.classList.add('error');
+
+        let errorEl = formGroup.querySelector('.error-message');
+        if (!errorEl) {
+          errorEl = document.createElement('div');
+          errorEl.className = 'error-message';
+          formGroup.appendChild(errorEl);
+        }
+        errorEl.textContent = message;
+        input.classList.add('form-field-error');
+      }
+
+      function clearFieldError(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+
+        const formGroup = input.closest('.form-group') || input.parentElement;
+        formGroup.classList.remove('error');
+        input.classList.remove('form-field-error');
+
+        const errorEl = formGroup.querySelector('.error-message');
+        if (errorEl) errorEl.remove();
+      }
+
+      function clearAllErrors(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        form.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+        form.querySelectorAll('.form-field-error').forEach(el => el.classList.remove('form-field-error'));
+        form.querySelectorAll('.error-message').forEach(el => el.remove());
+      }
+
+      // ============ CLASS VALIDATION SCHEMA ============
+      function validateClassForm() {
+        clearAllErrors('classForm');
+        let isValid = true;
+        const errors = {};
+
+        const name = document.getElementById('className').value.trim();
+        const nameError = validateField(name, [Validation.required, Validation.maxLength(50)]);
+        if (nameError) {
+          showFieldError('className', nameError);
+          errors.className = nameError;
+          isValid = false;
+        }
+
+        const stream = document.getElementById('classStream').value;
+        const streamError = validateField(stream, [Validation.required]);
+        if (streamError) {
+          showFieldError('classStream', streamError);
+          errors.classStream = streamError;
+          isValid = false;
+        }
+
+        const academicYear = document.getElementById('classAcademicYear').value.trim();
+        const yearError = validateField(academicYear, [Validation.required, Validation.pattern(/^\d{4}-\d{2}$/, 'Format should be: YYYY-YY (e.g., 2025-26)')]);
+        if (yearError) {
+          showFieldError('classAcademicYear', yearError);
+          errors.classAcademicYear = yearError;
+          isValid = false;
+        }
+
+        if (!isValid) {
+          showToast('Please fix the validation errors', 'error');
+        }
+
+        return isValid;
+      }
+
+      // ============ SKELETON LOADERS ============
+      function getClassesSkeletonHTML() {
+        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sections</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stream</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        for (let i = 0; i < 5; i++) {
+          html += '<tr>';
+          html += '<td class="px-4 py-3"><div class="skeleton skeleton-text"></div></td>';
+          html += '<td class="px-4 py-3"><div class="skeleton skeleton-text-sm"></div></td>';
+          html += '<td class="px-4 py-3"><div class="skeleton skeleton-text-sm"></div></td>';
+          html += '<td class="px-4 py-3"><div class="skeleton skeleton-text-sm"></div></td>';
+          html += '<td class="px-4 py-3"><div class="skeleton" style="width: 60px; height: 24px;"></div></td>';
+          html += '<td class="px-4 py-3"><div class="skeleton" style="width: 80px; height: 32px;"></div></td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table></div>';
+        return html;
+      }
+
+      // ============ PAGINATION ============
+      function renderPagination(totalItems, currentPage, itemsPerPage, onPageChange) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (totalPages <= 1) return '';
+
+        let html = '<div class="pagination">';
+        html += `<button onclick="${onPageChange}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>`;
+        html += '<i class="fas fa-chevron-left"></i> Prev</button>';
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage < maxVisiblePages - 1) {
+          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+          html += `<button onclick="${onPageChange}(1)">1</button>`;
+          if (startPage > 2) html += '<span class="px-2">...</span>';
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          html += `<button onclick="${onPageChange}(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+        }
+
+        if (endPage < totalPages) {
+          if (endPage < totalPages - 1) html += '<span class="px-2">...</span>';
+          html += `<button onclick="${onPageChange}(${totalPages})">${totalPages}</button>`;
+        }
+
+        html += `<button onclick="${onPageChange}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>`;
+        html += 'Next <i class="fas fa-chevron-right"></i></button>';
+
+        html += '</div>';
+        return html;
+      }
 
       function initNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
@@ -1618,50 +2034,97 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         overlay.classList.add('hidden');
       }
 
-      // --- School Setup Wizard Logic ---
-      window.loadSetupWizard = async function () {
+      // --- School Profile Logic ---
+      window.loadSetupWizard = async function (options = {}) {
         const token = auth.getToken();
         try {
-          const res = await api.getSchools(token);
-          if (res.success && res.schools && res.schools.length > 0) {
-            const school = res.schools[0];
+          // Use cache - optimistic mutations update cache immediately
+          const res = await api.getSchools(token, options);
+          console.log('School API response:', res);
+
+          const viewMode = document.getElementById('school-profile-view');
+          const formMode = document.getElementById('school-profile-form');
+          const emptyState = document.getElementById('school-profile-empty');
+
+          viewMode.classList.add('hidden');
+          formMode.classList.add('hidden');
+          emptyState.classList.add('hidden');
+
+          // Handle nested response structure from backend
+          const schoolsData = res.schools;
+          const schools = schoolsData && schoolsData.schools ? schoolsData.schools : (schoolsData || []);
+
+          console.log('[School] Schools data:', schools);
+          console.log('[School] First school _sync:', schools[0]?._sync);
+
+          // Monitor for pending sync status
+          SyncTracker.monitor('school', schools, (opts) => loadSetupWizard(opts));
+
+          if (res.success && schools.length > 0) {
+            const school = schools[0];
+            console.log('School found:', school);
             setupSchool = school;
-            document.getElementById('setup-school-id').value = school.id;
-            document.getElementById('setup-school-name').value = school.name;
-            document.getElementById('setup-school-code').value = school.code || '';
-            document.getElementById('setup-school-address').value = school.address || '';
-            document.getElementById('setup-school-contact').value = school.contact || '';
+            document.getElementById('view-school-name').textContent = school.name || '-';
+            document.getElementById('view-school-code').textContent = school.code || '-';
+            document.getElementById('view-school-address').textContent = school.address || '-';
+            document.getElementById('view-school-contact').textContent = school.contact || '-';
+
+            // Handle sync status display
+            const syncStatus = school._sync ? school._sync.status : 'synced';
+            const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+            const schoolCard = document.getElementById('school-card');
+            const schoolCardContent = document.getElementById('school-card-content');
+            const syncBadge = document.getElementById('school-sync-badge');
+            const editBtn = schoolCard.querySelector('button');
+
+            if (isPending) {
+              schoolCard.classList.add('opacity-70', 'border-orange-200', 'bg-orange-50/30');
+              schoolCardContent.classList.add('animate-pulse');
+              syncBadge.innerHTML = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse">SAVING...</span>';
+              editBtn.disabled = true;
+              editBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+              schoolCard.classList.remove('opacity-70', 'border-orange-200', 'bg-orange-50/30');
+              schoolCardContent.classList.remove('animate-pulse');
+              syncBadge.innerHTML = '';
+              editBtn.disabled = false;
+              editBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            viewMode.classList.remove('hidden');
+          } else {
+            console.log('No school found or API error, showing empty state');
+            emptyState.classList.remove('hidden');
           }
-          setSetupStep(setupStep);
-        } catch (e) { showError("Failed to load school setup"); }
+        } catch (e) {
+          console.error('Error loading school:', e);
+          document.getElementById('school-profile-empty').classList.remove('hidden');
+        }
       }
 
-      window.setSetupStep = function (step) {
-        setupStep = step;
-        document.querySelectorAll('.setup-step-container').forEach(c => c.classList.add('hidden'));
-        const target = document.getElementById(`setup-step-${step}`);
-        if (target) target.classList.remove('hidden');
+      window.showSchoolForm = function () {
+        document.getElementById('school-profile-view').classList.add('hidden');
+        document.getElementById('school-profile-empty').classList.add('hidden');
+        document.getElementById('school-profile-form').classList.remove('hidden');
+        document.getElementById('school-form-title').textContent = 'Add School';
+        document.getElementById('school-setup-form').reset();
+        document.getElementById('setup-school-id').value = '';
+      }
 
-        for (let i = 1; i <= 3; i++) {
-          const icon = document.getElementById(`step-${i}-icon`);
-          if (!icon) continue;
-          const label = icon.nextElementSibling;
-          if (i < step) {
-            icon.innerHTML = '<i class="fas fa-check"></i>';
-            icon.className = 'w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold mb-2';
-            label.className = 'text-sm font-medium text-green-600';
-          } else if (i === step) {
-            icon.innerHTML = i;
-            icon.className = 'w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2';
-            label.className = 'text-sm font-medium text-gray-800';
-          } else {
-            icon.innerHTML = i;
-            icon.className = 'w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mb-2';
-            label.className = 'text-sm font-medium text-gray-500';
-          }
-        }
-        if (step === 2) loadSetupGrades();
-        if (step === 3) populateSetupGradeSelector();
+      window.editSchoolProfile = function () {
+        if (!setupSchool) return;
+        document.getElementById('school-profile-view').classList.add('hidden');
+        document.getElementById('school-profile-form').classList.remove('hidden');
+        document.getElementById('school-form-title').textContent = 'Edit School';
+        document.getElementById('setup-school-id').value = setupSchool.id || '';
+        document.getElementById('setup-school-name').value = setupSchool.name || '';
+        document.getElementById('setup-school-code').value = setupSchool.code || '';
+        document.getElementById('setup-school-address').value = setupSchool.address || '';
+        document.getElementById('setup-school-contact').value = setupSchool.contact || '';
+      }
+
+      window.cancelSchoolEdit = function () {
+        loadSetupWizard();
       }
 
       document.getElementById('school-setup-form').addEventListener('submit', async (e) => {
@@ -1674,44 +2137,80 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           address: document.getElementById('setup-school-address').value,
           contact: document.getElementById('setup-school-contact').value
         };
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         try {
+          // Warm up cache to ensure optimistic mutation can be applied
+          console.log('[School] Warming up cache before save...');
+          await api.getSchools(token);
+          console.log('[School] Cache warmed up, now saving...');
+
           let res = id ? await api.updateSchool(token, { id, ...data }) : await api.createSchool(token, data);
+          console.log('[School] Save response:', res);
           if (res.success) {
-            setupSchool = res.school;
-            document.getElementById('setup-school-id').value = setupSchool.id;
-            setSetupStep(2);
-          } else alert(res.error || "Failed to save school");
-        } catch (err) { alert("Error saving school details"); }
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+
+            // Close form immediately and show card with SAVING status
+            document.getElementById('school-profile-form').classList.add('hidden');
+            document.getElementById('school-profile-empty').classList.add('hidden');
+            document.getElementById('school-profile-view').classList.remove('hidden');
+
+            // Show the data immediately with SAVING status (optimistic)
+            const schoolCard = document.getElementById('school-card');
+            const schoolCardContent = document.getElementById('school-card-content');
+            const syncBadge = document.getElementById('school-sync-badge');
+            const editBtn = schoolCard.querySelector('button');
+
+            document.getElementById('view-school-name').textContent = data.name || '-';
+            document.getElementById('view-school-code').textContent = data.code || '-';
+            document.getElementById('view-school-address').textContent = data.address || '-';
+            document.getElementById('view-school-contact').textContent = data.contact || '-';
+
+            // Show SAVING status immediately
+            schoolCard.classList.add('opacity-70', 'border-orange-200', 'bg-orange-50/30');
+            schoolCardContent.classList.add('animate-pulse');
+            syncBadge.innerHTML = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse">SAVING...</span>';
+            editBtn.disabled = true;
+            editBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            console.log('[School] Showing SAVING status, polling for completion...');
+
+            // If not optimistic, show success message
+            if (!res.optimistic) {
+              showToast(id ? 'School updated successfully' : 'School created successfully', 'success');
+            } else {
+              // Force cache bypass on the first load after mutation to ensure we see the pending state
+              loadSetupWizard({ cache: 'false' });
+            }
+          } else {
+            showToast(res.error || "Failed to save school", 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+          }
+        } catch (err) {
+          showToast("Error saving school details", 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       });
 
       window.loadSetupGrades = async function () {
-        const token = auth.getToken();
-        const table = document.getElementById('setup-grades-table');
         try {
-          const res = await api.getClasses(token);
+          const res = await api.getClasses(auth.getToken());
           if (res.success) {
-            setupGrades = res.classes;
-            renderSetupGradesTable();
+            setupGrades = res.classes || [];
             populateStudentClassPicker();
           }
-        } catch (e) { table.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">Failed to load grades</td></tr>'; }
+        } catch (e) { console.error("Failed to load grades", e); }
       }
 
       function renderSetupGradesTable() {
-        const table = document.getElementById('setup-grades-table');
-        if (setupGrades.length === 0) {
-          table.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">No grades defined yet.</td></tr>';
-          return;
-        }
-        table.innerHTML = setupGrades.map(g => `
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(g.name)}</td>
-            <td class="px-4 py-3 text-gray-500">${escapeHtml(g.academic_year || '-')}</td>
-            <td class="px-4 py-3 text-sm">
-              <button onclick="showGradeModal('${g.id}')" class="text-indigo-600 hover:text-indigo-800 mr-3">Edit</button>
-              <button onclick="deleteGrade('${g.id}')" class="text-red-500 hover:text-red-700">Delete</button>
-            </td>
-          </tr>`).join('');
+        // Deprecated - using Classes section instead
       }
 
       window.deleteGrade = async function (id) {
@@ -1723,85 +2222,174 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       }
 
       window.populateSetupGradeSelector = function () {
-        const select = document.getElementById('setup-grade-selector');
-        const current = select.value;
-        select.innerHTML = '<option value="">Select Grade</option>' +
-          setupGrades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-        select.value = current;
+        // Deprecated - using Classes section instead
       }
 
       window.loadSetupSections = async function () {
-        const classId = document.getElementById('setup-grade-selector').value;
-        if (!classId) {
-          document.getElementById('setup-sections-empty').classList.remove('hidden');
-          document.getElementById('setup-sections-list').classList.add('hidden');
-          return;
-        }
-        document.getElementById('setup-sections-empty').classList.add('hidden');
-        document.getElementById('setup-sections-list').classList.remove('hidden');
-        try {
-          const res = await api.getSections(auth.getToken(), { class_id: classId });
-          if (res.success) {
-            setupSections = res.sections;
-            document.getElementById('setup-sections-table').innerHTML = setupSections.length === 0
-              ? '<tr><td colspan="4" class="px-4 py-8 text-center">No sections defined yet.</td></tr>'
-              : setupSections.map(s => `
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(s.name)}</td>
-                  <td class="px-4 py-3 text-gray-500">${escapeHtml(s.room || '-')}</td>
-                  <td class="px-4 py-3 text-gray-500">${escapeHtml(s.class_teacher_id || '-')}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <button onclick="showSectionModal('${s.id}')" class="text-indigo-600 hover:text-indigo-800 mr-3">Edit</button>
-                    <button onclick="deleteSection('${s.id}')" class="text-red-500 hover:text-red-700">Delete</button>
-                  </td>
-                </tr>`).join('');
-          }
-        } catch (e) { alert("Error loading sections"); }
+        // Deprecated - using Classes section instead
       }
 
       window.showSectionModal = function (id) {
-        const classId = document.getElementById('setup-grade-selector').value;
-        document.getElementById('sectionModal').classList.add('show');
+        // Deprecated - using Classes section instead
+      }
+
+      // ============ CLASS MANAGEMENT - SECTION MODAL ============
+      let sectionsData = [];
+
+      window.openClassSections = async function (classId, className) {
+        document.getElementById('sectionModalTitle').textContent = 'Manage Sections';
         document.getElementById('sectionClassId').value = classId;
-        if (id) {
-          const s = setupSections.find(sec => sec.id === id);
-          document.getElementById('sectionModalTitle').textContent = 'Edit Section';
-          document.getElementById('editSectionId').value = id;
-          document.getElementById('sectionName').value = s.name;
-          document.getElementById('sectionRoom').value = s.room || '';
-          document.getElementById('sectionClassTeacherId').value = s.class_teacher_id || '';
-        } else {
-          document.getElementById('sectionModalTitle').textContent = 'Add Section';
-          document.getElementById('editSectionId').value = '';
-          document.getElementById('sectionName').value = '';
-          document.getElementById('sectionRoom').value = '';
-          document.getElementById('sectionClassTeacherId').value = '';
+        document.getElementById('sectionClassName').textContent = className;
+        document.getElementById('sectionModal').classList.add('show');
+        resetSectionForm();
+        await loadSectionsForClass(classId);
+        await loadTeachersForSection();
+      }
+
+      async function loadSectionsForClass(classId) {
+        const listEl = document.getElementById('sectionsList');
+        try {
+          const res = await api.getSections(auth.getToken(), { class_id: classId });
+          sectionsData = res.sections || [];
+
+          if (sectionsData.length === 0) {
+            listEl.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">No sections yet. Add one below.</div>';
+            return;
+          }
+
+          listEl.innerHTML = sectionsData.map(s => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
+              <div>
+                <span class="font-medium text-gray-800">${escapeHtml(s.name)}</span>
+                ${s.room ? `<span class="text-xs text-gray-500 ml-2"><i class="fas fa-door"></i> ${escapeHtml(s.room)}</span>` : ''}
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                <button onclick="editSection('${s.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded" title="Edit">
+                  <i class="fas fa-edit text-xs"></i>
+                </button>
+                <button onclick="deleteSection('${s.id}')" class="p-1.5 text-red-600 hover:bg-red-100 rounded" title="Delete">
+                  <i class="fas fa-trash text-xs"></i>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        } catch (e) {
+          listEl.innerHTML = '<div class="text-center py-4 text-red-500 text-sm">Error loading sections</div>';
         }
       }
 
-      window.closeSectionModal = function () { document.getElementById('sectionModal').classList.remove('show'); }
+      async function loadTeachersForSection() {
+        const select = document.getElementById('sectionClassTeacherId');
+        try {
+          const res = await api.getUsers(auth.getToken());
+          const teachers = (res.users || []).filter(u => u.role === 'teacher');
+          select.innerHTML = '<option value="">Select Teacher</option>' +
+            teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        } catch (e) {
+          select.innerHTML = '<option value="">Error loading teachers</option>';
+        }
+      }
+
+      window.editSection = function (sectionId) {
+        const s = sectionsData.find(sec => sec.id === sectionId);
+        if (!s) return;
+
+        document.getElementById('editSectionId').value = sectionId;
+        document.getElementById('sectionName').value = s.name || '';
+        document.getElementById('sectionRoom').value = s.room || '';
+        document.getElementById('sectionClassTeacherId').value = s.class_teacher_id || '';
+        document.getElementById('sectionSaveBtn').textContent = 'Update Section';
+        document.getElementById('sectionSaveBtn').classList.add('bg-amber-500', 'hover:bg-amber-600');
+        document.getElementById('sectionSaveBtn').classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+      }
+
+      window.resetSectionForm = function () {
+        document.getElementById('editSectionId').value = '';
+        document.getElementById('sectionName').value = '';
+        document.getElementById('sectionRoom').value = '';
+        document.getElementById('sectionClassTeacherId').value = '';
+        document.getElementById('sectionSaveBtn').textContent = 'Add Section';
+        document.getElementById('sectionSaveBtn').classList.remove('bg-amber-500', 'hover:bg-amber-600');
+        document.getElementById('sectionSaveBtn').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+      }
+
+      window.closeSectionModal = function () {
+        document.getElementById('sectionModal').classList.remove('show');
+      }
 
       document.getElementById('sectionForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const token = auth.getToken();
+        const sectionId = document.getElementById('editSectionId').value;
+        const classId = document.getElementById('sectionClassId').value;
+
+        if (!classId) {
+          showToast('Please select a class first', 'error');
+          return;
+        }
+
+        const sectionName = document.getElementById('sectionName').value.trim();
+        if (!sectionName) {
+          showToast('Section name is required', 'error');
+          return;
+        }
+
         const data = {
-          class_id: document.getElementById('sectionClassId').value,
-          name: document.getElementById('sectionName').value,
-          room: document.getElementById('sectionRoom').value,
+          class_id: classId,
+          name: sectionName,
+          room: document.getElementById('sectionRoom').value.trim(),
           class_teacher_id: document.getElementById('sectionClassTeacherId').value
         };
-        const id = document.getElementById('editSectionId').value;
+
+        const submitBtn = document.getElementById('sectionSaveBtn');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         try {
-          const res = id ? await api.updateSection(auth.getToken(), { id, ...data }) : await api.createSection(auth.getToken(), data);
-          if (res.success) { closeSectionModal(); loadSetupSections(); }
-        } catch (e) { alert("Error saving section"); }
+          let res;
+          if (sectionId) {
+            data.id = sectionId;
+            res = await api.updateSection(token, data);
+          } else {
+            res = await api.createSection(token, data);
+          }
+
+          if (res.success) {
+            showToast(sectionId ? 'Section updated' : 'Section added', 'success');
+            resetSectionForm();
+            await loadSectionsForClass(classId);
+            if (typeof loadClasses === 'function') loadClasses();
+          } else {
+            showToast(res.error || 'Failed to save section', 'error');
+          }
+        } catch (err) {
+          showToast('Error saving section', 'error');
+          console.error('Section save error:', err);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
       });
 
       window.deleteSection = async function (id) {
-        if (!confirm("Are you sure?")) return;
+        if (!confirm('Are you sure you want to delete this section?')) return;
+
+        const token = auth.getToken();
+        const classId = document.getElementById('sectionClassId').value;
+
         try {
-          const res = await api.deleteSection(auth.getToken(), id);
-          if (res.success) loadSetupSections();
-        } catch (e) { alert("Error deleting section"); }
+          const res = await api.deleteSection(token, id);
+          if (res.success) {
+            showToast('Section deleted', 'success');
+            await loadSectionsForClass(classId);
+            if (typeof loadClasses === 'function') loadClasses();
+          } else {
+            showToast(res.error || 'Failed to delete section', 'error');
+          }
+        } catch (err) {
+          showToast('Error deleting section', 'error');
+        }
       }
 
       // Student Hierarchical Selection
@@ -1988,11 +2576,17 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             delete this.timers[sourceId];
           }
 
-          if (!items || !Array.isArray(items)) return;
+          console.log(`[SyncTracker] Monitoring ${sourceId}:`, items);
+          if (!items || !Array.isArray(items)) {
+            console.log(`[SyncTracker] ${sourceId}: items is not an array or empty`);
+            return;
+          }
 
           const pendingItems = items.filter(item =>
             item._sync && (item._sync.status === 'pending' || item._sync.status === 'pending_delete')
           );
+
+          console.log(`[SyncTracker] ${sourceId}: pending items count:`, pendingItems.length);
 
           if (pendingItems.length > 0) {
             this.retries[sourceId] = (this.retries[sourceId] || 0) + 1;
@@ -2041,7 +2635,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             currentPage = 1;
             renderUsersTable(response.users);
             updateDashboardStats(response);
-            SyncTracker.monitor('users', response.users, () => loadUsers(token));
+            SyncTracker.monitor('users', response.users, (opts) => loadUsers(token, opts));
           } else {
             contentEl.innerHTML = '<p class="text-red-500">' + (response.error || 'Failed to load users') + '</p>';
           }
@@ -2119,7 +2713,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
               <button onclick="editUser('${user.id}')" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
                 <i class="fas fa-edit text-xs"></i>
               </button>
-              <button onclick="deleteUser('${user.id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
+              <button onclick="window.deleteUser('${user.id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
                 <i class="fas fa-trash text-xs"></i>
               </button>
             </div>
@@ -2207,19 +2801,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const modal = document.getElementById('classModal');
         const title = document.getElementById('classModalTitle');
         const form = document.getElementById('classForm');
+        clearAllErrors('classForm');
 
         if (classData) {
           title.textContent = 'Edit Class';
           document.getElementById('editClassId').value = classData.id;
           document.getElementById('className').value = classData.name || '';
-          document.getElementById('classSection').value = classData.section || '';
-          document.getElementById('classStream').value = classData.stream || '';
+          document.getElementById('classStream').value = classData.stream || 'General';
           document.getElementById('classAcademicYear').value = classData.academic_year || '';
           document.getElementById('classIsActive').checked = classData.is_active !== false;
         } else {
           title.textContent = 'Add New Class';
           form.reset();
           document.getElementById('editClassId').value = '';
+          const currentYear = new Date().getFullYear();
+          const nextYear = (currentYear + 1).toString().slice(-2);
+          document.getElementById('classAcademicYear').value = `${currentYear}-${nextYear}`;
+          document.getElementById('classStream').value = 'General';
+          document.getElementById('classIsActive').checked = true;
         }
 
         modal.classList.add('show');
@@ -2231,15 +2830,22 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
       document.getElementById('classForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        if (!validateClassForm()) return;
+
         const token = auth.getToken();
         const classId = document.getElementById('editClassId').value;
         const data = {
-          name: document.getElementById('className').value,
-          section: document.getElementById('classSection').value,
+          name: document.getElementById('className').value.trim(),
           stream: document.getElementById('classStream').value,
-          academic_year: document.getElementById('classAcademicYear').value,
-          is_active: document.getElementById('classIsActive').checked.toString()
+          academic_year: document.getElementById('classAcademicYear').value.trim(),
+          is_active: document.getElementById('classIsActive')?.checked.toString() || 'true'
         };
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
         try {
           let response;
@@ -2252,65 +2858,187 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
           if (response.success) {
             if (!response.optimistic) {
-              alert('Class saved successfully');
+              showToast(classId ? 'Class updated successfully' : 'Class created successfully', 'success');
             }
             closeClassModal();
             loadClasses();
           } else {
-            alert(response.error || 'Failed to save class');
+            showToast(response.error || 'Failed to save class', 'error');
           }
         } catch (err) {
-          alert('Error saving class');
+          showToast('Error saving class', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
         }
       });
+
+      // ============ CLASS MANAGEMENT FUNCTIONS ============
+      let classSectionsMap = {};
 
       async function loadClasses() {
         const token = auth.getToken();
         const loadingEl = document.getElementById('classes-loading');
         const contentEl = document.getElementById('classes-content');
+        const emptyEl = document.getElementById('classes-empty');
+
+        loadingEl.innerHTML = getClassesSkeletonHTML();
+        loadingEl.classList.remove('hidden');
+        contentEl.classList.add('hidden');
+        emptyEl.classList.add('hidden');
 
         try {
-          const response = await api.getClasses(token);
-          loadingEl.classList.add('hidden');
+          const classesRes = await api.getClasses(token);
 
-          if (response.classes && response.classes.length > 0) {
-            let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stream</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody class="divide-y divide-gray-100">';
-
-            response.classes.forEach(cls => {
-              const statusClass = cls.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
-              const statusText = cls.is_active ? 'Active' : 'Inactive';
-
-              const syncStatus = cls._sync ? cls._sync.status : 'synced';
-              const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
-              const pendingClass = isPending ? 'opacity-60 bg-orange-50/30' : '';
-              const syncBadge = syncStatus === 'pending'
-                ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
-                : syncStatus === 'pending_delete'
-                  ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>'
-                  : '';
-
-              html += `<tr class="${pendingClass}">
-              <td class="px-4 py-3 font-medium">${escapeHtml(cls.name || '')}${syncBadge}</td>
-              <td class="px-4 py-3">${escapeHtml(cls.section || '-')}</td>
-              <td class="px-4 py-3">${escapeHtml(cls.stream || 'General')}</td>
-              <td class="px-4 py-3">${escapeHtml(cls.academic_year || '-')}</td>
-              <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${statusText}</span></td>
-              <td class="px-4 py-3">
-                <button onclick='showClassModal(${JSON.stringify(cls)})' class="text-indigo-600 hover:text-indigo-800 mr-3 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteClass('${cls.id}')" class="text-red-600 hover:text-red-800 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-trash"></i></button>
-              </td>
-            </tr>`;
-            });
-
-            html += '</tbody></table></div>';
-            contentEl.innerHTML = html;
-            SyncTracker.monitor('classes', response.classes, () => loadClasses());
-          } else {
-            contentEl.innerHTML = '<div class="text-center py-8 text-gray-500">No classes found. Click "Add Class" to create one.</div>';
+          if (!classesRes.success) {
+            throw new Error(classesRes.error || 'Failed to load classes');
           }
+
+          loadingEl.classList.add('hidden');
+          contentEl.classList.remove('hidden');
+
+          classesData = classesRes.classes || [];
+
+          try {
+            const sectionsRes = await api.getSections(token);
+            classSectionsMap = {};
+            if (sectionsRes && sectionsRes.success !== false) {
+              const sections = sectionsRes.sections || [];
+              sections.forEach(s => {
+                if (!classSectionsMap[s.class_id]) {
+                  classSectionsMap[s.class_id] = [];
+                }
+                classSectionsMap[s.class_id].push(s);
+              });
+            }
+          } catch (sectionErr) {
+            console.warn('Could not load sections:', sectionErr);
+          }
+
+          classesData.forEach(cls => {
+            cls.sections = classSectionsMap[cls.id] || [];
+          });
+
+          applyClassFilters();
         } catch (err) {
           loadingEl.classList.add('hidden');
-          contentEl.innerHTML = '<div class="text-center py-8 text-red-500">Error loading classes</div>';
+          contentEl.classList.remove('hidden');
+          contentEl.innerHTML = '<div class="text-center py-8 text-red-500">Error loading classes. Please try again.</div>';
+          showToast('Failed to load classes: ' + err.message, 'error');
+          console.error('Load classes error:', err);
+        }
+      }
+
+      function applyClassFilters() {
+        const searchTerm = document.getElementById('classSearchInput')?.value?.toLowerCase() || '';
+        const streamFilter = document.getElementById('classStreamFilter')?.value || '';
+        const statusFilter = document.getElementById('classStatusFilter')?.value || '';
+
+        filteredClasses = classesData.filter(cls => {
+          const matchesSearch = !searchTerm ||
+            (cls.name || '').toLowerCase().includes(searchTerm) ||
+            (cls.stream || '').toLowerCase().includes(searchTerm) ||
+            (cls.academic_year || '').toLowerCase().includes(searchTerm);
+
+          const matchesStream = !streamFilter || cls.stream === streamFilter;
+
+          const matchesStatus = !statusFilter ||
+            (statusFilter === 'active' && cls.is_active) ||
+            (statusFilter === 'inactive' && !cls.is_active);
+
+          return matchesSearch && matchesStream && matchesStatus;
+        });
+
+        classPage = 1;
+        renderClassesPage();
+      }
+
+      function debounceClassSearch(value) {
+        clearTimeout(classSearchTimeout);
+        classSearchTimeout = setTimeout(() => {
+          applyClassFilters();
+        }, 300);
+      }
+
+      function goToClassPage(page) {
+        classPage = page;
+        renderClassesPage();
+      }
+
+      function renderClassesPage() {
+        const contentEl = document.getElementById('classes-content');
+        const emptyEl = document.getElementById('classes-empty');
+
+        if (filteredClasses.length === 0) {
+          contentEl.classList.add('hidden');
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        contentEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+
+        const startIndex = (classPage - 1) * classesPerPage;
+        const endIndex = startIndex + classesPerPage;
+        const pageClasses = filteredClasses.slice(startIndex, endIndex);
+
+        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sections</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stream</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>';
+        html += '</tr></thead><tbody class="divide-y divide-gray-100">';
+
+        pageClasses.forEach(cls => {
+          const statusClass = cls.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
+          const statusText = cls.is_active ? 'Active' : 'Inactive';
+
+          const syncStatus = cls._sync ? cls._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const pendingClass = isPending ? 'opacity-60 bg-orange-50/30' : '';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>'
+              : '';
+
+          const sections = cls.sections || [];
+          const sectionsDisplay = sections.length > 0
+            ? `<div class="flex flex-wrap gap-1">
+                ${sections.slice(0, 3).map(s => `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${escapeHtml(s.name)}</span>`).join('')}
+                ${sections.length > 3 ? `<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">+${sections.length - 3}</span>` : ''}
+                <button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}')" class="ml-1 px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>`
+            : `<button onclick="openClassSections('${cls.id}', '${escapeHtml(cls.name)}')" class="text-xs text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-plus"></i> Add Section
+              </button>`;
+
+          html += `<tr class="${pendingClass}">
+            <td class="px-4 py-3 font-medium">${escapeHtml(cls.name || '')}${syncBadge}</td>
+            <td class="px-4 py-3">${sectionsDisplay}</td>
+            <td class="px-4 py-3">${escapeHtml(cls.stream || 'General')}</td>
+            <td class="px-4 py-3">${escapeHtml(cls.academic_year || '-')}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${statusText}</span></td>
+            <td class="px-4 py-3">
+              <button onclick='showClassModal(${JSON.stringify(cls)})' class="text-indigo-600 hover:text-indigo-800 mr-3 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-edit"></i></button>
+              <button onclick="deleteClass('${cls.id}')" class="text-red-600 hover:text-red-800 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        html += renderPagination(filteredClasses.length, classPage, classesPerPage, 'goToClassPage');
+
+        contentEl.innerHTML = html;
+
+        if (classesData.length > 0) {
+          try {
+            SyncTracker.monitor('classes', classesData, () => loadClasses());
+          } catch (e) { }
         }
       }
 
@@ -2322,14 +3050,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const response = await api.deleteClass(token, id);
           if (response.success) {
             if (!response.optimistic) {
-              alert('Class deleted successfully');
+              showToast('Class deleted successfully', 'success');
             }
             loadClasses();
           } else {
-            alert(response.error || 'Failed to delete class');
+            showToast(response.error || 'Failed to delete class', 'error');
           }
         } catch (err) {
-          alert('Error deleting class');
+          showToast('Error deleting class', 'error');
         }
       }
 
@@ -2515,7 +3243,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                   <button onclick="editRole('${role.role_id}', '${role.role_name}', '${(role.permissions || []).join(',')}', ${role.is_active})" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
                     <i class="fas fa-edit text-xs"></i>
                   </button>
-                  <button onclick="deleteRole('${role.role_id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
+                  <button onclick="window.deleteRole('${role.role_id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
                     <i class="fas fa-trash text-xs"></i>
                   </button>
                 </div>
@@ -2529,7 +3257,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
             html += '</div>';
             contentEl.innerHTML = html;
-            SyncTracker.monitor('roles', roles, () => loadRoles(token));
+            SyncTracker.monitor('roles', roles, (opts) => loadRoles(token, opts));
           } else {
             contentEl.innerHTML = '<p class="text-gray-500">No roles found. Add a role using the form above.</p>';
           }
@@ -2574,7 +3302,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             if (!response.optimistic) {
               alert('Role deleted successfully!');
             }
-            loadRoles(token);
+            loadRoles(token, { cache: 'false' });
           } else {
             alert(response.error || 'Failed to delete role');
           }
@@ -2608,7 +3336,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
               alert('Role saved successfully!');
             }
             closeRoleModal();
-            loadRoles(token);
+            loadRoles(token, { cache: 'false' });
           } else {
             alert(response.error || 'Failed to save role');
           }
@@ -2663,7 +3391,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             if (!response.optimistic) {
               alert('User deleted successfully!');
             }
-            loadUsers(token);
+            loadUsers(token, { cache: 'false' });
           } else {
             alert(response.error || 'Failed to delete user');
           }
@@ -2699,7 +3427,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
               alert('User saved successfully!');
             }
             closeUserModal();
-            loadUsers(token);
+            loadUsers(token, { cache: 'false' });
           } else {
             alert(response.error || 'Failed to save user');
           }

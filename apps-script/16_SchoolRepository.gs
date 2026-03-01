@@ -5,11 +5,16 @@ const SchoolRepository = {
     const headers = data[0];
     const rows = data.slice(1);
     
+    Logger.log('School sheet headers: ' + JSON.stringify(headers));
+    Logger.log('School sheet rows count: ' + rows.length);
+    
     let schools = rows.map(row => {
       const obj = {};
       headers.forEach((h, i) => obj[h] = row[i]);
       return obj;
-    }).filter(s => s.id && s.name);
+    }).filter(s => s.id);
+    
+    Logger.log('Filtered schools (id only): ' + JSON.stringify(schools));
     
     return { schools, total: schools.length };
   },

@@ -2,7 +2,7 @@ const api = {
   baseUrl: window.API_URL || '',
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
+    let url = `${this.baseUrl}${endpoint}`;
     const token = auth.getToken();
 
     const headers = {
@@ -10,8 +10,12 @@ const api = {
       ...options.headers
     };
 
-    if (options.cache === 'false') {
+    const fetchOptions = { ...options };
+    if (fetchOptions.cache === 'false' || fetchOptions.cache === false) {
+      const sep = url.includes('?') ? '&' : '?';
+      url += `${sep}_t=${Date.now()}`;
       headers['X-Cache-Control'] = 'no-cache';
+      fetchOptions.cache = 'no-cache';
     }
 
     if (token && !options.noAuth) {
@@ -20,7 +24,7 @@ const api = {
 
     try {
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers
       });
 
@@ -412,10 +416,10 @@ const api = {
     return this.request('/getClasses?' + params.toString());
   },
 
-  async getSchools(token) {
+  async getSchools(token, options = {}) {
     const params = new URLSearchParams();
     params.append('token', token);
-    return this.request('/getSchools?' + params.toString());
+    return this.request('/getSchools?' + params.toString(), options);
   },
 
   async createSchool(token, data) {

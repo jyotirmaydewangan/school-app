@@ -18,9 +18,9 @@ const ONE_MIN = 60;
  */
 const CACHE_POLICY = {
   // --- Static/Hierarchical Data (Broad, High TTL) ---
-  'getConfig': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
+  'getConfig': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
   'getSchools': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
-  'getClasses': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
+  'getClasses': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: true },
   'getSections': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
   'getRoles': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
   'getSubjects': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },

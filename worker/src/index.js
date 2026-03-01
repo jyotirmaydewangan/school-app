@@ -207,11 +207,16 @@ const Router = {
         const bodyText = await RequestParser.parseBody(request);
         const body = bodyText ? JSON.parse(bodyText) : {};
 
+        console.warn(`[Worker] ===== HANDLING WRITE: ${action} =====`);
+        console.warn(`[Worker] Body:`, body);
+
         // Generic Mutation Handling - Applies to any action with a 'get*' invalidation pattern
         const mutationContext = await this.kvHandler.applyMutation(tenantId, action, body);
 
+        console.warn(`[Worker] ===== MUTATION RESULT: ${mutationContext ? 'APPLIED' : 'NULL'} =====`);
+
         if (mutationContext) {
-          console.log(`[Worker] Action ${action} applied optimistically to ${mutationContext.readAction}`);
+          console.warn(`[Worker] Action ${action} applied optimistically to ${mutationContext.readAction}`);
 
           const syncTask = async () => {
             try {
