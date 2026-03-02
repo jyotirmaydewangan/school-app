@@ -347,7 +347,11 @@ export const KVCacheHandler = {
               console.warn('[KV] Mutation applied to key:', listKey);
               data[listKey] = newList;
               appliedToThisAction = true;
-              finalItemId = matchedId || finalItemId;
+
+              // CRITICAL: Always use the ID generated/matched by _mutateList
+              if (matchedId) {
+                finalItemId = matchedId;
+              }
               finalIdField = idField;
             }
           }
@@ -369,7 +373,7 @@ export const KVCacheHandler = {
 
     console.warn('[KV] ===== MUTATION APPLIED SUCCESSFULLY =====');
 
-    const itemId = payload[finalIdField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || finalItemId;
+    const itemId = finalItemId || this._extractItemId(payload, finalIdField);
     console.warn(`[KV] applyMutation SUCCESS: itemId=${itemId}, idField=${finalIdField}, readActions=${mutations.map(m => m.readAction).join(',')}`);
 
     return { mutations, identityField: finalIdField, itemId };
@@ -389,12 +393,6 @@ export const KVCacheHandler = {
 
     for (const mut of mutations) {
       const { key, previousData, readAction, idField } = mut;
-
-      if (backendResponse && backendResponse.success === false) {
-        console.warn(`[KV] Resolving mutation FAILED for ${key} - Rolling back to previous data`);
-        await this.setByKey(key, previousData, readAction);
-        continue;
-      }
 
       const cached = await this.getByKey(key);
       if (!cached || !cached.data) continue;
@@ -531,6 +529,14 @@ export const KVCacheHandler = {
       if (String(i[idField]) === String(itemId) && itemId !== undefined) {
         matchedCount++;
         const { _sync, ...cleanItem } = i;
+
+        if (backendEntity._error) {
+          return {
+            ...cleanItem,
+            _sync: { status: 'error', error: backendEntity._error, updatedAt: Date.now() }
+          };
+        }
+
         // Merge clean item with backend entity, ensuring backend data wins
         return { ...cleanItem, ...backendEntity };
       }
@@ -569,10 +575,11 @@ export const KVCacheHandler = {
     return 'id';
   },
 
-  _extractItemId(payload) {
+  _extractItemId(payload, idFieldHint) {
     if (!payload) return null;
-    const idField = this._detectIdentityField(payload, false);
-    return payload[idField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || payload.id;
+    const idField = idFieldHint || this._detectIdentityField(payload, false);
+    // Be robust: check common ID fields if the primary one is missing
+    return payload[idField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || payload.userId;
   },
 
   buildResponse(data, isStale = false) {

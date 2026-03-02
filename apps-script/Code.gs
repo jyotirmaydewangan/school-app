@@ -387,7 +387,7 @@ function handleCreateStudent(token, data) {
   const auth = requireAdmin(token);
   if (!auth.success) return auth;
   
-  if (!data.name || !data.class) {
+  if (!data.name || !data.class_id) {
     return { success: false, error: 'Name and class are required' };
   }
   

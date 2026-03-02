@@ -3396,8 +3396,12 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const classFilter = document.getElementById('student-class-filter').value;
         const statusFilter = document.getElementById('student-status-filter').value;
 
-        document.getElementById('students-loading').classList.remove('hidden');
-        document.getElementById('students-content').innerHTML = '';
+        // Only show loading/clear on first load, not background sync refreshes
+        const isBackgroundRefresh = studentsData && studentsData.length > 0;
+        if (!isBackgroundRefresh) {
+          document.getElementById('students-loading').classList.remove('hidden');
+          document.getElementById('students-content').innerHTML = '';
+        }
 
         if (setupGrades.length === 0) {
           await loadSetupGrades();
@@ -3461,15 +3465,25 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
           const syncStatus = s._sync ? s._sync.status : 'synced';
           const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
-          const syncBadge = syncStatus === 'pending'
-            ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
-            : syncStatus === 'pending_delete'
-              ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>'
-              : '';
+          const isError = syncStatus === 'error';
 
-          html += `<tr class="hover:bg-gray-50 ${isPending ? 'opacity-60' : ''}">
+          let syncBadge = '';
+          if (syncStatus === 'pending') {
+            syncBadge = '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>';
+          } else if (syncStatus === 'pending_delete') {
+            syncBadge = '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>';
+          } else if (isError) {
+            syncBadge = `<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold cursor-help" title="${escapeHtml(s._sync.error || 'Unknown error')}">ERROR</span>`;
+          }
+
+          html += `<tr class="hover:bg-gray-50 ${isPending ? 'opacity-60' : ''} ${isError ? 'bg-red-50/30' : ''}">
           <td class="px-4 py-3">${escapeHtml(s.admission_no || '-')}</td>
-          <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}${syncBadge}</td>
+          <td class="px-4 py-3 font-medium">
+            <div class="flex items-center">
+              ${escapeHtml(s.name)}
+              ${syncBadge}
+            </div>
+          </td>
           <td class="px-4 py-3">${escapeHtml(className)}${sectionName ? ' - ' + escapeHtml(sectionName) : ''}</td>
           <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${s.status}</span></td>
           <td class="px-4 py-3">

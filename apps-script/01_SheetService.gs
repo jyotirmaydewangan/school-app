@@ -160,7 +160,7 @@ const SheetService = {
       [SHEET_NAMES.CONFIG]: ['key', 'value'],
       [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'is_active'],
       [SHEET_NAMES.RESOURCES]: ['id', 'class', 'subject_id', 'title', 'type', 'drive_file_id', 'drive_url', 'created_at'],
-      [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class', 'section', 'admission_no', 'name'],
+      [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class_id', 'section_id', 'admission_no', 'name'],
       [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
       [SHEET_NAMES.SCHOOLS]: ['id', 'name', 'code', 'address', 'contact', 'created_at'],
       [SHEET_NAMES.SECTIONS]: ['id', 'class_id', 'name', 'room', 'class_teacher_id', 'created_at'],
