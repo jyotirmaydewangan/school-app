@@ -82,7 +82,9 @@ const SheetService = {
   },
 
   initializeAll() {
-    Logger.log('Starting SheetService.initializeAll()');
+    Logger.log('========================================');
+    Logger.log('Starting Sheet Initialization Process');
+    Logger.log('========================================');
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
       Logger.log('Error: ss is null');
@@ -108,35 +110,50 @@ const SheetService = {
       SHEET_NAMES.SECTIONS
     ];
     
-    sheetNames.forEach(name => {
+    const totalSheets = sheetNames.length;
+    Logger.log(`Total sheets to process: ${totalSheets}`);
+    Logger.log('----------------------------------------');
+    
+    sheetNames.forEach((name, index) => {
+      const currentNum = index + 1;
       let sheet = ss.getSheetByName(name);
       if (!sheet) {
-        Logger.log('Inserting sheet: ' + name);
+        Logger.log(`[${currentNum}/${totalSheets}] Creating sheet: ${name}`);
         sheet = ss.insertSheet(name);
+        this.initializeSheet(name, sheet);
+      } else {
+        Logger.log(`[${currentNum}/${totalSheets}] Sheet already exists: ${name} - fixing schema`);
         this.initializeSheet(name, sheet);
       }
     });
     
+    Logger.log('----------------------------------------');
     try {
       const rolesSheet = ss.getSheetByName(SHEET_NAMES.ROLES);
+      Logger.log('Processing default roles...');
       this.seedDefaultRoles(rolesSheet);
+      Logger.log('Default roles processed');
     } catch (e) {
       Logger.log('Error seeding roles: ' + e.message);
     }
     
     try {
       const configSheet = ss.getSheetByName(SHEET_NAMES.CONFIG);
+      Logger.log('Processing default config...');
       this.seedDefaultConfig(configSheet);
+      Logger.log('Default config processed');
     } catch (e) {
       Logger.log('Error seeding config: ' + e.message);
     }
     
-    Logger.log('Initialization complete');
+    Logger.log('========================================');
+    Logger.log('Sheet Initialization Complete');
+    Logger.log('========================================');
     return { success: true, message: 'All sheets initialized' };
   },
 
   initializeSheet(name, sheet) {
-    Logger.log('Initializing schema for: ' + name);
+    Logger.log(`  > Applying schema for: ${name}`);
     const schemas = {
       [SHEET_NAMES.USERS]: ['id', 'email', 'phone', 'password_hash', 'role', 'name', 'is_approved', 'rejected_at', 'created_at', 'updated_at'],
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
@@ -147,11 +164,26 @@ const SheetService = {
       [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
       [SHEET_NAMES.SCHOOLS]: ['id', 'name', 'code', 'address', 'contact', 'created_at'],
       [SHEET_NAMES.SECTIONS]: ['id', 'class_id', 'name', 'room', 'class_teacher_id', 'created_at'],
-      [SHEET_NAMES.STUDENTS]: ['id', 'user_id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at']
+      [SHEET_NAMES.STUDENTS]: ['id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at']
     };
     
     if (schemas[name]) {
-      sheet.appendRow(schemas[name]);
+      const expectedSchema = schemas[name];
+      const existingHeaders = sheet.getDataRange().getValues()[0] || [];
+      
+      if (existingHeaders.length > expectedSchema.length) {
+        Logger.log(`  > Removing extra columns from ${name}`);
+        const numToRemove = existingHeaders.length - expectedSchema.length;
+        for (let i = 0; i < numToRemove; i++) {
+          sheet.deleteColumn(expectedSchema.length + 1);
+        }
+      }
+      
+      if (existingHeaders.length === 0 || (existingHeaders.length === 1 && !existingHeaders[0])) {
+        sheet.appendRow(expectedSchema);
+      } else if (JSON.stringify(existingHeaders) !== JSON.stringify(expectedSchema)) {
+        sheet.getRange(1, 1, 1, expectedSchema.length).setValues([expectedSchema]);
+      }
       SpreadsheetApp.flush();
     }
   },

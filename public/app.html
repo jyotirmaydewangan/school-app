@@ -385,13 +385,6 @@
             </a>
           </li>
           <li>
-            <a href="#" data-section="approvals"
-              class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
-              <i class="fas fa-user-check w-5 text-center"></i>
-              <span>Pending Approvals</span>
-            </a>
-          </li>
-          <li>
             <a href="#" data-section="settings"
               class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
               <i class="fas fa-cog w-5 text-center"></i>
@@ -546,7 +539,7 @@
           </div>
 
           <!-- Admin Stats Grid -->
-          <div id="admin-stats" class="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
+          <div id="admin-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
               <div class="flex items-center justify-between">
                 <div>
@@ -588,19 +581,6 @@
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
                   <i class="fas fa-school text-indigo-500 text-xl"></i>
-                </div>
-              </div>
-            </div>
-            <div
-              class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer"
-              onclick="navigateTo('approvals')">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-gray-500 text-sm">Pending</p>
-                  <p id="stat-pending" class="text-2xl sm:text-3xl font-bold text-orange-600 mt-1">-</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
-                  <i class="fas fa-user-clock text-orange-500 text-xl"></i>
                 </div>
               </div>
             </div>
@@ -813,6 +793,13 @@
                   <option value="student">Student</option>
                   <option value="parent">Parent</option>
                 </select>
+                <select id="status-filter"
+                  class="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white"
+                  onchange="applyFilters()">
+                  <option value="">All Status</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                </select>
                 <button onclick="showUserModal()"
                   class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2 justify-center whitespace-nowrap">
                   <i class="fas fa-plus"></i>
@@ -855,7 +842,7 @@
               class="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h2 class="text-xl font-semibold text-gray-800">Role Management</h2>
               <button onclick="showRoleModal()"
-                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2 justify-center">
+                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
                 <i class="fas fa-plus"></i>
                 <span>Add New Role</span>
               </button>
@@ -1099,27 +1086,6 @@
               <div id="classes-empty" class="hidden py-12 text-center text-gray-500">
                 <i class="fas fa-inbox text-4xl mb-3"></i>
                 <p>No classes found</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Pending Approvals Section -->
-        <section id="approvals" class="content-section">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-5 sm:p-6 border-b border-gray-100">
-              <h2 class="text-xl font-semibold text-gray-800 mb-2">Pending Registrations</h2>
-              <p class="text-gray-500 text-sm">Review and approve teacher and parent registrations</p>
-            </div>
-            <div class="p-5 sm:p-6">
-              <div id="approvals-loading" class="py-12 text-center text-gray-500">
-                <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
-                <p>Loading pending registrations...</p>
-              </div>
-              <div id="approvals-content"></div>
-              <div id="approvals-empty" class="hidden py-12 text-center text-gray-500">
-                <i class="fas fa-check-circle text-4xl text-green-500 mb-3"></i>
-                <p>No pending registrations</p>
               </div>
             </div>
           </div>
@@ -2008,7 +1974,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         if (sectionId === 'timetable') loadTimetable();
         if (sectionId === 'curriculum') loadCurriculum();
         if (sectionId === 'classes') loadClasses();
-        if (sectionId === 'approvals') loadPendingApprovals();
         if (sectionId === 'setup') loadSetupWizard();
         if (sectionId === 'dashboard') loadDashboardStats();
       }
@@ -2626,9 +2591,15 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       async function loadUsers(token, options = {}) {
         const loadingEl = document.getElementById('users-loading');
         const contentEl = document.getElementById('users-content');
+        const roleFilter = document.getElementById('role-filter')?.value || '';
+        const statusFilter = document.getElementById('status-filter')?.value || '';
 
         try {
-          const response = await api.getUsers(token, options);
+          const response = await api.getUsers(token, {
+            role: roleFilter || undefined,
+            status: statusFilter || undefined,
+            ...options
+          });
 
           loadingEl.classList.add('hidden');
 
@@ -2687,6 +2658,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           };
           const roleClass = roleColors[user.role] || 'bg-gray-100 text-gray-700';
 
+          const isApproved = String(user.is_approved) === 'true';
+          const statusColors = {
+            approved: 'bg-green-100 text-green-700',
+            pending: 'bg-yellow-100 text-yellow-700'
+          };
+          const statusClass = isApproved ? statusColors.approved : statusColors.pending;
+          const statusLabel = isApproved ? 'Approved' : 'Pending';
+
           const syncStatus = user._sync ? user._sync.status : 'synced';
           const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
           const pendingClass = isPending ? 'opacity-70 border-orange-200 bg-orange-50/30' : '';
@@ -2704,15 +2683,26 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
               <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
                 <i class="fas fa-user text-indigo-500"></i>
               </div>
-              <div>
+                <div>
                 <div class="flex items-center gap-2">
                   <h4 class="font-semibold text-gray-800">${escapeHtml(user.name)}</h4>
                   ${syncBadge}
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${roleClass}">${user.role}</span>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium ${roleClass}">${user.role}</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}">${statusLabel}</span>
+                </div>
               </div>
             </div>
             <div class="flex gap-1">
+              ${!isApproved ? `
+                <button onclick="approveUser('${user.id}')" class="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition" title="Approve">
+                  <i class="fas fa-check text-xs"></i>
+                </button>
+                <button onclick="rejectUser('${user.id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition" title="Reject">
+                  <i class="fas fa-times text-xs"></i>
+                </button>
+              ` : ''}
               <button onclick="editUser('${user.id}')" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
                 <i class="fas fa-edit text-xs"></i>
               </button>
@@ -2752,8 +2742,9 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       function applyFilters() {
         const searchTerm = document.getElementById('user-search').value.toLowerCase();
         const roleFilter = document.getElementById('role-filter').value;
+        const statusFilter = document.getElementById('status-filter').value;
 
-        currentPage = 1; // Reset to first page on filter change
+        currentPage = 1;
 
         filteredUsers = allUsersData.filter(user => {
           const matchesSearch = !searchTerm ||
@@ -2763,7 +2754,12 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
           const matchesRole = !roleFilter || user.role === roleFilter;
 
-          return matchesSearch && matchesRole;
+          const isApproved = String(user.is_approved) === 'true';
+          const matchesStatus = !statusFilter ||
+            (statusFilter === 'approved' && isApproved) ||
+            (statusFilter === 'pending' && !isApproved);
+
+          return matchesSearch && matchesRole && matchesStatus;
         });
 
         renderUsersTable(filteredUsers);
@@ -2789,7 +2785,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           document.getElementById('stat-students').textContent = response.stats.total_students || 0;
           document.getElementById('stat-teachers').textContent = response.stats.total_teachers || 0;
           document.getElementById('stat-classes').textContent = response.stats.total_classes || 0;
-          document.getElementById('stat-pending').textContent = response.stats.pending_approvals || 0;
         } else {
           const users = response.users || [];
           const roles = response.roles || [];
@@ -3064,58 +3059,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         }
       }
 
-      // Pending Approvals Functions
-      async function loadPendingApprovals() {
-        const token = auth.getToken();
-        const loadingEl = document.getElementById('approvals-loading');
-        const contentEl = document.getElementById('approvals-content');
-        const emptyEl = document.getElementById('approvals-empty');
-
-        try {
-          const response = await api.getPendingRegistrations(token);
-          loadingEl.classList.add('hidden');
-
-          if (response.users && response.users.length > 0) {
-            let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody class="divide-y divide-gray-100">';
-
-            response.users.forEach(user => {
-              const roleBadge = user.role === 'teacher'
-                ? '<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Teacher</span>'
-                : '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Parent</span>';
-
-              const syncStatus = user._sync ? user._sync.status : 'synced';
-              const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
-              const pendingClass = isPending ? 'opacity-60 bg-orange-50/30' : '';
-              const syncBadge = syncStatus === 'pending'
-                ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
-                : '';
-
-              html += `<tr class="${pendingClass}">
-              <td class="px-4 py-3 font-medium">${escapeHtml(user.name || '')}${syncBadge}</td>
-              <td class="px-4 py-3">${escapeHtml(user.email || '')}</td>
-              <td class="px-4 py-3">${roleBadge}</td>
-              <td class="px-4 py-3">${formatDate(user.created_at)}</td>
-              <td class="px-4 py-3">
-                <button onclick="approveUser('${user.id}')" class="text-green-600 hover:text-green-800 mr-3 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-check"></i> Approve</button>
-                <button onclick="rejectUser('${user.id}')" class="text-red-600 hover:text-red-800 ${isPending ? 'pointer-events-none opacity-50' : ''}"><i class="fas fa-times"></i> Reject</button>
-              </td>
-            </tr>`;
-            });
-
-            html += '</tbody></table></div>';
-            contentEl.innerHTML = html;
-            emptyEl.classList.add('hidden');
-            SyncTracker.monitor('approvals', response.users, () => loadPendingApprovals());
-          } else {
-            contentEl.innerHTML = '';
-            emptyEl.classList.remove('hidden');
-          }
-        } catch (err) {
-          loadingEl.classList.add('hidden');
-          contentEl.innerHTML = '<div class="text-center py-8 text-red-500">Error loading pending registrations</div>';
-        }
-      }
-
       async function approveUser(userId) {
         if (!confirm('Approve this user? They will be able to login.')) return;
 
@@ -3123,16 +3066,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         try {
           const response = await api.approveUser(token, userId);
           if (response.success) {
-            if (!response.optimistic) {
-              alert('User approved successfully');
-            }
-            loadPendingApprovals();
+            showToast('User approval submitted', 'success');
+            loadUsers(token);
             loadDashboardStats();
           } else {
-            alert(response.error || 'Failed to approve user');
+            showToast(response.error || 'Failed to approve user', 'error');
           }
         } catch (err) {
-          alert('Error approving user');
+          showToast('Error approving user', 'error');
         }
       }
 
@@ -3143,16 +3084,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         try {
           const response = await api.rejectUser(token, userId);
           if (response.success) {
-            if (!response.optimistic) {
-              alert('User rejected successfully');
-            }
-            loadPendingApprovals();
+            showToast('User rejection submitted', 'success');
+            loadUsers(token);
             loadDashboardStats();
           } else {
-            alert(response.error || 'Failed to reject user');
+            showToast(response.error || 'Failed to reject user', 'error');
           }
         } catch (err) {
-          alert('Error rejecting user');
+          showToast('Error rejecting user', 'error');
         }
       }
 
@@ -3471,11 +3410,19 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             ...options
           });
 
+          let sections = [];
+          try {
+            const sectionsRes = await api.getSections(token);
+            sections = sectionsRes.sections || [];
+          } catch (e) {
+            console.warn('Could not load sections:', e);
+          }
+
           document.getElementById('students-loading').classList.add('hidden');
 
           if (response.success) {
             studentsData = response.students || [];
-            renderStudentsTable(studentsData);
+            renderStudentsTable(studentsData, sections);
             populateClassFilter();
             SyncTracker.monitor('students', studentsData, () => loadStudents());
           } else {
@@ -3495,7 +3442,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         select.value = current;
       }
 
-      function renderStudentsTable(students) {
+      function renderStudentsTable(students, sections = []) {
         const content = document.getElementById('students-content');
 
         if (!students || students.length === 0) {
@@ -3509,7 +3456,8 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const statusClass = s.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
           const grade = setupGrades.find(g => g.id === s.class_id);
           const className = grade ? grade.name : (s.class || '-');
-          const sectionName = s.section || s.section_id || '';
+          const section = sections.find(sec => sec.id === s.section_id);
+          const sectionName = section ? section.name : '';
 
           const syncStatus = s._sync ? s._sync.status : 'synced';
           const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';

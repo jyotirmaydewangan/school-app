@@ -33,12 +33,23 @@ const UserRepository = {
       allUsers.push(this.mapRowToUser(headers, data[i]));
     }
     
-    const total = allUsers.length;
-    let paginatedUsers = allUsers;
+    let filteredUsers = allUsers;
+    
+    if (options.role) {
+      filteredUsers = filteredUsers.filter(u => u.role === options.role);
+    }
+    
+    if (options.status) {
+      const isApproved = options.status === 'approved';
+      filteredUsers = filteredUsers.filter(u => String(u.is_approved) === String(isApproved));
+    }
+    
+    const total = filteredUsers.length;
+    let paginatedUsers = filteredUsers;
     
     if (options.limit && options.limit > 0) {
       const offset = options.offset || 0;
-      paginatedUsers = allUsers.slice(offset, offset + options.limit);
+      paginatedUsers = filteredUsers.slice(offset, offset + options.limit);
     }
     
     return {

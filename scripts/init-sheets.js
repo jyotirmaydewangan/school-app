@@ -51,7 +51,11 @@ async function setupSheets(tenantName) {
     try {
       const result = JSON.parse(text);
       if (result.success) {
-        log('✓ Google Sheet initialized with required tabs: config, users, sessions, roles', 'success');
+        log('✓ Google Sheet initialized with all required tabs:', 'success');
+        log('  - config, users, sessions, roles', 'info');
+        log('  - students, parent_students, subjects', 'info');
+        log('  - exams, marks, timetable, syllabus', 'info');
+        log('  - resources, class_index, classes, schools, sections', 'info');
       } else {
         log(`Sheet initialization response: ${JSON.stringify(result)}`, 'info');
       }

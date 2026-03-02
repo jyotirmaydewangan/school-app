@@ -283,8 +283,17 @@ export const KVCacheHandler = {
     console.warn('[KV] Payload ID:', filteredPayload.id);
 
     // Determine mutation type once
-    const mutationType = writeAction.toLowerCase().includes('create') ? 'CREATE' :
+    let mutationType = writeAction.toLowerCase().includes('create') ? 'CREATE' :
       writeAction.toLowerCase().includes('delete') ? 'DELETE' : 'UPDATE';
+
+    const actionLower = writeAction.toLowerCase();
+    if (actionLower === 'approveuser') {
+      filteredPayload.is_approved = true;
+      filteredPayload.rejected_at = "";
+    } else if (actionLower === 'rejectuser') {
+      filteredPayload.is_approved = false;
+      filteredPayload.rejected_at = new Date().toISOString();
+    }
 
     console.warn('[KV] Mutation type:', mutationType);
 
@@ -306,11 +315,11 @@ export const KVCacheHandler = {
 
       if (Array.isArray(data)) {
         console.warn('[KV] Data is array, length:', data.length);
-        const { list: newList, applied, generatedId, idField } = this._mutateList(data, mutationType, filteredPayload);
+        const { list: newList, applied, matchedId, idField } = this._mutateList(data, mutationType, filteredPayload);
         if (applied) {
           data = newList;
           appliedToThisAction = true;
-          finalItemId = generatedId || finalItemId;
+          finalItemId = matchedId || finalItemId;
           finalIdField = idField;
         }
       } else {
@@ -323,22 +332,22 @@ export const KVCacheHandler = {
           let listData = data[listKey];
           if (listData && typeof listData === 'object' && !Array.isArray(listData) && listData.schools && Array.isArray(listData.schools)) {
             console.warn('[KV] Found nested schools array in:', listKey);
-            const { list: newList, applied, generatedId, idField } = this._mutateList(listData.schools, mutationType, filteredPayload);
+            const { list: newList, applied, matchedId, idField } = this._mutateList(listData.schools, mutationType, filteredPayload);
             if (applied) {
               console.warn('[KV] Mutation applied to nested array in key:', listKey);
               data[listKey] = { ...listData, schools: newList };
               appliedToThisAction = true;
-              finalItemId = generatedId || finalItemId;
+              finalItemId = matchedId || finalItemId;
               finalIdField = idField;
             }
           } else if (Array.isArray(listData)) {
             console.warn('[KV] Array found in key:', listKey, 'length:', listData.length);
-            const { list: newList, applied, generatedId, idField } = this._mutateList(listData, mutationType, filteredPayload);
+            const { list: newList, applied, matchedId, idField } = this._mutateList(listData, mutationType, filteredPayload);
             if (applied) {
               console.warn('[KV] Mutation applied to key:', listKey);
               data[listKey] = newList;
               appliedToThisAction = true;
-              finalItemId = generatedId || finalItemId;
+              finalItemId = matchedId || finalItemId;
               finalIdField = idField;
             }
           }
@@ -441,7 +450,7 @@ export const KVCacheHandler = {
     const itemId = this._extractItemId(payload);
 
     let applied = false;
-    let generatedId = null;
+    let matchedId = null;
     let newList = [...list];
 
     if (type === 'DELETE') {
@@ -449,6 +458,7 @@ export const KVCacheHandler = {
       newList = newList.map(item => {
         if (String(item[listIdField]) === String(itemId) && itemId !== undefined) {
           applied = true;
+          matchedId = itemId;
           return { ...item, _sync: { status: 'pending_delete', updatedAt: Date.now() } };
         }
         return item;
@@ -458,6 +468,7 @@ export const KVCacheHandler = {
       newList = newList.map(item => {
         if (String(item[listIdField]) === String(itemId) && itemId !== undefined) {
           applied = true;
+          matchedId = itemId;
           return { ...item, ...payload, _sync: { status: 'pending', updatedAt: Date.now() } };
         }
         return item;
@@ -467,17 +478,17 @@ export const KVCacheHandler = {
       const isCorrectList = this._isPayloadCompatibleWithList(payload, listIdField, list);
       if (!isCorrectList) return { list, applied: false };
 
-      generatedId = itemId || 'opt_' + Math.random().toString(36).substr(2, 9);
+      matchedId = itemId || 'opt_' + Math.random().toString(36).substr(2, 9);
       const newItem = {
         ...payload,
-        [listIdField]: generatedId,
+        [listIdField]: matchedId,
         _sync: { status: 'pending', updatedAt: Date.now() }
       };
       newList.unshift(newItem);
       applied = true;
     }
 
-    return { list: newList, applied, generatedId, idField: listIdField };
+    return { list: newList, applied, matchedId, idField: listIdField };
   },
 
   _isPayloadCompatibleWithList(payload, idField, list) {
@@ -536,7 +547,7 @@ export const KVCacheHandler = {
   },
 
   _detectIdentityField(data, isList = false) {
-    const patterns = ['id', 'uid', 'admission_no', 'code', 'key'];
+    const patterns = ['id', 'uid', 'userId', 'user_id', 'admission_no', 'code', 'key'];
 
     // If it's a list, check the first item
     if (isList && Array.isArray(data) && data.length > 0) {

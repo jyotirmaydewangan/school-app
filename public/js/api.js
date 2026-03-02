@@ -86,6 +86,8 @@ const api = {
     params.append('token', token);
     if (options.limit) params.append('limit', options.limit);
     if (options.offset) params.append('offset', options.offset);
+    if (options.role) params.append('role', options.role);
+    if (options.status) params.append('status', options.status);
 
     return this.request('/getUsers', {
       method: 'POST',

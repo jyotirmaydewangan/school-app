@@ -72,7 +72,6 @@ const StudentRepository = {
     
     const row = [
       id,
-      data.user_id || '',
       data.admission_no || '',
       data.name || '',
       data.class_id || '',
@@ -88,6 +87,11 @@ const StudentRepository = {
     SpreadsheetApp.flush();
     
     const student = { id, ...data, status: data.status || 'pending', created_at: now };
+    
+    if (data.user_id) {
+      ParentStudentRepository.link(data.user_id, id);
+    }
+    
     this.autoLinkParent(student);
     this.updateClassIndex();
     

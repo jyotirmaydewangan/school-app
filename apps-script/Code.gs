@@ -269,6 +269,12 @@ function doPost(e) {
       case 'deleteClass':
         result = handleDeleteClass(token, postData);
         break;
+      case 'approveUser':
+        result = handleApproveUser(token, postData);
+        break;
+      case 'rejectUser':
+        result = handleRejectUser(token, postData);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
