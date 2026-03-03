@@ -84,6 +84,8 @@ function deployPages(tenantName, args = []) {
     '{LOGO_URL}': defaults.defaults?.logoUrl || '',
     '{FAVICON_URL}': defaults.defaults?.faviconUrl || '',
     '{SHOW_POWERED_BY}': String(defaults.defaults?.showPoweredBy || false),
+    '{VERIFY_CACHE_DURATION}': String(defaults.defaults?.auth?.verifyCacheDurationMs || 300000),
+    '{TOKEN_THRESHOLD}': String(defaults.defaults?.auth?.tokenExpiringThresholdMs || 60000),
     '{ROLES_JSON}': JSON.stringify(Object.fromEntries(Object.entries(roles).map(([name, data]) => [
       name,
       {

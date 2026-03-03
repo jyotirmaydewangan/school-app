@@ -348,7 +348,7 @@ const Router = {
 
 export default {
   async fetch(request, env, ctx) {
-    const tenantId = env.TENANT_ID || 'unknown';
+    const tenantId = env.TENANT_ID || '{TENANT_ID_DEFAULT}';
     console.log(`[${tenantId}] ${request.method} ${request.url}`);
 
     const router = Router.create(env, ctx);

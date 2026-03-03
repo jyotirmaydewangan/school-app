@@ -7,13 +7,14 @@ const {
   getKVConfig,
   log,
   runCommand,
-  copyFile
+  copyFile,
+  replaceInFile
 } = require('./utils');
 
 function syncWorkerFiles(tenantDir) {
   const templateWorkerDir = path.join(TEMPLATE_DIR, 'worker');
   const tenantWorkerDir = path.join(tenantDir, 'worker');
-  
+
   const filesToSync = [
     'src/index.js',
     'src/cache/KVCacheHandler.js',
@@ -26,7 +27,7 @@ function syncWorkerFiles(tenantDir) {
   ];
 
   log('Syncing worker template files...', 'info');
-  
+
   filesToSync.forEach(file => {
     const src = path.join(templateWorkerDir, file);
     const dest = path.join(tenantWorkerDir, file);
@@ -34,8 +35,24 @@ function syncWorkerFiles(tenantDir) {
       copyFile(src, dest);
     }
   });
-  
+
   log('✓ Worker files synced', 'success');
+}
+
+function getCachePolicyConstants() {
+  const { getCacheConfig } = require('./utils');
+  const cache = getCacheConfig();
+  return {
+    '{CACHE_VERSION}': cache.version || 'v1',
+    '{TTL_ONE_MONTH}': String(cache.ttls?.oneMonth || 2592000),
+    '{TTL_ONE_WEEK}': String(cache.ttls?.oneWeek || 604800),
+    '{TTL_ONE_DAY}': String(cache.ttls?.oneDay || 86400),
+    '{TTL_FIFTEEN_MIN}': String(cache.ttls?.fifteenMin || 900),
+    '{TTL_ONE_MIN}': String(cache.ttls?.oneMin || 60),
+    '{CACHE_POLICY_JSON}': JSON.stringify(cache.policy || {}), // Assuming we might move policy later
+    '{INVALIDATION_MAP_JSON}': JSON.stringify(cache.invalidationMap || {}),
+    '{TENANT_ID_DEFAULT}': require('./utils').getConfig().worker?.tenantIdDefault || 'unknown'
+  };
 }
 
 function updateWranglerConfig(tenantDir, tenantName) {
@@ -81,7 +98,7 @@ function deployWorker(tenantName, args = []) {
   }
 
   const tenantDir = getTenantDir(tenantName);
-  
+
   if (!fs.existsSync(tenantDir)) {
     log(`Error: Tenant "${tenantName}" not found at ${tenantDir}`, 'error');
     log('Run: node scripts/create-tenant.js <tenant-name> first', 'info');
@@ -89,10 +106,22 @@ function deployWorker(tenantName, args = []) {
   }
 
   syncWorkerFiles(tenantDir);
+
+  // Replace placeholders in synced files
+  const cacheReplacements = getCachePolicyConstants();
+  const workerFiles = [
+    'src/index.js',
+    'src/cache/KVCacheHandler.js',
+    'src/cache/CacheConfig.js'
+  ];
+  workerFiles.forEach(file => {
+    replaceInFile(path.join(tenantDir, 'worker', file), cacheReplacements);
+  });
+
   updateWranglerConfig(tenantDir, tenantName);
 
   const webAppUrlPath = path.join(tenantDir, 'apps-script', 'WEB_APP_URL.txt');
-  
+
   if (!fs.existsSync(webAppUrlPath)) {
     log('Error: WEB_APP_URL.txt not found', 'error');
     log('Run: node scripts/deploy-apps-script.js first', 'info');
@@ -100,7 +129,7 @@ function deployWorker(tenantName, args = []) {
   }
 
   let webAppUrl = fs.readFileSync(webAppUrlPath, 'utf8').trim();
-  
+
   if (!webAppUrl || webAppUrl.startsWith('#')) {
     log('Error: Please add your Web App URL to apps-script/WEB_APP_URL.txt', 'error');
     log('  After deploying as Web App, copy the URL and save it here', 'info');
@@ -109,7 +138,7 @@ function deployWorker(tenantName, args = []) {
 
   const tomlPath = path.join(tenantDir, 'worker', 'wrangler.toml');
   let tomlContent = fs.readFileSync(tomlPath, 'utf8');
-  
+
   if (!tomlContent.includes('SCRIPT_URL = "')) {
     tomlContent = tomlContent.replace(
       '[vars]',
@@ -125,21 +154,21 @@ function deployWorker(tenantName, args = []) {
 
   const workerDir = path.join(tenantDir, 'worker');
   const wranglerArgs = args.length > 0 ? args.join(' ') : 'deploy';
-  
+
   const command = 'wrangler ' + wranglerArgs;
   log(`  Running: ${command}`, 'info');
 
   const result = runCommand(command, workerDir);
-  
+
   if (!result.success) {
     log(`Error deploying worker: ${result.error}`, 'error');
     process.exit(1);
   }
 
   const output = result.output;
-  
+
   const urlMatch = output.match(/https:\/\/[a-zA-Z0-9_.-]+\.workers\.dev/);
-  
+
   let workerUrl = '';
   if (urlMatch) {
     workerUrl = urlMatch[0];
@@ -151,12 +180,12 @@ function deployWorker(tenantName, args = []) {
   if (workerUrl) {
     const configJsPath = path.join(tenantDir, 'public', 'js', 'config.js');
     const configContent = fs.readFileSync(configJsPath, 'utf8');
-    
+
     const newConfig = configContent.replace(
       /API_URL: "([^"]*)"/,
       `API_URL: "${workerUrl}"`
     );
-    
+
     fs.writeFileSync(configJsPath, newConfig);
 
     log(`\n✓ Worker deployed!`, 'success');

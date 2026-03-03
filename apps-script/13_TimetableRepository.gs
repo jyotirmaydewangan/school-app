@@ -117,7 +117,7 @@ const TimetableRepository = {
   },
 
   getWeeklyTimetable(className, section) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = DAYS_OF_WEEK;
     const timetable = {};
     
     days.forEach(day => {
@@ -152,8 +152,8 @@ const TimetableRepository = {
   }
 };
 
-const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const PERIODS = {
+const DAYS_OF_WEEK = TENANT_CONFIG.ACADEMIC_DAYS || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const PERIODS = TENANT_CONFIG.ACADEMIC_PERIODS || {
   1: { start: '08:00', end: '08:45' },
   2: { start: '08:45', end: '09:30' },
   3: { start: '09:30', end: '10:15' },

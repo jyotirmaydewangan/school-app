@@ -66,6 +66,9 @@ async function deployAppsScript(tenantName) {
   const roles = require('./utils').getRoles();
   const rolesJson = JSON.stringify(roles);
 
+  const config = require('./utils').getConfig();
+  const academic = config.academic || {};
+
   const replacements = {
     '{TENANT}': tenantName,
     '{APP_NAME}': defaults.appName || 'My School',
@@ -73,7 +76,9 @@ async function deployAppsScript(tenantName) {
     '{DEFAULT_ROLE}': defaults.defaultRole || 'student',
     '{SESSION_TIMEOUT}': String(defaults.sessionTimeoutMinutes || 60),
     '{JWT_SECRET}': require('crypto').randomBytes(32).toString('hex'),
-    '{ROLES_JSON}': rolesJson
+    '{ROLES_JSON}': rolesJson,
+    '{ACADEMIC_DAYS_JSON}': JSON.stringify(academic.daysOfWeek || []),
+    '{ACADEMIC_PERIODS_JSON}': JSON.stringify(academic.periods || {})
   };
 
   replaceInFile(path.join(appsScriptDir, 'config.gs'), replacements);

@@ -6,12 +6,12 @@ const auth = {
       return 'school_app';
     }
   },
-  
+
   get TOKEN_KEY() { return this.STORAGE_PREFIX + '_token'; },
   get USER_KEY() { return this.STORAGE_PREFIX + '_user'; },
   get TOKEN_EXPIRES_KEY() { return this.STORAGE_PREFIX + '_token_expires'; },
   get VERIFY_CACHE_KEY() { return this.STORAGE_PREFIX + '_verify_cache'; },
-  get VERIFY_CACHE_DURATION() { return 5 * 60 * 1000; },
+  get VERIFY_CACHE_DURATION() { return Number('{VERIFY_CACHE_DURATION}') || 300000; },
 
   setToken(token, expiresIn = null) {
     sessionStorage.setItem(this.TOKEN_KEY, token);
@@ -34,7 +34,7 @@ const auth = {
   getTokenExpires() {
     const expiresStr = sessionStorage.getItem(this.TOKEN_EXPIRES_KEY);
     if (expiresStr) return parseInt(expiresStr);
-    
+
     const token = this.getToken();
     if (token) {
       const payload = this.parseJWT(token);
@@ -62,7 +62,7 @@ const auth = {
     }
   },
 
-  isTokenExpiringSoon(thresholdMs = 60000) {
+  isTokenExpiringSoon(thresholdMs = (Number('{TOKEN_THRESHOLD}') || 60000)) {
     const expiresAt = this.getTokenExpires();
     if (!expiresAt) return true;
     return Date.now() >= (expiresAt - thresholdMs);
@@ -92,7 +92,7 @@ const auth = {
       if (Date.now() - cache.timestamp < this.VERIFY_CACHE_DURATION) {
         return cache.result;
       }
-    } catch (e) {}
+    } catch (e) { }
     return null;
   },
 
@@ -126,9 +126,9 @@ const auth = {
   hasPermission(permission) {
     const user = this.getUser();
     if (!user) return false;
-    
-    const rolePermissions = {ROLES_JSON};
-    
+
+    const rolePermissions = { ROLES_JSON };
+
     const permissions = rolePermissions[user.role]?.permissions || [];
     return permissions.includes('*') || permissions.includes(permission);
   }

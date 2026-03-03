@@ -1,6 +1,9 @@
 import { CacheConfig, CACHE_SCOPES } from './CacheConfig.js';
 
-export const CACHE_VERSION = 'v2';
+export const CACHE_VERSION = (function () {
+  const v = '{CACHE_VERSION}';
+  return v.startsWith('{') ? 'v1' : v;
+})();
 
 export const KVCacheHandler = {
   kv: null,
@@ -26,7 +29,7 @@ export const KVCacheHandler = {
     const isBroad = CacheConfig.isBroad(action);
     const { token, queryParams = {}, body = null } = context;
 
-    let key = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
+    let key = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action;
 
     // 1. Scope handling
     if (scope === CACHE_SCOPES.USER || scope === CACHE_SCOPES.SESSION) {
@@ -223,7 +226,7 @@ export const KVCacheHandler = {
   async invalidate(tenantId, action) {
     if (!this.isEnabled()) return;
 
-    const prefix = `cache:${CACHE_VERSION}:${tenantId}:${action}`;
+    const prefix = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action;
 
     try {
       const list = await this.kv.list({ prefix });
@@ -393,6 +396,13 @@ export const KVCacheHandler = {
 
     for (const mut of mutations) {
       const { key, previousData, readAction, idField } = mut;
+
+      // Handle rollback on backend failure
+      if (backendResponse && backendResponse.success === false) {
+        console.warn(`[KV] Backend failure detected for ${key}, rolling back to previousData`);
+        await this.setByKey(key, previousData, readAction);
+        continue;
+      }
 
       const cached = await this.getByKey(key);
       if (!cached || !cached.data) continue;

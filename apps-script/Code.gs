@@ -986,23 +986,35 @@ function handleGetDashboardStats(token) {
   if (!auth.success) return auth;
   
   const usersResult = UserRepository.findAll({});
-  const pendingCount = UserRepository.countPending();
-  const classesResult = ClassRepository.findAll({});
+  
+  const studentsResult = StudentRepository.findAll({});
+  const students = studentsResult.students;
+  const isStudentApproved = (s) => s.status && (s.status.toString().toLowerCase() === 'approved' || s.status === true);
+  const isStudentPending = (s) => !s.status || s.status.toString().toLowerCase() === 'pending';
+  const studentsApproved = students.filter(isStudentApproved).length;
+  const studentsPending = students.filter(isStudentPending).length;
   
   const users = usersResult.users;
-  const teachers = users.filter(u => u.role === 'teacher').length;
-  const parents = users.filter(u => u.role === 'parent').length;
-  const students = users.filter(u => u.role === 'student').length;
+  const isApproved = (u) => u.is_approved === true || u.is_approved === 'true' || u.is_approved === 'TRUE' || u.is_approved === 1 || u.is_approved === '1';
+  const approvedUsers = users.filter(isApproved);
+  const pendingUsers = users.filter(u => !isApproved(u));
+  
+  const teachersApproved = approvedUsers.filter(u => u.role === 'teacher').length;
+  const teachersPending = pendingUsers.filter(u => u.role === 'teacher').length;
+  const parentsApproved = approvedUsers.filter(u => u.role === 'parent').length;
+  const parentsPending = pendingUsers.filter(u => u.role === 'parent').length;
   
   return {
     success: true,
     stats: {
-      total_users: users.length,
-      total_students: students,
-      total_teachers: teachers,
-      total_parents: parents,
-      total_classes: classesResult.total,
-      pending_approvals: pendingCount
+      users_approved: approvedUsers.length,
+      users_pending: pendingUsers.length,
+      students_approved: studentsApproved,
+      students_pending: studentsPending,
+      teachers_approved: teachersApproved,
+      teachers_pending: teachersPending,
+      parents_approved: parentsApproved,
+      parents_pending: parentsPending
     }
   };
 }

@@ -322,10 +322,12 @@ describe('KVCacheHandler._resolveList()', () => {
             { id: 's2', name: 'Bob' }
         ];
         const result = KVCacheHandler._resolveList(list, 'id', 's1', { success: true });
-        // Returns an array (the filtered list) for DELETE
-        expect(Array.isArray(result)).toBe(true);
-        expect(result.find(i => i.id === 's1')).toBeUndefined();
-        expect(result.find(i => i.id === 's2')).toBeDefined();
+        // Returns an object { newList, matchedCount }
+        expect(result.newList).toBeDefined();
+        expect(Array.isArray(result.newList)).toBe(true);
+        expect(result.newList.find(i => i.id === 's1')).toBeUndefined();
+        expect(result.newList.find(i => i.id === 's2')).toBeDefined();
+        expect(result.matchedCount).toBe(1);
     });
 
     test('resolves UPDATE: merges backend entity into matching item and clears _sync', () => {

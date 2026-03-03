@@ -27,6 +27,11 @@ defaults:
   # Session configuration
   sessionTimeoutMinutes: 30
   
+  # Auth configuration
+  auth:
+    verifyCacheDurationMs: 300000 # 5 minutes
+    tokenExpiringThresholdMs: 60000 # 1 minute
+  
   # Rate limiting (0 to disable)
   rateLimitPerMinute: 60
   
@@ -48,7 +53,98 @@ defaults:
 
 # Cache configuration Defaults (in seconds)
 cache:
+  version: "v1"
   default: 2592000 # 1 month
+  ttls:
+    oneMonth: 2592000
+    oneWeek: 604800
+    oneDay: 86400
+    fifteenMin: 900
+    oneMin: 60
+  # CACHE_POLICY defines the rules for every read action.
+  policy:
+    getConfig: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getSchools: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getClasses: { scope: GLOBAL, ttl: 86400, isBroad: true }
+    getSections: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getRoles: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getSubjects: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getUsers: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getStudents: { scope: GLOBAL, ttl: 2592000, isBroad: true }
+    getTimetable: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getExams: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getSyllabus: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getResources: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getNoticeboard: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getDashboardStats: { scope: GLOBAL, ttl: 900, isBroad: true }
+    getAttendance: { scope: USER, ttl: 604800, isBroad: false }
+    getAttendanceSummary: { scope: USER, ttl: 86400, isBroad: false }
+    getMarks: { scope: USER, ttl: 604800, isBroad: false }
+    getLinkedStudents: { scope: USER, ttl: 86400, isBroad: false }
+    getPendingRegistrations: { scope: GLOBAL, ttl: 60, isBroad: true }
+    verify: { scope: SESSION, ttl: 900, isBroad: true }
+
+  # INVALIDATION_MAP maps write actions to the read caches they must invalidate.
+  invalidationMap:
+    register: [getUsers, verify]
+    login: [verify]
+    logout: [verify]
+    approveUser: [getPendingRegistrations, getUsers]
+    rejectUser: [getPendingRegistrations]
+    createUser: [getUsers, verify]
+    updateUser: [getUsers, verify]
+    deleteUser: [getUsers, verify]
+    updateUserRole: [getUsers, verify]
+    createRole: [getRoles, getUsers, verify]
+    updateRole: [getRoles, getUsers, verify]
+    deleteRole: [getRoles, getUsers, verify]
+    createSchool: [getSchools]
+    updateSchool: [getSchools]
+    deleteSchool: [getSchools]
+    createClass: [getClasses]
+    updateClass: [getClasses]
+    deleteClass: [getClasses]
+    createSection: [getSections]
+    updateSection: [getSections]
+    deleteSection: [getSections]
+    createStudent: [getStudents, getDashboardStats]
+    updateStudent: [getStudents, getDashboardStats]
+    deleteStudent: [getStudents, getDashboardStats]
+    approveStudent: [getStudents, getDashboardStats]
+    linkParentStudent: [getLinkedStudents]
+    autoLinkParents: [getLinkedStudents]
+    markAttendance: [getAttendance, getAttendanceSummary, getDashboardStats]
+    createExam: [getExams, getDashboardStats]
+    updateExam: [getExams]
+    deleteExam: [getExams]
+    enterMarks: [getMarks, getDashboardStats]
+    calculateGrades: [getMarks]
+    setTimetable: [getTimetable]
+    deleteTimetable: [getTimetable]
+    createSubject: [getSubjects]
+    updateSubject: [getSubjects]
+    deleteSubject: [getSubjects]
+    addSyllabus: [getSyllabus]
+    updateSyllabus: [getSyllabus]
+    deleteSyllabus: [getSyllabus]
+    addResource: [getResources]
+    deleteResource: [getResources]
+
+# Academic Configuration
+academic:
+  daysOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  periods:
+    1: { start: "08:00", end: "08:45" }
+    2: { start: "08:45", end: "09:30" }
+    3: { start: "09:30", end: "10:15" }
+    4: { start: "10:15", end: "11:00" }
+    5: { start: "11:00", end: "11:45" }
+    6: { start: "11:45", end: "12:30" }
+    7: { start: "12:30", end: "13:15" }
+    8: { start: "13:15", end: "14:00" }
+
+worker:
+  tenantIdDefault: "unknown"
 
 # KV Store Cache Settings
 kvCache:

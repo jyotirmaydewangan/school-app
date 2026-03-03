@@ -17,7 +17,7 @@ describe('KVCacheHandler', () => {
             const key1 = KVCacheHandler.buildKeyForAction('t1', 'getStudents', { queryParams: { status: 'pending' } });
             const key2 = KVCacheHandler.buildKeyForAction('t1', 'getStudents', { queryParams: { status: 'approved' } });
             expect(key1).toBe(key2);
-            expect(key1).toBe('cache:v6:t1:getStudents');
+            expect(key1).toBe('cache:v1:t1:getStudents');
         });
 
         test('user-scoped actions include a token suffix', () => {

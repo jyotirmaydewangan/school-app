@@ -356,13 +356,6 @@
             </a>
           </li>
           <li>
-            <a href="#" data-section="students"
-              class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
-              <i class="fas fa-user-graduate w-5 text-center"></i>
-              <span>Students</span>
-            </a>
-          </li>
-          <li>
             <a href="#" data-section="subjects"
               class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
               <i class="fas fa-book w-5 text-center"></i>
@@ -464,6 +457,10 @@
             <button onclick="switchSchoolTab('classes-tab')" id="tab-btn-classes"
               class="school-tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-gray-300 transition-all whitespace-nowrap">
               <i class="fas fa-layer-group mr-2"></i>Classes & Sections
+            </button>
+            <button onclick="switchSchoolTab('students-tab')" id="tab-btn-students"
+              class="school-tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-gray-300 transition-all whitespace-nowrap">
+              <i class="fas fa-user-graduate mr-2"></i>Students
             </button>
           </div>
 
@@ -614,6 +611,45 @@
               </div>
             </div>
           </div>
+
+          <!-- Tab: Students -->
+          <div id="school-tab-students-tab" class="school-tab-content">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800">Student Management</h2>
+                <div class="flex gap-2">
+                  <button onclick="showImportModal()"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center gap-2">
+                    <i class="fas fa-file-import"></i> Import CSV
+                  </button>
+                  <button onclick="showStudentModal()"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Add Student
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <select id="student-class-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
+                  onchange="loadStudents()">
+                  <option value="">All Classes</option>
+                </select>
+                <select id="student-status-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
+                  onchange="loadStudents()">
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                </select>
+                <input type="text" id="student-search" placeholder="Search students..."
+                  class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl"
+                  oninput="debounceStudentSearch(this.value)">
+              </div>
+              <div id="students-loading" class="py-12 text-center text-gray-500">
+                <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+                <p>Loading students...</p>
+              </div>
+              <div id="students-content"></div>
+            </div>
+          </div>
         </section>
 
         <!-- Dashboard Section -->
@@ -624,8 +660,8 @@
             <p class="text-indigo-100">You are logged in as <span id="user-role-text" class="font-medium"></span></p>
           </div>
 
-          <!-- Admin Stats Grid -->
-          <div id="admin-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+<!-- Admin Stats Grid -->
+          <div id="admin-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
             <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
               <div class="flex items-center justify-between">
                 <div>
@@ -658,18 +694,7 @@
                   <i class="fas fa-chalkboard-teacher text-purple-500 text-xl"></i>
                 </div>
               </div>
-            </div>
-            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-gray-500 text-sm">Classes</p>
-                  <p id="stat-classes" class="text-2xl sm:text-3xl font-bold text-gray-800 mt-1">-</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <i class="fas fa-school text-indigo-500 text-xl"></i>
-                </div>
-              </div>
-            </div>
+</div>
           </div>
 
           <!-- Teacher Dashboard -->
@@ -943,43 +968,6 @@
           </div>
         </section>
 
-        <!-- Students Section -->
-        <section id="students" class="content-section">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h2 class="text-xl font-semibold text-gray-800">Student Management</h2>
-              <div class="flex gap-2">
-                <button onclick="showImportModal()"
-                  class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center gap-2">
-                  <i class="fas fa-file-import"></i> Import CSV
-                </button>
-                <button onclick="showStudentModal()"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
-                  <i class="fas fa-plus"></i> Add Student
-                </button>
-              </div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-3 mb-4">
-              <select id="student-class-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
-                onchange="loadStudents()">
-                <option value="">All Classes</option>
-              </select>
-              <select id="student-status-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
-                onchange="loadStudents()">
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-              </select>
-              <input type="text" id="student-search" placeholder="Search students..."
-                class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl">
-            </div>
-            <div id="students-loading" class="py-12 text-center text-gray-500">
-              <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
-              <p>Loading students...</p>
-            </div>
-            <div id="students-content"></div>
-          </div>
-        </section>
 
         <!-- Subjects Section -->
         <section id="subjects" class="content-section">
@@ -1999,7 +1987,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         });
 
         if (sectionId === 'users') loadUsers();
-        if (sectionId === 'students') loadStudents();
+        if (sectionId === 'students') {
+          navigateTo('school-mgmt');
+          switchSchoolTab('students-tab');
+          return;
+        }
         if (sectionId === 'subjects') loadSubjects();
         if (sectionId === 'attendance') {
           document.getElementById('attendance-date').valueAsDate = new Date();
@@ -2037,6 +2029,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         // Load data if needed
         if (tabId === 'general') loadSetupWizard();
         if (tabId === 'classes-tab') loadClasses();
+        if (tabId === 'students-tab') loadStudents();
       }
 
       function toggleSidebar() {
@@ -2669,7 +2662,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             filteredUsers = response.users;
             currentPage = 1;
             renderUsersTable(response.users);
-            updateDashboardStats(response);
+            loadDashboardStats();
             SyncTracker.monitor('users', response.users, (opts) => loadUsers(token, opts));
           } else {
             contentEl.innerHTML = '<p class="text-red-500">' + (response.error || 'Failed to load users') + '</p>';
@@ -2840,18 +2833,25 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         applyFilters();
       }
 
-      function updateDashboardStats(response) {
+function updateDashboardStats(response) {
         if (response.stats) {
-          document.getElementById('stat-users').textContent = response.stats.total_users || 0;
-          document.getElementById('stat-students').textContent = response.stats.total_students || 0;
-          document.getElementById('stat-teachers').textContent = response.stats.total_teachers || 0;
-          document.getElementById('stat-classes').textContent = response.stats.total_classes || 0;
+          document.getElementById('stat-users').innerHTML = 
+            `<span class="text-green-600 font-semibold">Approved: ${response.stats.users_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.users_pending || 0}</span>`;
+          document.getElementById('stat-students').innerHTML = 
+            `<span class="text-green-600 font-semibold">Approved: ${response.stats.students_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.students_pending || 0}</span>`;
+          document.getElementById('stat-teachers').innerHTML = 
+            `<span class="text-green-600 font-semibold">Approved: ${response.stats.teachers_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.teachers_pending || 0}</span>`;
         } else {
           const users = response.users || [];
-          const roles = response.roles || [];
-          document.getElementById('stat-users').textContent = users.length;
-          document.getElementById('stat-students').textContent = users.filter(u => u.role === 'student').length;
-          document.getElementById('stat-teachers').textContent = users.filter(u => u.role === 'teacher').length;
+          const isApproved = (u) => u.is_approved === true || u.is_approved === 'true' || u.is_approved === 'TRUE' || u.is_approved === 1 || u.is_approved === '1';
+          const approvedUsers = users.filter(isApproved);
+          const pendingUsers = users.filter(u => !isApproved(u));
+          document.getElementById('stat-users').innerHTML = 
+            `Approved: ${approvedUsers.length}<br><span class="text-gray-400 text-sm">Pending: ${pendingUsers.length}</span>`;
+          document.getElementById('stat-students').innerHTML = 
+            `Approved: 0<br><span class="text-gray-400 text-sm">Pending: 0</span>`;
+          document.getElementById('stat-teachers').innerHTML = 
+            `Approved: ${approvedUsers.filter(u => u.role === 'teacher').length}<br><span class="text-gray-400 text-sm">Pending: ${pendingUsers.filter(u => u.role === 'teacher').length}</span>`;
         }
       }
 
@@ -3456,6 +3456,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const token = auth.getToken();
         const classFilter = document.getElementById('student-class-filter').value;
         const statusFilter = document.getElementById('student-status-filter').value;
+        const searchQuery = document.getElementById('student-search').value;
 
         // Only show loading/clear on first load, not background sync refreshes
         const isBackgroundRefresh = studentsData && studentsData.length > 0;
@@ -3472,6 +3473,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const response = await api.getStudents(token, {
             class_id: classFilter || undefined,
             status: statusFilter || undefined,
+            search: searchQuery || undefined,
             ...options
           });
 
@@ -3497,6 +3499,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           document.getElementById('students-loading').classList.add('hidden');
           showError('Failed to load students');
         }
+      }
+
+      let studentSearchTimeout;
+      window.debounceStudentSearch = function (value) {
+        clearTimeout(studentSearchTimeout);
+        studentSearchTimeout = setTimeout(() => {
+          loadStudents();
+        }, 500);
       }
 
       function populateClassFilter() {
