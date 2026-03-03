@@ -30,7 +30,7 @@ defaults:
   # Auth configuration
   auth:
     verifyCacheDurationMs: 300000 # 5 minutes
-    tokenExpiringThresholdMs: 60000 # 1 minute
+    tokenExpiringThresholdMs: 360000 # 60 minute
   
   # Rate limiting (0 to disable)
   rateLimitPerMinute: 60

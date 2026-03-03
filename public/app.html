@@ -2013,7 +2013,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         document.querySelectorAll('.school-tab-btn').forEach(btn => {
           btn.classList.remove('active-tab');
         });
-        const activeBtn = document.getElementById(`tab-btn-${tabId === 'classes-tab' ? 'classes' : tabId}`);
+        const activeBtn = document.getElementById(`tab-btn-${tabId.replace('-tab', '')}`);
         if (activeBtn) activeBtn.classList.add('active-tab');
 
         // Update Content
