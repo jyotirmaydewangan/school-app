@@ -42,7 +42,7 @@ const ClassRepository = {
     const headers = data[0];
     
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === id) {
+      if (String(data[i][0]) === String(id)) {
         const obj = {};
         headers.forEach((h, j) => obj[h] = data[i][j]);
         return obj;

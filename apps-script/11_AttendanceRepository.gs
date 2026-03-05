@@ -17,6 +17,15 @@ const AttendanceRepository = {
     return sheet;
   },
 
+  formatDate(date) {
+    if (!date) return '';
+    if (Object.prototype.toString.call(date) === '[object Date]') {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return Utilities.formatDate(date, ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+    }
+    return String(date);
+  },
+
   markAttendance(attendanceData) {
     const lock = LockService.getScriptLock();
     lock.waitLock(30000);
@@ -41,7 +50,7 @@ const AttendanceRepository = {
           
           const existing = this.findByStudentAndDate(record.student_id, date, year, month);
           if (existing) {
-            this.updateAttendance(existing.id, record.status, attendanceData.marked_by);
+            this.updateAttendance(existing.id, record.status, attendanceData.marked_by, year, month);
             results.success++;
           } else {
             const id = Utilities.getUuid();
@@ -74,11 +83,14 @@ const AttendanceRepository = {
   },
 
   findByStudentAndDate(studentId, date, year, month) {
+    SpreadsheetApp.flush(); // Ensure latest data is visible
     const sheet = this.getAttendanceSheet(year, month);
     const data = sheet.getDataRange().getValues();
     
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][1]) === String(studentId) && String(data[i][2]) === String(date)) {
+    // Search from bottom to top to find the most recent record if duplicates exist
+    for (let i = data.length - 1; i >= 1; i--) {
+      const sheetDate = this.formatDate(data[i][2]);
+      if (String(data[i][1]).trim() === String(studentId).trim() && sheetDate === String(date)) {
         return {
           id: data[i][0],
           student_id: data[i][1],
@@ -93,12 +105,12 @@ const AttendanceRepository = {
     return null;
   },
 
-  updateAttendance(id, status, markedBy) {
-    const data = this.getAllForMonth(new Date().getFullYear(), new Date().getMonth() + 1);
+  updateAttendance(id, status, markedBy, year, month) {
+    const sheet = this.getAttendanceSheet(year, month);
+    const data = sheet.getDataRange().getValues();
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === id) {
-        const sheet = data[0].sheet;
         data[i][4] = status;
         data[i][5] = markedBy;
         sheet.getRange(i + 1, 5, 1, 2).setValues([[status, markedBy]]);
@@ -125,17 +137,21 @@ const AttendanceRepository = {
     };
   },
 
-  getByClassAndDate(className, date, section = null) {
+  getByClassAndDate(classId, sectionId, date) {
     const year = parseInt(date.split('-')[0]);
     const month = parseInt(date.split('-')[1]);
     
-    const students = StudentRepository.getStudentsByClass(className, section).students;
-    const attendanceData = this.getAllForMonth(year, month);
+    // Use getAllForMonth which is already efficient
+    const data = this.getAllForMonth(year, month);
+    const studentsResult = StudentRepository.findAll({ class_id: classId, section_id: sectionId, status: 'approved' });
+    const students = studentsResult.students;
     
-    return students.map(student => {
-      const record = attendanceData.data.find(a => 
+    const attendance = students.map(student => {
+      // Find the LATEST entry for this student on this date
+      // We search from bottom to top to respect the "Last Entry Wins" rule
+      const record = data.data.slice().reverse().find(a => 
         String(a.student_id) === String(student.id) && 
-        String(a.date) === String(date)
+        this.formatDate(a.date) === String(date)
       );
       
       return {
@@ -146,6 +162,44 @@ const AttendanceRepository = {
         marked_by: record ? record.marked_by : null
       };
     });
+    
+    return {
+      success: true,
+      class: ClassRepository.findById(classId)?.name,
+      class_id: classId,
+      section: SectionRepository.findById(sectionId)?.name,
+      section_id: sectionId,
+      date: date,
+      students: attendance,
+      total_students: students.length
+    };
+  },
+
+  getByClassAndMonth(classId, sectionId, year, month) {
+    const data = this.getAllForMonth(parseInt(year), parseInt(month));
+    const studentsResult = StudentRepository.findAll({ class_id: classId, section_id: sectionId, status: 'approved' });
+    const students = studentsResult.students;
+    
+    // We return ALL attendance records for matched students in this month
+    // The worker/client will filter by date
+    const attendanceRecords = data.data.filter(a => 
+      students.some(s => String(s.id) === String(a.student_id))
+    ).map(a => ({
+      ...a,
+      date: this.formatDate(a.date) // Normalize date for worker filtering
+    }));
+
+    return {
+      success: true,
+      class: ClassRepository.findById(classId)?.name,
+      class_id: classId,
+      section: SectionRepository.findById(sectionId)?.name,
+      section_id: sectionId,
+      year: year,
+      month: month,
+      students: students.map(s => ({ id: s.id, name: s.name, admission_no: s.admission_no })),
+      attendance: attendanceRecords
+    };
   },
 
   getByStudent(studentId, options = {}) {
@@ -178,6 +232,7 @@ const AttendanceRepository = {
       const present = studentRecords.filter(r => r.status === 'present').length;
       const absent = studentRecords.filter(r => r.status === 'absent').length;
       const late = studentRecords.filter(r => r.status === 'late').length;
+      const leave = studentRecords.filter(r => r.status === 'leave').length;
       const total = studentRecords.length;
       
       months.push({
@@ -185,6 +240,7 @@ const AttendanceRepository = {
         present,
         absent,
         late,
+        leave,
         total,
         percentage: total > 0 ? Math.round((present / total) * 100) : 0
       });
@@ -198,7 +254,7 @@ const AttendanceRepository = {
     const month = parseInt(date.split('-')[1]);
     
     const data = this.getAllForMonth(year, month);
-    const absences = data.data.filter(a => String(a.date) === String(date) && a.status === 'absent');
+    const absences = data.data.filter(a => this.formatDate(a.date) === String(date) && a.status === 'absent');
     
     return absences.map(a => {
       const student = StudentRepository.findById(a.student_id);

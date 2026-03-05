@@ -46,6 +46,9 @@ function doGet(e) {
       case 'getAttendance':
         result = handleGetAttendance(params.token, params);
         break;
+      case 'getAttendanceByClass':
+        result = handleGetAttendanceByClass(params.token, params);
+        break;
       case 'getMarks':
         result = handleGetMarks(params.token, params);
         break;
@@ -190,6 +193,9 @@ function doPost(e) {
         break;
       case 'getAttendanceSummary':
         result = handleGetAttendanceSummary(token, postData);
+        break;
+      case 'getAttendanceByClass':
+        result = handleGetAttendanceByClass(token, postData);
         break;
       case 'createExam':
         result = handleCreateExam(token, postData);
@@ -464,12 +470,38 @@ function handleGetAttendance(token, params) {
     return { success: true, attendance };
   }
   
-  if (params.class && params.date) {
+  if (params.class && params.section && params.date) {
     const result = AttendanceRepository.getByClassAndDate(params.class, params.date, params.section);
     return { success: true, records: result };
   }
   
-  return { success: false, error: 'Invalid parameters' };
+  return { success: false, error: 'Invalid parameters: class, section, and date are required' };
+}
+
+function handleGetAttendanceByClass(token, params) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+
+  const classId = params.class || params.class_id;
+  const sectionId = params.section || params.section_id;
+  const date = params.date;
+  const year = params.year;
+  const month = params.month;
+
+  if (!classId) {
+    return { success: false, error: "Class ID is required" };
+  }
+
+  // Monthly fetching for worker optimization
+  if (year && month) {
+    return AttendanceRepository.getByClassAndMonth(classId, sectionId, year, month);
+  }
+
+  if (!date) {
+    return { success: false, error: "Date or Month/Year is required" };
+  }
+
+  return AttendanceRepository.getByClassAndDate(classId, sectionId, date);
 }
 
 function handleGetAttendanceSummary(token, data) {

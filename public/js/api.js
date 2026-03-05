@@ -218,6 +218,17 @@ const api = {
     return this.request('/getAttendance?' + params.toString());
   },
 
+  async getAttendanceByClass(token, classId, sectionId, date, requestOptions = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (classId) params.append('class', classId);
+    if (sectionId) params.append('section', sectionId);
+    if (date) params.append('date', date);
+    if (requestOptions.cache) params.append('cache', requestOptions.cache);
+
+    return this.request('/getAttendanceByClass?' + params.toString(), requestOptions);
+  },
+
   async getAttendanceSummary(token, data) {
     return this.request('/getAttendanceSummary', {
       method: 'POST',

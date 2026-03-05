@@ -5,6 +5,8 @@ export const CACHE_VERSION = (function () {
   return v.startsWith('{') ? 'v1' : v;
 })();
 
+const ATTENDANCE_KEY_PREFIX = 'attendance';
+
 export const KVCacheHandler = {
   kv: null,
   env: null,
@@ -39,8 +41,53 @@ export const KVCacheHandler = {
       }
     }
 
+    const keyParams = CacheConfig.getRule(action)?.keyParameters;
+
     // 2. Data Key handling (Broad vs Specific)
-    if (!isBroad) {
+    if (keyParams && keyParams.length > 0) {
+      // READABLE KEYS: Use explicit parameters if defined
+      let hasMissingRequiredParam = false;
+      const parts = keyParams.map(p => {
+        const lowerP = p.toLowerCase();
+        const baseP = lowerP.replace(/[^a-z0-9]/g, '');
+
+        // Robust lookup: try direct match, then search all keys for a fuzzy match
+        let val = queryParams[p] || queryParams[lowerP] || queryParams[lowerP + '_id'] ||
+          (body ? (body[p] || body[lowerP] || body[lowerP + '_id']) : null);
+
+        if (val === undefined || val === null) {
+          // Fuzzy search in both queryParams and body keys
+          const searchSources = [queryParams, body].filter(s => s && typeof s === 'object');
+          for (const source of searchSources) {
+            const matchingKey = Object.keys(source).find(k => {
+              const normalizedK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return normalizedK === baseP || normalizedK === baseP + 'id';
+            });
+            if (matchingKey) {
+              val = source[matchingKey];
+              break;
+            }
+          }
+        }
+
+        if (val === undefined || val === null) {
+          // Strictly REQUIRED parameters for specific caching
+          const isRequired = ['class', 'year', 'month', 'student', 'id', 'user'].includes(baseP);
+          if (isRequired) {
+            hasMissingRequiredParam = true;
+          }
+          return 'any';
+        }
+        return String(val);
+      });
+
+      // SAFETY: If a partitioned broad action is missing its REQUIRED keys, do NOT cache it
+      if (hasMissingRequiredParam && isBroad) {
+        console.warn(`[KV] Missing required key parameters for ${action}. Falling back to 'any'.`);
+        // return null;
+      }
+      key += ":" + parts.join(':');
+    } else if (!isBroad) {
       // For non-broad actions, we still need uniqueness but NO raw query params in the key.
       // We'll create a stable hash of the parameters.
       const ignoredParams = ['token', 'action', 'tenantId', 't', 'cache', 'force'];
@@ -75,19 +122,24 @@ export const KVCacheHandler = {
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
   },
 
+  buildAttendanceKey(className, section, date) {
+    const normalizedClass = (className || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const normalizedSection = (section || 'nosection').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const normalizedDate = date || '';
+    return `${ATTENDANCE_KEY_PREFIX}:${normalizedClass}:${normalizedSection}:${normalizedDate}`;
+  },
+
   async get(tenantId, action, queryParams = {}) {
     if (!this.isEnabled()) {
-      console.log('[KV] Get - KV not enabled');
       return null;
     }
 
     const key = this.buildKeyForAction(tenantId, action, { queryParams });
-    console.log(`[KV] Get key: ${key}`);
 
     try {
       const cached = await this.kv.get(key, 'json');
@@ -96,13 +148,10 @@ export const KVCacheHandler = {
         const staleAt = cached.staleAt || 0;
         const expiresAt = cached.expiresAt || 0;
 
-        console.log(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
-
         const data = cached.data;
         const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
 
         if (isEmpty) {
-          console.log('[KV] Cached data is empty, treating as miss');
           await this.kv.delete(key);
           return null;
         }
@@ -112,8 +161,6 @@ export const KVCacheHandler = {
           isStale: now > staleAt && now < expiresAt,
           isExpired: now >= expiresAt
         };
-      } else {
-        console.log('[KV] Cache miss for key:', key);
       }
     } catch (e) {
       console.error('KV get error:', e.message);
@@ -122,16 +169,10 @@ export const KVCacheHandler = {
   },
 
   async set(tenantId, action, data, queryParams = {}) {
-    if (!this.isEnabled()) {
-      console.log('[KV] Set - KV not enabled');
-      return;
-    }
+    if (!this.isEnabled()) return;
 
     // Safety: Never cache error responses or invalid objects
-    if (!data || data.success === false || data.error) {
-      console.warn(`[KV] Refused to cache error response for action: ${action}`);
-      return;
-    }
+    if (!data || data.success === false || data.error) return;
 
     const key = this.buildKeyForAction(tenantId, action, { queryParams });
     const ttl = CacheConfig.getTTL(action);
@@ -147,18 +188,13 @@ export const KVCacheHandler = {
 
     try {
       await this.kv.put(key, JSON.stringify(cacheEntry), { expirationTtl: ttl + 60 });
-      console.log(`[KV] Cached key: ${key} with TTL: ${ttl}s`);
     } catch (e) {
       console.error('KV set error:', e.message);
     }
   },
 
   async getByKey(key) {
-    if (!this.isEnabled()) {
-      return null;
-    }
-
-    console.warn(`[KV] GetByKey: ${key}`);
+    if (!this.isEnabled()) return null;
 
     try {
       const cached = await this.kv.get(key, 'json');
@@ -167,13 +203,10 @@ export const KVCacheHandler = {
         const staleAt = cached.staleAt || 0;
         const expiresAt = cached.expiresAt || 0;
 
-        console.warn(`[KV] Cache hit! staleAt=${staleAt}, expiresAt=${expiresAt}, now=${now}`);
-
         const data = cached.data;
         const isEmpty = Array.isArray(data) ? data.length === 0 : !data || Object.keys(data).length === 0;
 
         if (isEmpty) {
-          console.warn('[KV] Cached data is empty, treating as miss');
           await this.kv.delete(key);
           return null;
         }
@@ -183,8 +216,6 @@ export const KVCacheHandler = {
           isStale: now > staleAt && now < expiresAt,
           isExpired: now >= expiresAt
         };
-      } else {
-        console.warn('[KV] Cache miss for key:', key);
       }
     } catch (e) {
       console.error('KV getByKey error:', e.message);
@@ -193,16 +224,10 @@ export const KVCacheHandler = {
   },
 
   async setByKey(key, data, action) {
-    if (!this.isEnabled()) {
-      console.log('[KV] SetByKey - KV not enabled');
-      return;
-    }
+    if (!this.isEnabled()) return;
 
     // Safety: Never cache error responses or invalid objects
-    if (!data || data.success === false || data.error) {
-      console.warn(`[KV] Refused to cache error response for key: ${key}`);
-      return;
-    }
+    if (!data || data.success === false || data.error) return;
 
     const ttl = CacheConfig.getTTL(action);
     const now = Date.now();
@@ -217,16 +242,56 @@ export const KVCacheHandler = {
 
     try {
       await this.kv.put(key, JSON.stringify(cacheEntry), { expirationTtl: ttl + 60 });
-      console.log(`[KV] Cached key: ${key} with TTL: ${ttl}s`);
     } catch (e) {
       console.error('KV setByKey error:', e.message);
     }
   },
 
-  async invalidate(tenantId, action) {
+  async invalidate(tenantId, action, context = null) {
     if (!this.isEnabled()) return;
 
-    const prefix = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action;
+    const rule = CacheConfig.getRule(action);
+    const keyParams = rule?.keyParameters;
+
+    // TARGETED INVALIDATION: If we have context (write payload) and it provides all key parameters
+    if (keyParams && keyParams.length > 0 && context) {
+      // Create a copy to avoid mutating the original body while enriching
+      const enrichedContext = { ...context };
+
+      // Enrich context with year/month if only date is present
+      if (enrichedContext.date && (!enrichedContext.year || !enrichedContext.month)) {
+        const parts = enrichedContext.date.split('-');
+        if (parts.length >= 2) {
+          enrichedContext.year = parts[0];
+          enrichedContext.month = parts[1];
+        }
+      }
+
+      console.warn(`[KV] Checking targeted invalidation for ${action}. KeyParams: ${keyParams.join(', ')}. Context enriched: ${JSON.stringify(enrichedContext)}`);
+
+      // Check if context satisfies all key parameters (robust fuzzy matching)
+      const hasAllParams = keyParams.every(p => {
+        const baseP = p.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchingKey = Object.keys(enrichedContext).find(k => {
+          const normalizedK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return normalizedK === baseP || normalizedK === baseP + 'id';
+        });
+        const found = matchingKey !== undefined && enrichedContext[matchingKey] !== null;
+        console.warn(`[KV] Param ${p} (base: ${baseP}) matching key in context: ${matchingKey || 'NONE'}. Value: ${matchingKey ? enrichedContext[matchingKey] : 'n/a'}`);
+        return found;
+      });
+
+      if (hasAllParams) {
+        const key = this.buildKeyForAction(tenantId, action, { body: enrichedContext });
+        console.warn(`[KV] TARGETED INVALIDATION MATCHED! Deleting key: ${key}`);
+        await this.kv.delete(key);
+        return;
+      }
+      console.warn(`[KV] Falling back to broad invalidation for ${action} due to missing params. Context keys: ${Object.keys(enrichedContext).join(', ')}`);
+    }
+
+    const prefix = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action + ":";
+    console.warn(`[KV] BROAD INVALIDATION! Scanning prefix: ${prefix} ...`);
 
     try {
       const list = await this.kv.list({ prefix });
@@ -235,45 +300,31 @@ export const KVCacheHandler = {
       for (const key of keys) {
         await this.kv.delete(key);
       }
-
-      if (keys.length > 0) {
-        console.log(`[KV] Invalidated ${keys.length} keys for ${action}`);
-      }
     } catch (e) {
       console.error('KV invalidate error:', e.message);
     }
   },
 
-  async invalidateByPattern(tenantId, patterns) {
+  async invalidateByPattern(tenantId, patterns, context = null) {
     if (!this.isEnabled() || !patterns) return;
 
     for (const pattern of patterns) {
-      await this.invalidate(tenantId, pattern);
+      await this.invalidate(tenantId, pattern, context);
     }
   },
 
   async applyMutation(tenantId, writeAction, payload) {
-    console.warn(`[KV] ===== applyMutation START: ${writeAction} =====`);
-
-    if (!this.isEnabled()) {
-      console.warn('[KV] Cache not enabled, skipping mutation');
-      return null;
-    }
+    if (!this.isEnabled()) return null;
 
     const targets = CacheConfig.getInvalidatePatterns(writeAction);
-    console.warn('[KV] Mutation targets:', targets);
     const readActions = targets.filter(t => t.startsWith('get'));
-    if (readActions.length === 0) {
-      console.warn('[KV] No read actions to invalidate, skipping mutation');
-      return null;
-    }
+    if (readActions.length === 0) return null;
 
     const mutations = [];
     let hasApplied = false;
     let finalItemId = null;
     let finalIdField = null;
 
-    // Filter payload to prevent security leaks (token, password, etc.)
     const sensitiveKeys = ['token', 'password', 'key', 'secret', 'auth'];
     const filteredPayload = Object.keys(payload).reduce((acc, key) => {
       if (!sensitiveKeys.includes(key.toLowerCase())) {
@@ -282,10 +333,6 @@ export const KVCacheHandler = {
       return acc;
     }, {});
 
-    console.warn('[KV] Filtered payload:', filteredPayload);
-    console.warn('[KV] Payload ID:', filteredPayload.id);
-
-    // Determine mutation type once
     let mutationType = writeAction.toLowerCase().includes('create') ? 'CREATE' :
       writeAction.toLowerCase().includes('delete') ? 'DELETE' : 'UPDATE';
 
@@ -298,26 +345,16 @@ export const KVCacheHandler = {
       filteredPayload.rejected_at = new Date().toISOString();
     }
 
-    console.warn('[KV] Mutation type:', mutationType);
-
     for (const readAction of readActions) {
       const key = this.buildKeyForAction(tenantId, readAction);
-      console.warn('[KV] Looking for cache key:', key);
       const cached = await this.getByKey(key);
-      console.warn('[KV] Cached data for', readAction + ':', cached ? 'found' : 'not found');
-      if (!cached || !cached.data) {
-        console.warn('[KV] No cached data found, cannot apply mutation');
-        continue;
-      }
-
-      console.warn('[KV] Cached data structure:', JSON.stringify(cached.data).substring(0, 500));
+      if (!cached || !cached.data) continue;
 
       const previousData = JSON.parse(JSON.stringify(cached.data));
       let data = cached.data;
       let appliedToThisAction = false;
 
       if (Array.isArray(data)) {
-        console.warn('[KV] Data is array, length:', data.length);
         const { list: newList, applied, matchedId, idField } = this._mutateList(data, mutationType, filteredPayload);
         if (applied) {
           data = newList;
@@ -326,35 +363,23 @@ export const KVCacheHandler = {
           finalIdField = idField;
         }
       } else {
-        console.warn('[KV] Data is object, keys:', Object.keys(data));
         data = { ...data };
         for (const listKey in data) {
-          console.warn('[KV] Checking key:', listKey, 'value type:', typeof data[listKey]);
-
-          // Handle nested object with schools array (e.g., { schools: { schools: [...], total: 1 } })
           let listData = data[listKey];
           if (listData && typeof listData === 'object' && !Array.isArray(listData) && listData.schools && Array.isArray(listData.schools)) {
-            console.warn('[KV] Found nested schools array in:', listKey);
             const { list: newList, applied, matchedId, idField } = this._mutateList(listData.schools, mutationType, filteredPayload);
             if (applied) {
-              console.warn('[KV] Mutation applied to nested array in key:', listKey);
               data[listKey] = { ...listData, schools: newList };
               appliedToThisAction = true;
               finalItemId = matchedId || finalItemId;
               finalIdField = idField;
             }
           } else if (Array.isArray(listData)) {
-            console.warn('[KV] Array found in key:', listKey, 'length:', listData.length);
             const { list: newList, applied, matchedId, idField } = this._mutateList(listData, mutationType, filteredPayload);
             if (applied) {
-              console.warn('[KV] Mutation applied to key:', listKey);
               data[listKey] = newList;
               appliedToThisAction = true;
-
-              // CRITICAL: Always use the ID generated/matched by _mutateList
-              if (matchedId) {
-                finalItemId = matchedId;
-              }
+              if (matchedId) finalItemId = matchedId;
               finalIdField = idField;
             }
           }
@@ -362,44 +387,28 @@ export const KVCacheHandler = {
       }
 
       if (appliedToThisAction) {
-        console.warn('[KV] Saving mutated data back to cache');
         await this.setByKey(key, data, readAction);
         mutations.push({ key, previousData, readAction, idField: finalIdField });
         hasApplied = true;
       }
     }
 
-    if (!hasApplied) {
-      console.warn('[KV] No mutation applied - data not found or ID mismatch in cache');
-      return null;
-    }
-
-    console.warn('[KV] ===== MUTATION APPLIED SUCCESSFULLY =====');
+    if (!hasApplied) return null;
 
     const itemId = finalItemId || this._extractItemId(payload, finalIdField);
-    console.warn(`[KV] applyMutation SUCCESS: itemId=${itemId}, idField=${finalIdField}, readActions=${mutations.map(m => m.readAction).join(',')}`);
-
     return { mutations, identityField: finalIdField, itemId };
-  },
-
-  _extractItemIdFromMutatedData(mutation) {
-    // Helper to find the newly created/updated ID if it's not in the payload
-    return null; // Placeholder, the actionItemId logic above is better
   },
 
   async resolveMutation(tenantId, context, backendResponse) {
     if (!this.isEnabled() || !context) return;
     const { mutations, itemId } = context;
 
-    // Safety check: Never resolve if itemId is missing (prevents overwriting entire lists)
     if (!itemId) return;
 
     for (const mut of mutations) {
       const { key, previousData, readAction, idField } = mut;
 
-      // Handle rollback on backend failure
       if (backendResponse && backendResponse.success === false) {
-        console.warn(`[KV] Backend failure detected for ${key}, rolling back to previousData`);
         await this.setByKey(key, previousData, readAction);
         continue;
       }
@@ -417,7 +426,6 @@ export const KVCacheHandler = {
       } else {
         data = { ...data };
         for (const listKey in data) {
-          // Handle nested object with schools array (e.g., { schools: { schools: [...], total: 1 } })
           let listData = data[listKey];
           if (listData && typeof listData === 'object' && !Array.isArray(listData) && listData.schools && Array.isArray(listData.schools)) {
             const { newList, matchedCount } = this._resolveList(listData.schools, idField, itemId, backendResponse);
@@ -431,19 +439,15 @@ export const KVCacheHandler = {
         }
       }
 
-      // Self-healing: If backend succeeded but we couldn't resolve in cache, invalidate
       if (backendResponse && backendResponse.success !== false) {
         if (totalMatched === 0) {
-          console.warn(`[KV] Self-healing: Invalidation required for ${key} - Resolution mismatch`);
           await this.kv.delete(key);
         } else {
-          // Extra Guard: If any items STILL have _sync after a successful resolve, invalidate everything
           const hasResidualSync = Array.isArray(data)
             ? data.some(i => i._sync)
             : Object.values(data).some(list => Array.isArray(list) && list.some(i => i._sync));
 
           if (hasResidualSync) {
-            console.warn(`[KV] Self-healing: Invalidation required for ${key} - Residual _sync detected`);
             await this.kv.delete(key);
           } else {
             await this.setByKey(key, data, readAction);
@@ -482,7 +486,6 @@ export const KVCacheHandler = {
         return item;
       });
     } else { // CREATE
-      // Optimization: Only unshift into lists where the identity field matches the payload context
       const isCorrectList = this._isPayloadCompatibleWithList(payload, listIdField, list);
       if (!isCorrectList) return { list, applied: false };
 
@@ -500,23 +503,13 @@ export const KVCacheHandler = {
   },
 
   _isPayloadCompatibleWithList(payload, idField, list) {
-    if (!list || list.length === 0) return true; // Empty list is always compatible
-
+    if (!list || list.length === 0) return true;
     const firstItem = list[0];
-
-    // 1. Strict Identity Check
-    // If the list has the idField and the payload has a value for it, they probably match
     if (firstItem[idField] !== undefined && payload[idField] !== undefined) return true;
-
-    // 2. Generic Schema Overlap Check
-    // Compare keys (excluding internal _sync and common id fields)
     const ignoreKeys = ['_sync', 'id', 'role_id', 'user_id', 'admission_no', 'created_at', 'updated_at'];
     const payloadKeys = Object.keys(payload).filter(k => !ignoreKeys.includes(k));
     const listKeys = Object.keys(firstItem).filter(k => !ignoreKeys.includes(k));
-
     const commonKeys = payloadKeys.filter(k => listKeys.includes(k));
-
-    // If they share more than 1 distinct domain property (e.g. email, role_name, etc.), they are compatible
     return commonKeys.length > 0;
   },
 
@@ -524,7 +517,6 @@ export const KVCacheHandler = {
     const isDelete = list.some(i => String(i[idField]) === String(itemId) && i._sync?.status === 'pending_delete');
 
     if (isDelete) {
-      console.log(`[KV] Resolving DELETE for ${idField}=${itemId}`);
       const newList = list.filter(i => String(i[idField]) !== String(itemId));
       return { newList, matchedCount: list.length - newList.length };
     }
@@ -539,33 +531,19 @@ export const KVCacheHandler = {
       if (String(i[idField]) === String(itemId) && itemId !== undefined) {
         matchedCount++;
         const { _sync, ...cleanItem } = i;
-
         if (backendEntity._error) {
-          return {
-            ...cleanItem,
-            _sync: { status: 'error', error: backendEntity._error, updatedAt: Date.now() }
-          };
+          return { ...cleanItem, _sync: { status: 'error', error: backendEntity._error, updatedAt: Date.now() } };
         }
-
-        // Merge clean item with backend entity, ensuring backend data wins
         return { ...cleanItem, ...backendEntity };
       }
       return i;
     });
-
-    if (matchedCount > 0) {
-      console.log(`[KV] Resolved ${matchedCount} items for ${idField}=${itemId}`);
-    } else {
-      console.warn(`[KV] No match found for resolution. Field: ${idField}, ID: ${itemId}`);
-    }
 
     return { newList, matchedCount };
   },
 
   _detectIdentityField(data, isList = false) {
     const patterns = ['id', 'uid', 'userId', 'user_id', 'admission_no', 'code', 'key'];
-
-    // If it's a list, check the first item
     if (isList && Array.isArray(data) && data.length > 0) {
       const first = data[0];
       for (const p of patterns) {
@@ -573,22 +551,18 @@ export const KVCacheHandler = {
       }
       return Object.keys(first).find(k => k.endsWith('_id')) || 'id';
     }
-
-    // If it's a payload object
     if (!isList && data && typeof data === 'object') {
       for (const p of patterns) {
         if (data[p] !== undefined) return p;
       }
       return Object.keys(data).find(k => k.endsWith('_id')) || 'id';
     }
-
     return 'id';
   },
 
   _extractItemId(payload, idFieldHint) {
     if (!payload) return null;
     const idField = idFieldHint || this._detectIdentityField(payload, false);
-    // Be robust: check common ID fields if the primary one is missing
     return payload[idField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || payload.userId;
   },
 
@@ -622,7 +596,7 @@ export const KVCacheHandler = {
     const filterList = (list) => {
       return list.filter(item => {
         return Object.entries(filters).every(([key, value]) => {
-          if (item[key] === undefined) return true; // Property doesn't exist on item, skip filter
+          if (item[key] === undefined) return true;
           return String(item[key]) === String(value);
         });
       });

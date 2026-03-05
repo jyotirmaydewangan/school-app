@@ -316,6 +316,126 @@
         transform: translateY(0);
       }
     }
+
+    /* Mobile Attendance Card Styles */
+    .attendance-card {
+      background: white;
+      border: 1px solid #f3f4f6;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-left: 4px solid #e5e7eb;
+    }
+
+    .attendance-card.present {
+      border-left-color: #10b981;
+      background-color: #f0fdf4 !important;
+    }
+
+    .attendance-card.absent {
+      border-left-color: #ef4444;
+      background-color: #fef2f2 !important;
+    }
+
+    .attendance-card.late {
+      border-left-color: #f59e0b;
+      background-color: #fffbeb !important;
+    }
+
+    .attendance-card.leave {
+      border-left-color: #3b82f6;
+      background-color: #eff6ff !important;
+    }
+
+    .attendance-card.pending {
+      border-left-color: #9ca3af;
+    }
+
+    .status-btn {
+      flex: 1;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      color: #4b5563;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .status-btn.active.present {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .status-btn.active.absent {
+      background: #ef4444;
+      color: white;
+      border-color: #ef4444;
+    }
+
+    .status-btn.active.late {
+      background: #f59e0b;
+      color: white;
+      border-color: #f59e0b;
+    }
+
+    .status-btn.active.leave {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    .present-badge {
+      background: #dcfce7;
+      color: #166534;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .absent-badge {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .late-badge {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .leave-badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .pending-badge {
+      background: #f3f4f6;
+      color: #4b5563;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+    }
   </style>
 </head>
 
@@ -660,7 +780,7 @@
             <p class="text-indigo-100">You are logged in as <span id="user-role-text" class="font-medium"></span></p>
           </div>
 
-<!-- Admin Stats Grid -->
+          <!-- Admin Stats Grid -->
           <div id="admin-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
             <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
               <div class="flex items-center justify-between">
@@ -694,7 +814,7 @@
                   <i class="fas fa-chalkboard-teacher text-purple-500 text-xl"></i>
                 </div>
               </div>
-</div>
+            </div>
           </div>
 
           <!-- Teacher Dashboard -->
@@ -1001,8 +1121,15 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
                 <select id="attendance-class" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
-                  onchange="loadAttendanceClass()">
+                  onchange="loadAttendanceSections(); loadAttendanceStudents();">
                   <option value="">Select Class</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                <select id="attendance-section" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
+                  onchange="loadAttendanceStudents();">
+                  <option value="">All Sections</option>
                 </select>
               </div>
               <div>
@@ -1010,17 +1137,60 @@
                 <input type="date" id="attendance-date" class="px-4 py-2.5 border border-gray-200 rounded-xl">
               </div>
               <div class="flex items-end">
-                <button onclick="loadAttendanceClass()"
+                <button onclick="loadAttendanceStudents()"
                   class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">
-                  Load
+                  <i class="fas fa-search mr-2"></i>Load
                 </button>
               </div>
             </div>
+
+            <!-- Quick Actions Bar -->
+            <div id="attendance-actions"
+              class="hidden mb-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs font-bold text-indigo-900 uppercase tracking-wider mr-1">Bulk:</span>
+                  <button onclick="markAllPresent()"
+                    class="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition shadow-sm shadow-green-200">
+                    <i class="fas fa-check mr-2"></i>All Present
+                  </button>
+                  <button onclick="markAllAbsent()"
+                    class="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition shadow-sm shadow-red-200">
+                    <i class="fas fa-times mr-2"></i>All Absent
+                  </button>
+                </div>
+                <div
+                  class="text-xs font-medium text-indigo-700 bg-indigo-100/50 px-3 py-1.5 rounded-lg border border-indigo-200/50">
+                  <i class="fas fa-user-friends mr-2"></i><span id="attendance-count">0</span> Students
+                </div>
+              </div>
+            </div>
+
             <div id="attendance-loading" class="hidden py-12 text-center text-gray-500">
               <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
               <p>Loading attendance...</p>
             </div>
+            <div id="attendance-empty" class="hidden py-12 text-center text-gray-500">
+              <i class="fas fa-users text-4xl mb-3"></i>
+              <p>Select a class and date to load students</p>
+            </div>
             <div id="attendance-content"></div>
+
+            <!-- Submit Button -->
+            <div id="attendance-submit" class="hidden mt-8 pt-6 border-t border-gray-100">
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div
+                  class="text-sm text-gray-500 flex items-center bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+                  <i class="fas fa-info-circle text-indigo-500 mr-2"></i>
+                  Review all records before submitting
+                </div>
+                <button onclick="submitAttendance()" id="attendance-submit-btn"
+                  class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-3 ring-4 ring-white">
+                  <i class="fas fa-cloud-upload-alt text-lg"></i>
+                  <span>Save Attendance Records</span>
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1975,7 +2145,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         overlay.addEventListener('click', closeSidebar);
       }
 
-      function navigateTo(sectionId) {
+      async function navigateTo(sectionId) {
         document.querySelectorAll('.nav-item').forEach(item => {
           const isActive = item.dataset.section === sectionId;
           item.classList.toggle('bg-indigo-600', isActive);
@@ -1993,10 +2163,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           return;
         }
         if (sectionId === 'subjects') loadSubjects();
-        if (sectionId === 'attendance') {
-          document.getElementById('attendance-date').valueAsDate = new Date();
-          loadAttendanceClass();
-        }
         if (sectionId === 'exams') loadExams();
         if (sectionId === 'timetable') loadTimetable();
         if (sectionId === 'curriculum') loadCurriculum();
@@ -2833,24 +2999,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         applyFilters();
       }
 
-function updateDashboardStats(response) {
+      function updateDashboardStats(response) {
         if (response.stats) {
-          document.getElementById('stat-users').innerHTML = 
+          document.getElementById('stat-users').innerHTML =
             `<span class="text-green-600 font-semibold">Approved: ${response.stats.users_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.users_pending || 0}</span>`;
-          document.getElementById('stat-students').innerHTML = 
+          document.getElementById('stat-students').innerHTML =
             `<span class="text-green-600 font-semibold">Approved: ${response.stats.students_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.students_pending || 0}</span>`;
-          document.getElementById('stat-teachers').innerHTML = 
+          document.getElementById('stat-teachers').innerHTML =
             `<span class="text-green-600 font-semibold">Approved: ${response.stats.teachers_approved || 0}</span><br><span class="text-orange-500 font-semibold">Pending: ${response.stats.teachers_pending || 0}</span>`;
         } else {
           const users = response.users || [];
           const isApproved = (u) => u.is_approved === true || u.is_approved === 'true' || u.is_approved === 'TRUE' || u.is_approved === 1 || u.is_approved === '1';
           const approvedUsers = users.filter(isApproved);
           const pendingUsers = users.filter(u => !isApproved(u));
-          document.getElementById('stat-users').innerHTML = 
+          document.getElementById('stat-users').innerHTML =
             `Approved: ${approvedUsers.length}<br><span class="text-gray-400 text-sm">Pending: ${pendingUsers.length}</span>`;
-          document.getElementById('stat-students').innerHTML = 
+          document.getElementById('stat-students').innerHTML =
             `Approved: 0<br><span class="text-gray-400 text-sm">Pending: 0</span>`;
-          document.getElementById('stat-teachers').innerHTML = 
+          document.getElementById('stat-teachers').innerHTML =
             `Approved: ${approvedUsers.filter(u => u.role === 'teacher').length}<br><span class="text-gray-400 text-sm">Pending: ${pendingUsers.filter(u => u.role === 'teacher').length}</span>`;
         }
       }
@@ -3726,104 +3892,292 @@ function updateDashboardStats(response) {
       });
 
       // Attendance functions
-      async function loadAttendanceClass() {
-        const className = document.getElementById('attendance-class').value;
+      window.populateAttendanceClassFilter = async function () {
+        const select = document.getElementById('attendance-class');
+        const current = select.value;
+        select.innerHTML = '<option value="">Select Class</option>';
+
+        if (setupGrades && setupGrades.length > 0) {
+          setupGrades.forEach(g => {
+            select.innerHTML += `<option value="${g.id}">${g.name}</option>`;
+          });
+        } else {
+          try {
+            const token = auth.getToken();
+            const res = await api.getClasses(token);
+            if (res.success && res.classes) {
+              res.classes.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+              });
+            }
+          } catch (e) {
+            console.error('Error loading classes:', e);
+          }
+        }
+
+        select.value = current;
+      }
+
+      let currentAttendanceStudents = [];
+
+      window.loadAttendanceSections = async function () {
+        const classId = document.getElementById('attendance-class').value;
+        const sectionSelect = document.getElementById('attendance-section');
+
+        sectionSelect.innerHTML = '<option value="">All Sections</option>';
+
+        if (!classId) return;
+
+        try {
+          const token = auth.getToken();
+          const response = await api.getSections(token, { class_id: classId });
+
+          if (response.success && response.sections) {
+            response.sections.forEach(section => {
+              const option = document.createElement('option');
+              option.value = section.id;
+              option.textContent = section.name;
+              sectionSelect.appendChild(option);
+            });
+          }
+        } catch (err) {
+          console.error('Error loading sections:', err);
+        }
+      }
+
+      window.loadAttendanceStudents = async function (options = {}) {
+        const classId = document.getElementById('attendance-class').value;
+        const sectionId = document.getElementById('attendance-section').value;
         const date = document.getElementById('attendance-date').value;
 
-        if (!className || !date) return;
+        if (!classId || !sectionId || !date) {
+          document.getElementById('attendance-empty').classList.remove('hidden');
+          document.getElementById('attendance-content').innerHTML = '';
+          document.getElementById('attendance-actions').classList.add('hidden');
+          document.getElementById('attendance-submit').classList.add('hidden');
+          return;
+        }
 
         document.getElementById('attendance-loading').classList.remove('hidden');
+        document.getElementById('attendance-empty').classList.add('hidden');
         document.getElementById('attendance-content').innerHTML = '';
+        document.getElementById('attendance-actions').classList.add('hidden');
+        document.getElementById('attendance-submit').classList.add('hidden');
 
         const token = auth.getToken();
 
         try {
-          const response = await api.getAttendance(token, { class: className, date: date });
+          const requestOptions = options.forceRefresh ? { cache: 'false' } : {};
+          const response = await api.getAttendanceByClass(token, classId, sectionId, date, requestOptions);
+          console.log('Attendance response:', response);
 
           document.getElementById('attendance-loading').classList.add('hidden');
 
           if (response.success) {
-            currentAttendanceData = response.records || [];
-            renderAttendanceTable(currentAttendanceData);
+            let finalStudents = [];
+            // Handle monthly aggregated format from worker/backend
+            if (response.attendance && response.students) {
+              const selectedDate = document.getElementById('attendance-date').value;
+              finalStudents = response.students.map(s => {
+                // Return latest record for this student on this date
+                const records = response.attendance.filter(a =>
+                  String(a.student_id) === String(s.id) && a.date === selectedDate
+                );
+                const latest = records.length > 0 ? records[records.length - 1] : null;
+
+                return {
+                  student_id: s.id,
+                  student_name: s.name,
+                  admission_no: s.admission_no,
+                  status: latest ? latest.status : 'pending',
+                  marked_by: latest ? latest.marked_by : null
+                };
+              });
+            } else {
+              finalStudents = response.students || [];
+            }
+
+            currentAttendanceStudents = finalStudents;
+            renderAttendanceTable(currentAttendanceStudents);
+            document.getElementById('attendance-count').textContent = currentAttendanceStudents.length;
+            document.getElementById('attendance-actions').classList.remove('hidden');
+            document.getElementById('attendance-submit').classList.remove('hidden');
           } else {
             showError(response.error || 'Failed to load attendance');
+            console.error('Attendance error:', response.error);
+            document.getElementById('attendance-empty').classList.remove('hidden');
           }
         } catch (err) {
           document.getElementById('attendance-loading').classList.add('hidden');
+          console.error('Attendance exception:', err);
           showError('Failed to load attendance');
+          document.getElementById('attendance-empty').classList.remove('hidden');
         }
       }
 
-      function renderAttendanceTable(records) {
+      function renderAttendanceTable(students) {
         const content = document.getElementById('attendance-content');
 
-        if (!records || records.length === 0) {
+        if (!students || students.length === 0) {
           content.innerHTML = '<div class="text-center py-12"><p class="text-gray-500">No students found for this class</p></div>';
           return;
         }
 
-        let html = '<form id="attendance-form"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admission No</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th></tr></thead><tbody class="divide-y divide-gray-100">';
+        let html = '';
 
-        records.forEach(r => {
-          const checked = r.status === 'present' ? 'checked' : '';
-          const absentChecked = r.status === 'absent' ? 'checked' : '';
-          const lateChecked = r.status === 'late' ? 'checked' : '';
+        // --- Desktop Table View (Hidden on mobile) ---
+        html += '<div class="hidden md:block overflow-x-auto shadow-sm border border-gray-100 rounded-xl">';
+        html += '<table class="w-full text-left border-collapse"><thead class="bg-gray-50 border-b border-gray-100"><tr>';
+        html += '<th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admission No</th>';
+        html += '<th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>';
+        html += '<th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Status</th>';
+        html += '</tr></thead><tbody class="divide-y divide-gray-50 bg-white">';
 
-          html += `<tr class="hover:bg-gray-50">
-          <td class="px-4 py-3">${escapeHtml(r.admission_no || '-')}</td>
-          <td class="px-4 py-3 font-medium">${escapeHtml(r.student_name)}</td>
-          <td class="px-4 py-3">
-            <div class="flex gap-4">
-              <label class="inline-flex items-center">
-                <input type="radio" name="status_${r.student_id}" value="present" ${checked} class="text-green-600">
-                <span class="ml-1 text-sm">Present</span>
-              </label>
-              <label class="inline-flex items-center">
-                <input type="radio" name="status_${r.student_id}" value="absent" ${absentChecked} class="text-red-600">
-                <span class="ml-1 text-sm">Absent</span>
-              </label>
-              <label class="inline-flex items-center">
-                <input type="radio" name="status_${r.student_id}" value="late" ${lateChecked} class="text-yellow-600">
-                <span class="ml-1 text-sm">Late</span>
-              </label>
-            </div>
-            <input type="hidden" name="student_id" value="${r.student_id}">
-          </td>
-        </tr>`;
+        // --- Mobile Card View (Hidden on desktop) ---
+        let mobileHtml = '<div class="md:hidden space-y-4">';
+
+        students.forEach((r) => {
+          const status = r.status || 'pending';
+          const statusClass = getStatusClass(status);
+
+          // Table Row
+          html += `<tr class="hover:bg-indigo-50/30 transition-colors" data-student-id="${r.student_id}">
+            <td class="px-6 py-4 text-sm text-gray-600 font-mono">${escapeHtml(r.admission_no || '-')}</td>
+            <td class="px-6 py-4 font-medium text-gray-800 text-sm">${escapeHtml(r.student_name)}</td>
+            <td class="px-6 py-4 text-right">
+              <select class="attendance-status-select px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${statusClass}" 
+                      onchange="setAttendanceStatus('${r.student_id}', this.value)">
+                <option value="pending" ${status === 'pending' ? 'selected' : ''}>— Not Marked —</option>
+                <option value="present" ${status === 'present' ? 'selected' : ''}>Present</option>
+                <option value="absent" ${status === 'absent' ? 'selected' : ''}>Absent</option>
+                <option value="late" ${status === 'late' ? 'selected' : ''}>Late</option>
+                <option value="leave" ${status === 'leave' ? 'selected' : ''}>Leave</option>
+              </select>
+            </td>
+          </tr>`;
+
+          // Mobile Card
+          mobileHtml += `
+            <div class="attendance-card ${status}" data-student-id="${r.student_id}">
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h4 class="font-bold text-gray-900 text-base mb-0.5">${escapeHtml(r.student_name)}</h4>
+                  <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Adm: ${escapeHtml(r.admission_no || '-')}</p>
+                </div>
+                <span class="status-badge ${status}-badge">${status === 'pending' ? 'Pending' : status}</span>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="setAttendanceStatus('${r.student_id}', 'present')" class="status-btn present ${status === 'present' ? 'active' : ''}">Present</button>
+                <button onclick="setAttendanceStatus('${r.student_id}', 'absent')" class="status-btn absent ${status === 'absent' ? 'active' : ''}">Absent</button>
+                <button onclick="setAttendanceStatus('${r.student_id}', 'late')" class="status-btn late ${status === 'late' ? 'active' : ''}">Late</button>
+                <button onclick="setAttendanceStatus('${r.student_id}', 'leave')" class="status-btn leave ${status === 'leave' ? 'active' : ''}">Leave</button>
+              </div>
+            </div>`;
         });
 
-        html += '</tbody></table></div><div class="mt-4"><button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition">Save Attendance</button></div></form>';
-        content.innerHTML = html;
+        html += '</tbody></table></div>';
+        mobileHtml += '</div>';
 
-        document.getElementById('attendance-form').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          await saveAttendance();
-        });
+        content.innerHTML = html + mobileHtml;
       }
 
-      async function saveAttendance() {
+      function getStatusClass(status) {
+        return status === 'present' ? 'text-green-600 bg-green-50' :
+          status === 'absent' ? 'text-red-600 bg-red-50' :
+            status === 'late' ? 'text-yellow-600 bg-yellow-50' :
+              status === 'leave' ? 'text-blue-600 bg-blue-50' :
+                'text-gray-500 bg-gray-50';
+      }
+
+      window.setAttendanceStatus = function (studentId, status) {
+        // Update Table Select
+        const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+        if (row) {
+          const select = row.querySelector('.attendance-status-select');
+          if (select) {
+            select.value = status;
+            updateStatusColor(select);
+          }
+        }
+
+        // Update Mobile Card
+        const card = document.querySelector(`.attendance-card[data-student-id="${studentId}"]`);
+        if (card) {
+          card.className = `attendance-card ${status}`;
+
+          // Update Buttons
+          card.querySelectorAll('.status-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.classList.contains(status));
+          });
+
+          // Update Badge
+          const badge = card.querySelector('.status-badge');
+          if (badge) {
+            badge.className = `status-badge ${status}-badge`;
+            badge.textContent = status === 'pending' ? 'Pending' : status;
+          }
+        }
+      }
+
+      window.updateStatusColor = function (selectEl) {
+        selectEl.classList.remove('text-green-600', 'bg-green-50', 'text-red-600', 'bg-red-50', 'text-yellow-600', 'bg-yellow-50', 'text-blue-600', 'bg-blue-50', 'text-gray-500', 'bg-gray-50');
+        selectEl.classList.add(...getStatusClass(selectEl.value).split(' '));
+      }
+
+      window.markAllPresent = function () {
+        currentAttendanceStudents.forEach(s => setAttendanceStatus(s.student_id, 'present'));
+      }
+
+      window.markAllAbsent = function () {
+        currentAttendanceStudents.forEach(s => setAttendanceStatus(s.student_id, 'absent'));
+      }
+
+      window.submitAttendance = async function () {
         const token = auth.getToken();
         const date = document.getElementById('attendance-date').value;
-        const className = document.getElementById('attendance-class').value;
+        const classId = document.getElementById('attendance-class').value;
+        const sectionId = document.getElementById('attendance-section').value;
 
-        const form = document.getElementById('attendance-form');
-        const formData = new FormData(form);
         const records = [];
-
-        currentAttendanceData.forEach(r => {
-          const status = formData.get(`status_${r.student_id}`) || 'present';
-          records.push({ student_id: r.student_id, status: status });
+        // Extract data from the table rows (which are always synchronized by setAttendanceStatus)
+        document.querySelectorAll('.hidden.md\\:block tr[data-student-id]').forEach(row => {
+          const studentId = row.dataset.studentId;
+          const status = row.querySelector('.attendance-status-select').value;
+          records.push({ student_id: studentId, status: status });
         });
 
+        if (records.length === 0) {
+          showToast('No students to save', 'warning');
+          return;
+        }
+
+        const submitBtn = document.getElementById('attendance-submit-btn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+
         try {
-          const response = await api.markAttendance(token, { date, class: className, records });
+          const response = await api.markAttendance(token, {
+            date,
+            class: classId,
+            section: sectionId,
+            records
+          });
+
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+
           if (response.success) {
-            alert('Attendance saved successfully!');
+            showToast('Attendance saved successfully!', 'success');
+            // Reload with cache bypass so the table immediately shows the updated statuses
+            await loadAttendanceStudents({ forceRefresh: true });
           } else {
-            alert(response.error || 'Failed to save attendance');
+            showToast(response.error || 'Failed to save attendance', 'error');
           }
         } catch (err) {
-          alert('Error saving attendance');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+          showToast('Failed to save attendance', 'error');
         }
       }
 
@@ -4377,7 +4731,7 @@ function updateDashboardStats(response) {
 
       // Navigation handler for new sections
       const originalNavigateTo = navigateTo;
-      navigateTo = function (sectionId) {
+      navigateTo = async function (sectionId) {
         originalNavigateTo(sectionId);
 
         if (sectionId === 'students') {
@@ -4385,7 +4739,12 @@ function updateDashboardStats(response) {
         } else if (sectionId === 'subjects') {
           loadSubjects();
         } else if (sectionId === 'attendance') {
-          loadAttendanceClass();
+          document.getElementById('attendance-date').valueAsDate = new Date();
+          if (setupGrades.length === 0) {
+            await loadSetupGrades();
+          }
+          populateAttendanceClassFilter();
+          loadAttendanceStudents();
         } else if (sectionId === 'exams') {
           loadExams();
         } else if (sectionId === 'timetable') {

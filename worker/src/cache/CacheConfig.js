@@ -15,9 +15,10 @@ const ONE_MIN = Number('{TTL_ONE_MIN}') || 60;
  * CACHE_POLICY defines the rules for every read action.
  */
 const CACHE_POLICY = (function () {
+  const injected = '{CACHE_POLICY_JSON}';
+  if (injected === '{CACHE_POLICY_JSON}' || injected === '{}' || injected === '') return _getDefaultPolicy();
   try {
-    const injected = { CACHE_POLICY_JSON };
-    return Object.keys(injected).length > 0 ? injected : _getDefaultPolicy();
+    return JSON.parse(injected);
   } catch (e) {
     return _getDefaultPolicy();
   }
@@ -27,9 +28,10 @@ const CACHE_POLICY = (function () {
  * Maps write actions to the read caches they must invalidate.
  */
 const INVALIDATION_MAP = (function () {
+  const injected = '{INVALIDATION_MAP_JSON}';
+  if (injected === '{INVALIDATION_MAP_JSON}' || injected === '{}' || injected === '') return _getDefaultInvalidationMap();
   try {
-    const injected = { INVALIDATION_MAP_JSON };
-    return Object.keys(injected).length > 0 ? injected : _getDefaultInvalidationMap();
+    return JSON.parse(injected);
   } catch (e) {
     return _getDefaultInvalidationMap();
   }
@@ -51,8 +53,9 @@ function _getDefaultPolicy() {
     'getResources': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
     'getNoticeboard': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
     'getDashboardStats': { scope: CACHE_SCOPES.GLOBAL, ttl: FIFTEEN_MIN, isBroad: true },
-    'getAttendance': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
-    'getAttendanceSummary': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
+    'getAttendance': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: false },
+    'getAttendanceByClass': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK * 2, isBroad: true, keyParameters: ['class', 'section', 'year', 'month'] },
+    'getAttendanceSummary': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: false },
     'getMarks': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
     'getLinkedStudents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
     'getPendingRegistrations': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MIN, isBroad: true },
@@ -89,7 +92,7 @@ function _getDefaultInvalidationMap() {
     'approveStudent': ['getStudents', 'getDashboardStats'],
     'linkParentStudent': ['getLinkedStudents'],
     'autoLinkParents': ['getLinkedStudents'],
-    'markAttendance': ['getAttendance', 'getAttendanceSummary', 'getDashboardStats'],
+    'markAttendance': ['getAttendance', 'getAttendanceByClass', 'getAttendanceSummary', 'getDashboardStats'],
     'createExam': ['getExams', 'getDashboardStats'],
     'updateExam': ['getExams'],
     'deleteExam': ['getExams'],

@@ -78,6 +78,7 @@ cache:
     getNoticeboard: { scope: GLOBAL, ttl: 604800, isBroad: true }
     getDashboardStats: { scope: GLOBAL, ttl: 900, isBroad: true }
     getAttendance: { scope: USER, ttl: 604800, isBroad: false }
+    getAttendanceByClass: { scope: GLOBAL, ttl: 1209600, isBroad: true, keyParameters: [class, section, year, month] }
     getAttendanceSummary: { scope: USER, ttl: 86400, isBroad: false }
     getMarks: { scope: USER, ttl: 604800, isBroad: false }
     getLinkedStudents: { scope: USER, ttl: 86400, isBroad: false }
@@ -113,7 +114,7 @@ cache:
     approveStudent: [getStudents, getDashboardStats]
     linkParentStudent: [getLinkedStudents]
     autoLinkParents: [getLinkedStudents]
-    markAttendance: [getAttendance, getAttendanceSummary, getDashboardStats]
+    markAttendance: [getAttendance, getAttendanceByClass, getAttendanceSummary, getDashboardStats]
     createExam: [getExams, getDashboardStats]
     updateExam: [getExams]
     deleteExam: [getExams]

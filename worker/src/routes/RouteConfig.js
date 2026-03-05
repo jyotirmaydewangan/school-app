@@ -27,17 +27,17 @@ export const RouteConfig = {
 export const RequestParser = {
   async parseBody(request) {
     const contentType = request.headers.get('Content-Type') || '';
-    
+
     if (contentType.includes('application/json')) {
       return await request.text();
     }
-    
-    if (contentType.includes('application/x-www-form-urlencoded') || 
-        contentType.includes('multipart/form-data')) {
+
+    if (contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       return JSON.stringify(Object.fromEntries(formData));
     }
-    
+
     return null;
   },
 
@@ -45,13 +45,19 @@ export const RequestParser = {
     const separator = scriptUrl.includes('?') ? '&' : '?';
     const params = new URLSearchParams();
     params.set('action', action);
-    
-    queryParams.forEach((value, key) => {
-      if (key !== 'action') {
-        params.set(key, value);
+
+    if (queryParams instanceof URLSearchParams) {
+      queryParams.forEach((value, key) => {
+        if (key !== 'action') params.set(key, value);
+      });
+    } else if (queryParams && typeof queryParams === 'object') {
+      for (const [key, value] of Object.entries(queryParams)) {
+        if (key !== 'action' && value !== undefined && value !== null) {
+          params.set(key, String(value));
+        }
       }
-    });
-    
+    }
+
     return `${scriptUrl}${separator}${params.toString()}`;
   }
 };

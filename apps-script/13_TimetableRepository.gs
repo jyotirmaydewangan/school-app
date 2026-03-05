@@ -152,8 +152,8 @@ const TimetableRepository = {
   }
 };
 
-const DAYS_OF_WEEK = TENANT_CONFIG.ACADEMIC_DAYS || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const PERIODS = TENANT_CONFIG.ACADEMIC_PERIODS || {
+const DAYS_OF_WEEK = (typeof TENANT_CONFIG !== 'undefined' ? TENANT_CONFIG.ACADEMIC_DAYS : null) || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const PERIODS = (typeof TENANT_CONFIG !== 'undefined' ? TENANT_CONFIG.ACADEMIC_PERIODS : null) || {
   1: { start: '08:00', end: '08:45' },
   2: { start: '08:45', end: '09:30' },
   3: { start: '09:30', end: '10:15' },

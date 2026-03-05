@@ -136,8 +136,16 @@ const Router = {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
         const cacheHeader = request.headers.get('X-Cache-Control');
-
         let forceRefresh = queryParams.cache === 'false' || queryParams.force === 'true' || cacheHeader === 'no-cache';
+
+        // 0. Action-specific Query Pre-processing
+        if (action.toLowerCase() === 'getattendancebyclass' && queryParams.date) {
+          const dateParts = queryParams.date.split('-');
+          if (dateParts.length >= 2) {
+            queryParams.year = dateParts[0];
+            queryParams.month = dateParts[1];
+          }
+        }
 
         if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
           const token = AuthMiddleware.extractToken(request);
@@ -145,7 +153,7 @@ const Router = {
 
           const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
             token,
-            queryParams: isBroad ? {} : queryParams
+            queryParams: queryParams
           });
 
           const cached = await this.kvHandler.getByKey(cacheKey);
@@ -223,6 +231,17 @@ const Router = {
               const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId, {}, bodyText);
               const result = await response.json();
               await this.kvHandler.resolveMutation(tenantId, mutationContext, result);
+              // Always invalidate all related patterns after backend confirms success.
+              // The optimistic mutation only patches whatever keys it found — any caches
+              // with hash-based keys (e.g. getAttendance, getAttendanceByClass) that
+              // couldn't be located by applyMutation must still be cleared here.
+              if (result && result.success !== false) {
+                const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
+                if (invalidatePatterns.length > 0) {
+                  // Pass body as context so targeted invalidation only clears the matching key
+                  await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns, body);
+                }
+              }
             } catch (e) {
               console.error(`[Worker] Background sync failed for ${action}:`, e.message);
               await this.kvHandler.resolveMutation(tenantId, mutationContext, { success: false, error: e.message });
@@ -251,7 +270,8 @@ const Router = {
         if (response.ok) {
           const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
           if (invalidatePatterns.length > 0) {
-            await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns);
+            // Pass body as context so targeted invalidation only clears the matching key
+            await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns, body);
           }
         }
 
@@ -287,8 +307,22 @@ const Router = {
             backendParams = new URLSearchParams();
             const tokenInQuery = urlObj.searchParams.get('token');
             if (tokenInQuery) backendParams.set('token', tokenInQuery);
+
+            // Preserve keyParameters for Partitioned Broad Caches (like Attendance)
+            const keyParams = CacheConfig.getRule(action)?.keyParameters;
+            if (keyParams) {
+              for (const p of keyParams) {
+                // Use enriched queryParams if available, otherwise fetch from URL
+                const val = queryParams[p] || urlObj.searchParams.get(p);
+                if (val !== null) backendParams.set(p, val);
+              }
+            }
           } else {
-            backendParams = urlObj.searchParams;
+            backendParams = new URLSearchParams(urlObj.searchParams);
+            // Merge enriched queryParams
+            for (const [k, v] of Object.entries(queryParams)) {
+              if (v !== undefined && v !== null) backendParams.set(k, v);
+            }
           }
 
           const apiUrl = RequestParser.buildApiUrl(scriptUrl, action, backendParams);
@@ -302,10 +336,13 @@ const Router = {
             const hasData = Array.isArray(data) ? data.length > 0 : (data && Object.keys(data).length > 0);
 
             if (isValidData && hasData) {
+              // Partitioned broad caches (with keyParameters) need queryParams for a specific key.
+              // Only truly global broad caches (no keyParameters) use an empty queryParams.
+              const hasKeyParams = !!(CacheConfig.getRule(action)?.keyParameters);
               const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
                 token,
-                queryParams: isBroad ? {} : queryParams,
-                body: isBroad ? null : (bodyWithToken || body)
+                queryParams: (isBroad && !hasKeyParams) ? {} : queryParams,
+                body: (isBroad && !hasKeyParams) ? null : (bodyWithToken || body)
               });
               await this.kvHandler.setByKey(cacheKey, data, action);
             }
