@@ -2434,8 +2434,15 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         await loadTeachersForSection();
       }
 
-      async function loadSectionsForClass(classId) {
+      async function loadSectionsForClass(classId, silent = false) {
         const listEl = document.getElementById('sectionsList');
+
+        // Only show mini-spinner if we are not already showing sections
+        const isBackgroundRefresh = silent || (sectionsData && sectionsData.length > 0);
+        if (!isBackgroundRefresh) {
+          listEl.innerHTML = '<div class="py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading sections...</div>';
+        }
+
         try {
           const res = await api.getSections(auth.getToken(), { class_id: classId });
           sectionsData = res.sections || [];
@@ -2546,7 +2553,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           if (res.success) {
             showToast(sectionId ? 'Section updated' : 'Section added', 'success');
             resetSectionForm();
-            await loadSectionsForClass(classId);
+            await loadSectionsForClass(classId, true);
             if (typeof loadClasses === 'function') loadClasses();
           } else {
             showToast(res.error || 'Failed to save section', 'error');
@@ -2570,7 +2577,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const res = await api.deleteSection(token, id);
           if (res.success) {
             showToast('Section deleted', 'success');
-            await loadSectionsForClass(classId);
+            await loadSectionsForClass(classId, true);
             if (typeof loadClasses === 'function') loadClasses();
           } else {
             showToast(res.error || 'Failed to delete section', 'error');
@@ -3101,19 +3108,23 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       // ============ CLASS MANAGEMENT FUNCTIONS ============
       let classSectionsMap = {};
 
-      async function loadClasses() {
+      async function loadClasses(options = {}) {
         const token = auth.getToken();
         const loadingEl = document.getElementById('classes-loading');
         const contentEl = document.getElementById('classes-content');
         const emptyEl = document.getElementById('classes-empty');
 
-        loadingEl.innerHTML = getClassesSkeletonHTML();
-        loadingEl.classList.remove('hidden');
-        contentEl.classList.add('hidden');
-        emptyEl.classList.add('hidden');
+        // Only show loading if we don't already have data (first load)
+        const isBackgroundRefresh = classesData && classesData.length > 0;
+        if (!isBackgroundRefresh) {
+          loadingEl.innerHTML = getClassesSkeletonHTML();
+          loadingEl.classList.remove('hidden');
+          contentEl.classList.add('hidden');
+          emptyEl.classList.add('hidden');
+        }
 
         try {
-          const classesRes = await api.getClasses(token);
+          const classesRes = await api.getClasses(token, options);
 
           if (!classesRes.success) {
             throw new Error(classesRes.error || 'Failed to load classes');
@@ -3145,6 +3156,9 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           });
 
           applyClassFilters();
+
+          // Monitor for optimistic updates
+          SyncTracker.monitor('classes', classesData, (opt) => loadClasses(opt));
         } catch (err) {
           loadingEl.classList.add('hidden');
           contentEl.classList.remove('hidden');
@@ -3919,6 +3933,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       }
 
       let currentAttendanceStudents = [];
+      let isSavingAttendance = false;
 
       window.loadAttendanceSections = async function () {
         const classId = document.getElementById('attendance-class').value;
@@ -3958,11 +3973,15 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           return;
         }
 
-        document.getElementById('attendance-loading').classList.remove('hidden');
-        document.getElementById('attendance-empty').classList.add('hidden');
-        document.getElementById('attendance-content').innerHTML = '';
-        document.getElementById('attendance-actions').classList.add('hidden');
-        document.getElementById('attendance-submit').classList.add('hidden');
+        const isBackgroundRefresh = options.forceRefresh || (currentAttendanceStudents && currentAttendanceStudents.length > 0);
+
+        if (!isBackgroundRefresh) {
+          document.getElementById('attendance-loading').classList.remove('hidden');
+          document.getElementById('attendance-empty').classList.add('hidden');
+          document.getElementById('attendance-content').innerHTML = '';
+          document.getElementById('attendance-actions').classList.add('hidden');
+          document.getElementById('attendance-submit').classList.add('hidden');
+        }
 
         const token = auth.getToken();
 
@@ -4090,6 +4109,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       }
 
       window.setAttendanceStatus = function (studentId, status) {
+        if (isSavingAttendance) return;
         // Update Table Select
         const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
         if (row) {
@@ -4125,14 +4145,17 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       }
 
       window.markAllPresent = function () {
+        if (isSavingAttendance) return;
         currentAttendanceStudents.forEach(s => setAttendanceStatus(s.student_id, 'present'));
       }
 
       window.markAllAbsent = function () {
+        if (isSavingAttendance) return;
         currentAttendanceStudents.forEach(s => setAttendanceStatus(s.student_id, 'absent'));
       }
 
       window.submitAttendance = async function () {
+        if (isSavingAttendance) return;
         const token = auth.getToken();
         const date = document.getElementById('attendance-date').value;
         const classId = document.getElementById('attendance-class').value;
@@ -4152,9 +4175,13 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         }
 
         const submitBtn = document.getElementById('attendance-submit-btn');
+        const contentArea = document.getElementById('attendance-content');
         const originalText = submitBtn.innerHTML;
+
+        isSavingAttendance = true;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        contentArea.classList.add('opacity-50', 'pointer-events-none');
 
         try {
           const response = await api.markAttendance(token, {
@@ -4164,20 +4191,21 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             records
           });
 
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalText;
-
           if (response.success) {
             showToast('Attendance saved successfully!', 'success');
-            // Reload with cache bypass so the table immediately shows the updated statuses
+            // Await background refresh so we only unblock when data is confirmed
             await loadAttendanceStudents({ forceRefresh: true });
           } else {
             showToast(response.error || 'Failed to save attendance', 'error');
           }
         } catch (err) {
+          console.error('Save error:', err);
+          showToast('Failed to save attendance', 'error');
+        } finally {
+          isSavingAttendance = false;
           submitBtn.disabled = false;
           submitBtn.innerHTML = originalText;
-          showToast('Failed to save attendance', 'error');
+          contentArea.classList.remove('opacity-50', 'pointer-events-none');
         }
       }
 
