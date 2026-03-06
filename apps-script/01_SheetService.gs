@@ -14,15 +14,22 @@ const SHEET_NAMES = Object.freeze({
   CLASS_INDEX: 'class_index',
   CLASSES: 'classes',
   SCHOOLS: 'schools',
-  SECTIONS: 'sections'
+  NOTICES: 'notices',
+  NOTICEBOARD: 'noticeboard'
 });
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Initialize')
-    .addItem('Setup Sheets', 'SheetService.initializeAll')
+    .addItem('Initialize Sheet', 'SheetService.initializeAll')
+    .addItem('Authorize Drive', 'checkDrivePermission')
     .addToUi();
-  SheetService.initializeAll();
+}
+
+function checkDrivePermission() {
+  const folder = DriveApp.createFolder('Temp Auth Test');
+  folder.setTrashed(true);
+  SpreadsheetApp.getUi().alert('Drive permission is active!');
 }
 
 function getRolePermissions() {
@@ -107,7 +114,8 @@ const SheetService = {
       SHEET_NAMES.CLASS_INDEX,
       SHEET_NAMES.CLASSES,
       SHEET_NAMES.SCHOOLS,
-      SHEET_NAMES.SECTIONS
+      SHEET_NAMES.SECTIONS,
+      SHEET_NAMES.NOTICEBOARD
     ];
     
     const totalSheets = sheetNames.length;
@@ -164,7 +172,9 @@ const SheetService = {
       [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
       [SHEET_NAMES.SCHOOLS]: ['id', 'name', 'code', 'address', 'contact', 'created_at'],
       [SHEET_NAMES.SECTIONS]: ['id', 'class_id', 'name', 'room', 'class_teacher_id', 'created_at'],
-      [SHEET_NAMES.STUDENTS]: ['id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at']
+      [SHEET_NAMES.STUDENTS]: ['id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at'],
+      [SHEET_NAMES.PARENT_STUDENTS]: ['id', 'parent_id', 'student_id', 'created_at'],
+      [SHEET_NAMES.NOTICEBOARD]: ['id', 'title', 'content', 'image_url', 'created_by', 'created_at', 'status']
     };
     
     if (schemas[name]) {

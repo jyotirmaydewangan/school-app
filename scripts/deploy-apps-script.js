@@ -49,8 +49,8 @@ async function deployAppsScript(tenantName) {
     '07_AuthHandler.gs', '08_RoleHandler.gs', '09_UserHandler.gs',
     '10_StudentRepository.gs', '11_AttendanceRepository.gs', '12_ExamRepository.gs',
     '13_TimetableRepository.gs', '14_CurriculumRepository.gs', '15_ClassRepository.gs',
-    '16_SchoolRepository.gs', '17_SectionRepository.gs',
-    'config.gs', 'appsscript.json'];
+    '16_SchoolRepository.gs', '17_SectionRepository.gs', '18_NoticeboardRepository.gs',
+    'config.gs', 'appsscript.json', '.claspignore'];
 
   templateFiles.forEach(file => {
     const src = path.join(templateDir, file);
@@ -83,6 +83,7 @@ async function deployAppsScript(tenantName) {
 
   replaceInFile(path.join(appsScriptDir, 'config.gs'), replacements);
   replaceInFile(path.join(appsScriptDir, 'appsscript.json'), replacements);
+  replaceInFile(path.join(appsScriptDir, '18_NoticeboardRepository.gs'), replacements);
   log('✓ Config placeholders replaced', 'success');
 
   const claspJsonPath = path.join(appsScriptDir, '.clasp.json');

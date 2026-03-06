@@ -422,6 +422,20 @@ const api = {
     });
   },
 
+  async getLinkedParents(token, studentId) {
+    return this.request('/getLinkedParents', {
+      method: 'POST',
+      body: JSON.stringify({ token, student_id: studentId })
+    });
+  },
+
+  async unlinkParentStudent(token, parentId, studentId) {
+    return this.request('/unlinkParentStudent', {
+      method: 'POST',
+      body: JSON.stringify({ token, parent_id: parentId, student_id: studentId })
+    });
+  },
+
   async getClasses(token, options = {}) {
     const params = new URLSearchParams();
     params.append('token', token);
@@ -553,6 +567,33 @@ const api = {
 
   async deleteClass(token, id) {
     return this.request('/deleteClass', {
+      method: 'POST',
+      body: JSON.stringify({ token, id })
+    });
+  },
+
+  async getNotices(token) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    return this.request('/getNotices?' + params.toString());
+  },
+
+  async createNotice(token, data) {
+    return this.request('/createNotice', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateNotice(token, data) {
+    return this.request('/updateNotice', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteNotice(token, id) {
+    return this.request('/deleteNotice', {
       method: 'POST',
       body: JSON.stringify({ token, id })
     });

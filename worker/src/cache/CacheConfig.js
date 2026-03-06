@@ -52,12 +52,14 @@ function _getDefaultPolicy() {
     'getSyllabus': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
     'getResources': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
     'getNoticeboard': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
+    'getNotices': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: true },
     'getDashboardStats': { scope: CACHE_SCOPES.GLOBAL, ttl: FIFTEEN_MIN, isBroad: true },
     'getAttendance': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: false },
     'getAttendanceByClass': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK * 2, isBroad: true, keyParameters: ['class', 'section', 'year', 'month'] },
     'getAttendanceSummary': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: false },
     'getMarks': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
     'getLinkedStudents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
+    'getLinkedParents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
     'getPendingRegistrations': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MIN, isBroad: true },
     'verify': { scope: CACHE_SCOPES.SESSION, ttl: FIFTEEN_MIN, isBroad: true }
   };
@@ -90,8 +92,9 @@ function _getDefaultInvalidationMap() {
     'updateStudent': ['getStudents', 'getDashboardStats'],
     'deleteStudent': ['getStudents', 'getDashboardStats'],
     'approveStudent': ['getStudents', 'getDashboardStats'],
-    'linkParentStudent': ['getLinkedStudents'],
-    'autoLinkParents': ['getLinkedStudents'],
+    'linkParentStudent': ['getLinkedStudents', 'getLinkedParents'],
+    'autoLinkParents': ['getLinkedStudents', 'getLinkedParents'],
+    'unlinkParentStudent': ['getLinkedStudents', 'getLinkedParents'],
     'markAttendance': ['getAttendance', 'getAttendanceByClass', 'getAttendanceSummary', 'getDashboardStats'],
     'createExam': ['getExams', 'getDashboardStats'],
     'updateExam': ['getExams'],
@@ -107,7 +110,10 @@ function _getDefaultInvalidationMap() {
     'updateSyllabus': ['getSyllabus'],
     'deleteSyllabus': ['getSyllabus'],
     'addResource': ['getResources'],
-    'deleteResource': ['getResources']
+    'deleteResource': ['getResources'],
+    'createNotice': ['getNotices', 'getDashboardStats'],
+    'updateNotice': ['getNotices'],
+    'deleteNotice': ['getNotices']
   };
 }
 

@@ -103,6 +103,9 @@ function doGet(e) {
       case 'getSections':
         result = handleGetSections(params.token, params);
         break;
+      case 'getNotices':
+        result = handleGetNotices(params.token, params);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -245,8 +248,23 @@ function doPost(e) {
       case 'linkParentStudent':
         result = handleLinkParentStudent(token, postData);
         break;
+      case 'createNotice':
+        result = handleCreateNotice(token, postData);
+        break;
+      case 'updateNotice':
+        result = handleUpdateNotice(token, postData);
+        break;
+      case 'deleteNotice':
+        result = handleDeleteNotice(token, postData);
+        break;
       case 'autoLinkParents':
         result = handleAutoLinkParents(token, postData);
+        break;
+      case 'getLinkedParents':
+        result = handleGetLinkedParents(token, postData);
+        break;
+      case 'unlinkParentStudent':
+        result = handleUnlinkParentStudent(token, postData);
         break;
       case 'createSchool':
         result = handleCreateSchool(token, postData);
@@ -265,6 +283,15 @@ function doPost(e) {
         break;
       case 'deleteSection':
         result = handleDeleteSection(token, postData);
+        break;
+      case 'createNotice':
+        result = handleCreateNotice(token, postData);
+        break;
+      case 'updateNotice':
+        result = handleUpdateNotice(token, postData);
+        break;
+      case 'deleteNotice':
+        result = handleDeleteNotice(token, postData);
         break;
       case 'createClass':
         result = handleCreateClass(token, postData);
@@ -349,7 +376,7 @@ function checkAuth(token) {
 function requireAdmin(token) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
-  if (auth.user.role !== 'admin') {
+  if (auth.user.role !== 'admin' && auth.user.role !== 'super_admin') {
     return { success: false, error: 'Admin access required' };
   }
   return auth;
@@ -358,7 +385,7 @@ function requireAdmin(token) {
 function requireTeacherOrAdmin(token) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
-  if (auth.user.role !== 'admin' && auth.user.role !== 'teacher') {
+  if (auth.user.role !== 'admin' && auth.user.role !== 'teacher' && auth.user.role !== 'super_admin') {
     return { success: false, error: 'Teacher or Admin access required' };
   }
   return auth;
@@ -885,6 +912,37 @@ function handleAutoLinkParents(token, data) {
   return ParentStudentRepository.autoLinkByPhone();
 }
 
+function handleGetLinkedParents(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.student_id) {
+    return { success: false, error: 'Student ID is required' };
+  }
+  
+  const links = ParentStudentRepository.findByStudentId(data.student_id);
+  const users = UserRepository.findAll().users;
+  const parents = users.filter(u => u.role === 'parent');
+  
+  const linkedParents = links.map(link => {
+    const parent = parents.find(p => p.id === link.parent_id);
+    return parent ? { id: parent.id, name: parent.name, email: parent.email, phone: parent.phone, link_id: link.id } : null;
+  }).filter(p => p !== null);
+  
+  return { success: true, parents: linkedParents };
+}
+
+function handleUnlinkParentStudent(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.parent_id || !data.student_id) {
+    return { success: false, error: 'Parent ID and Student ID are required' };
+  }
+  
+  return ParentStudentRepository.unlink(data.parent_id, data.student_id);
+}
+
 function handleGetClasses(token, params) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
@@ -1248,4 +1306,52 @@ function handleDeleteSection(token, data) {
   
   const deleted = SectionRepository.delete(data.id);
   return deleted ? { success: true } : { success: false, error: 'Section not found' };
+}
+
+// --- Noticeboard Handlers ---
+
+function handleGetNotices(token, params) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+  
+  const notices = NoticeboardRepository.findAll();
+  return { success: true, notices };
+}
+
+function handleCreateNotice(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.title || !data.content) return { success: false, error: 'Title and content are required' };
+  
+  const notice = NoticeboardRepository.create(data, auth.user);
+  return { success: true, notice };
+}
+
+function handleUpdateNotice(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.id) return { success: false, error: 'Notice ID is required' };
+  
+  try {
+    const notice = NoticeboardRepository.update(data.id, data);
+    return { success: true, notice };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleDeleteNotice(token, data) {
+  const auth = requireAdmin(token);
+  if (!auth.success) return auth;
+  
+  if (!data.id) return { success: false, error: 'Notice ID is required' };
+  
+  try {
+    const result = NoticeboardRepository.delete(data.id);
+    return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }

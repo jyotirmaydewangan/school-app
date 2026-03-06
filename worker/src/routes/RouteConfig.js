@@ -28,14 +28,18 @@ export const RequestParser = {
   async parseBody(request) {
     const contentType = request.headers.get('Content-Type') || '';
 
-    if (contentType.includes('application/json')) {
-      return await request.text();
-    }
+    try {
+      if (contentType.includes('application/json')) {
+        return await request.clone().text();
+      }
 
-    if (contentType.includes('application/x-www-form-urlencoded') ||
-      contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      return JSON.stringify(Object.fromEntries(formData));
+      if (contentType.includes('application/x-www-form-urlencoded') ||
+        contentType.includes('multipart/form-data')) {
+        const formData = await request.clone().formData();
+        return JSON.stringify(Object.fromEntries(formData));
+      }
+    } catch (e) {
+      console.error(`Error parsing body: ${e.message}`);
     }
 
     return null;

@@ -210,67 +210,34 @@ const Router = {
           console.error(`[KV] Background refresh failed: ${e.message}`);
         }
       },
-
       async handleWriteRequest(request, action, method, urlObj, tenantId) {
         const bodyText = await RequestParser.parseBody(request);
         const body = bodyText ? JSON.parse(bodyText) : {};
 
-        console.warn(`[Worker] ===== HANDLING WRITE: ${action} =====`);
-        console.warn(`[Worker] Body:`, body);
-
         // Generic Mutation Handling - Applies to any action with a 'get*' invalidation pattern
         const mutationContext = await this.kvHandler.applyMutation(tenantId, action, body);
 
-        console.warn(`[Worker] ===== MUTATION RESULT: ${mutationContext ? 'APPLIED' : 'NULL'} =====`);
-
-        if (mutationContext) {
-          console.warn(`[Worker] Action ${action} applied optimistically to ${mutationContext.readAction}`);
-
-          const syncTask = async () => {
-            try {
-              const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId, {}, bodyText);
-              const result = await response.json();
-              await this.kvHandler.resolveMutation(tenantId, mutationContext, result);
-              // Always invalidate all related patterns after backend confirms success.
-              // The optimistic mutation only patches whatever keys it found — any caches
-              // with hash-based keys (e.g. getAttendance, getAttendanceByClass) that
-              // couldn't be located by applyMutation must still be cleared here.
-              if (result && result.success !== false) {
-                const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
-                if (invalidatePatterns.length > 0) {
-                  // Pass body as context so targeted invalidation only clears the matching key
-                  await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns, body);
-                }
-              }
-            } catch (e) {
-              console.error(`[Worker] Background sync failed for ${action}:`, e.message);
-              await this.kvHandler.resolveMutation(tenantId, mutationContext, { success: false, error: e.message });
-            }
-          };
-
-          if (this.ctx) {
-            this.ctx.waitUntil(syncTask());
-          } else {
-            await syncTask();
-          }
-
-          return new Response(JSON.stringify({
-            success: true,
-            message: 'Request submitted and is processing',
-            optimistic: true,
-            action: action
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...CorsMiddleware.buildHeaders() }
-          });
-        }
-
         const response = await this.proxyToBackend(request, action, method, false, urlObj, tenantId, {}, bodyText);
 
-        if (response.ok) {
+        if (mutationContext) {
+          try {
+            const result = await response.clone().json();
+            await this.kvHandler.resolveMutation(tenantId, mutationContext, result);
+
+            // If backend confirm success, also trigger broad invalidations for related patterns
+            if (result && result.success !== false) {
+              const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
+              if (invalidatePatterns.length > 0) {
+                await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns, body);
+              }
+            }
+          } catch (e) {
+            console.error(`[Worker] Failed to resolve mutation for ${action}:`, e.message);
+            await this.kvHandler.resolveMutation(tenantId, mutationContext, { success: false, error: e.message });
+          }
+        } else if (response.ok) {
           const invalidatePatterns = CacheConfig.getInvalidatePatterns(action);
           if (invalidatePatterns.length > 0) {
-            // Pass body as context so targeted invalidation only clears the matching key
             await this.kvHandler.invalidateByPattern(tenantId, invalidatePatterns, body);
           }
         }

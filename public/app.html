@@ -469,6 +469,13 @@
             </a>
           </li>
           <li>
+            <a href="#" data-section="noticeboard"
+              class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
+              <i class="fas fa-bullhorn w-5 text-center"></i>
+              <span>Noticeboard</span>
+            </a>
+          </li>
+          <li>
             <a href="#" data-section="users"
               class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
               <i class="fas fa-users w-5 text-center"></i>
@@ -738,9 +745,9 @@
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <h2 class="text-xl font-semibold text-gray-800">Student Management</h2>
                 <div class="flex gap-2">
-                  <button onclick="showImportModal()"
-                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition flex items-center gap-2">
-                    <i class="fas fa-file-import"></i> Import CSV
+                  <button onclick="bulkAutoLinkParents()" id="globalAutoLinkBtn"
+                    class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition flex items-center gap-2">
+                    <i class="fas fa-link"></i> Auto-Link
                   </button>
                   <button onclick="showStudentModal()"
                     class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
@@ -771,6 +778,91 @@
             </div>
           </div>
         </section>
+
+        <!-- Noticeboard Section -->
+        <section id="noticeboard" class="content-section hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h2 class="text-xl font-semibold text-gray-800">Noticeboard & Announcements</h2>
+                <p class="text-gray-500 text-sm mt-1">Keep students and parents informed</p>
+              </div>
+              <div id="noticeboard-actions" class="hidden">
+                <button onclick="showNoticeModal()"
+                  class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
+                  <i class="fas fa-plus"></i> Add Notice
+                </button>
+              </div>
+            </div>
+
+            <div id="notices-loading" class="py-12 text-center text-gray-500">
+              <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+              <p>Loading notices...</p>
+            </div>
+
+            <!-- Grid for Notices -->
+            <div id="notices-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Cards will be populated here by JS -->
+            </div>
+
+            <div id="notices-empty"
+              class="hidden py-12 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
+              <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-bullhorn text-gray-400 text-2xl"></i>
+              </div>
+              <h3 class="text-lg font-medium text-gray-800 mb-1">No announcements yet</h3>
+              <p class="text-sm">Check back later for updates</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Noticeboard Modal -->
+        <div id="noticeModal"
+          class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 id="noticeModalTitle" class="text-lg font-semibold text-gray-800">Add Notice</h3>
+              <button onclick="closeNoticeModal()" class="text-gray-400 hover:text-gray-600 transition">
+                <i class="fas fa-times text-lg"></i>
+              </button>
+            </div>
+            <form id="noticeForm" class="p-6">
+              <input type="hidden" id="editNoticeId">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <input type="text" id="noticeTitle" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Content *</label>
+                  <textarea id="noticeContent" required rows="4"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"></textarea>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Attach Image</label>
+                  <input type="file" id="noticeImage" accept="image/png, image/jpeg"
+                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                  <p class="text-xs text-gray-500 mt-1" id="currentNoticeImageTxt"></p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select id="noticeStatus" class="w-full px-4 py-2 border border-gray-200 rounded-xl outline-none">
+                    <option value="published">Published</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeNoticeModal()"
+                  class="px-5 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-xl transition">Cancel</button>
+                <button type="submit" id="saveNoticeBtn"
+                  class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition">Save
+                  Notice</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
         <!-- Dashboard Section -->
         <section id="dashboard" class="content-section active">
@@ -1095,8 +1187,9 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 class="text-xl font-semibold text-gray-800">Subject Management</h2>
               <button onclick="showSubjectModal()"
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
-                <i class="fas fa-plus"></i> Add Subject
+                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2 justify-center whitespace-nowrap">
+                <i class="fas fa-plus"></i>
+                <span>Add Subject</span>
               </button>
             </div>
             <div class="flex flex-wrap gap-4 mb-6">
@@ -1499,6 +1592,33 @@
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
               </div>
             </div>
+
+            <!-- Linked Parents Section -->
+            <div class="mt-4 p-4 bg-gray-50 rounded-xl hidden" id="linkedParentsSection">
+              <div class="flex items-center justify-between mb-3">
+                <label class="block text-sm font-medium text-gray-700">Linked Parents</label>
+                <div class="flex gap-2">
+                  <button type="button" onclick="showLinkParentDropdown()" id="addParentBtn"
+                    class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition">
+                    <i class="fas fa-plus"></i> Add Parent
+                  </button>
+                </div>
+              </div>
+              <div id="linkedParentsList" class="space-y-2">
+                <p class="text-sm text-gray-500 text-center py-2">No parents linked</p>
+              </div>
+              <div id="linkParentDropdown" class="hidden mt-2">
+                <select id="parentSelect" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-2">
+                  <option value="">Select a parent</option>
+                </select>
+                <div class="flex gap-2">
+                  <button type="button" onclick="linkSelectedParent()"
+                    class="flex-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Link</button>
+                  <button type="button" onclick="hideLinkParentDropdown()"
+                    class="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="mt-6 flex gap-3">
             <button type="submit"
@@ -1890,6 +2010,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       let setupSchool = null;
       let setupGrades = [];
       let studentsData = [];
+      let linkedParentsData = [];
       let examsData = [];
       let subjectsData = [];
       let currentAttendanceData = [];
@@ -2166,6 +2287,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         if (sectionId === 'exams') loadExams();
         if (sectionId === 'timetable') loadTimetable();
         if (sectionId === 'curriculum') loadCurriculum();
+        if (sectionId === 'noticeboard') loadNotices();
         if (sectionId === 'school-mgmt') {
           // Default to general tab if not set
           const lastTab = sessionStorage.getItem('school_mgmt_tab') || 'general';
@@ -2420,6 +2542,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
       // ============ CLASS MANAGEMENT - SECTION MODAL ============
       let sectionsData = [];
+      let sectionTeachers = [];
 
       let classPendingStatus = false;
 
@@ -2452,11 +2575,15 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             return;
           }
 
-          listEl.innerHTML = sectionsData.map(s => `
+          listEl.innerHTML = sectionsData.map(s => {
+            const teacher = sectionTeachers.find(t => t.id === s.class_teacher_id);
+            const teacherName = teacher ? teacher.name : null;
+            return `
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
               <div>
                 <span class="font-medium text-gray-800">${escapeHtml(s.name)}</span>
                 ${s.room ? `<span class="text-xs text-gray-500 ml-2"><i class="fas fa-door"></i> ${escapeHtml(s.room)}</span>` : ''}
+                ${teacherName ? `<span class="text-xs text-indigo-600 ml-2"><i class="fas fa-user-tie"></i> ${escapeHtml(teacherName)}</span>` : ''}
               </div>
               <div class="flex gap-1 ${classPendingStatus ? 'opacity-50 pointer-events-none' : 'opacity-0 group-hover:opacity-100'} transition">
                 <button onclick="editSection('${s.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded" title="Edit">
@@ -2467,7 +2594,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                 </button>
               </div>
             </div>
-          `).join('');
+          `}).join('');
         } catch (e) {
           listEl.innerHTML = '<div class="text-center py-4 text-red-500 text-sm">Error loading sections</div>';
         }
@@ -2478,6 +2605,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         try {
           const res = await api.getUsers(auth.getToken());
           const teachers = (res.users || []).filter(u => u.role === 'teacher');
+          sectionTeachers = teachers;
           select.innerHTML = '<option value="">Select Teacher</option>' +
             teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
         } catch (e) {
@@ -3765,6 +3893,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
       window.showStudentModal = async function (studentId) {
         document.getElementById('studentModal').classList.add('show');
+        hideLinkParentDropdown();
         if (setupGrades.length === 0) {
           await loadSetupGrades();
         } else {
@@ -3786,6 +3915,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
             document.getElementById('studentParentPhone1').value = student.parent_phone1 || '';
             document.getElementById('studentParentPhone2').value = student.parent_phone2 || '';
+
+            // Show linked parents section and load data
+            document.getElementById('linkedParentsSection').classList.remove('hidden');
+            await loadLinkedParents(studentId);
+            await loadAllParentsForDropdown();
           }
         } else {
           document.getElementById('studentModalTitle').textContent = 'Add New Student';
@@ -3796,11 +3930,169 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           document.getElementById('studentSection').innerHTML = '<option value="">Select Section</option>';
           document.getElementById('studentParentPhone1').value = '';
           document.getElementById('studentParentPhone2').value = '';
+
+          // Hide linked parents section for new students
+          document.getElementById('linkedParentsSection').classList.add('hidden');
         }
       };
 
       window.closeStudentModal = function () {
         document.getElementById('studentModal').classList.remove('show');
+      };
+
+      window.loadLinkedParents = async function (studentId, retryCount = 0) {
+        const token = auth.getToken();
+        try {
+          const res = await api.getLinkedParents(token, studentId);
+
+          // The API returns { success: true, parents: [...] }
+          if (res && res.success && Array.isArray(res.parents)) {
+            linkedParentsData = res.parents;
+          } else if (res && Array.isArray(res)) {
+            linkedParentsData = res;
+          } else if (res && res.parents && Array.isArray(res.parents)) {
+            linkedParentsData = res.parents;
+          } else {
+            // Retry once if no valid data
+            if (retryCount < 1) {
+              await new Promise(r => setTimeout(r, 800));
+              return loadLinkedParents(studentId, retryCount + 1);
+            }
+            linkedParentsData = [];
+          }
+          renderLinkedParents();
+        } catch (e) {
+          console.error('Error loading linked parents:', e);
+          linkedParentsData = [];
+          renderLinkedParents();
+        }
+      };
+
+      function renderLinkedParents() {
+        const container = document.getElementById('linkedParentsList');
+        const studentId = document.getElementById('editStudentId').value;
+
+        if (!studentId) {
+          container.innerHTML = '<p class="text-sm text-gray-500 text-center py-2">Save student first to link parents</p>';
+          return;
+        }
+
+        if (linkedParentsData.length === 0) {
+          container.innerHTML = '<p class="text-sm text-gray-500 text-center py-2">No parents linked</p>';
+          return;
+        }
+
+        container.innerHTML = linkedParentsData.map(p => `
+          <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-user text-gray-400"></i>
+              <span class="text-sm text-gray-700">${escapeHtml(p.name)}</span>
+              ${p.phone ? `<span class="text-xs text-gray-400">(${escapeHtml(p.phone)})</span>` : ''}
+            </div>
+            <button type="button" onclick="unlinkParent('${p.id}', '${studentId}')" class="text-red-500 hover:text-red-700 p-1" title="Unlink">
+              <i class="fas fa-times text-xs"></i>
+            </button>
+          </div>
+        `).join('');
+      };
+
+      window.showLinkParentDropdown = async function () {
+        const dropdown = document.getElementById('linkParentDropdown');
+        dropdown.classList.remove('hidden');
+        document.getElementById('addParentBtn').classList.add('hidden');
+      };
+
+      window.hideLinkParentDropdown = function () {
+        const dropdown = document.getElementById('linkParentDropdown');
+        dropdown.classList.add('hidden');
+        document.getElementById('addParentBtn').classList.remove('hidden');
+        document.getElementById('parentSelect').value = '';
+      };
+
+      window.loadAllParentsForDropdown = async function () {
+        const select = document.getElementById('parentSelect');
+        const token = auth.getToken();
+        try {
+          const res = await api.getUsers(token);
+          const parents = (res.users || []).filter(u => u.role === 'parent');
+          const linkedIds = linkedParentsData.map(p => p.id);
+          const availableParents = parents.filter(p => !linkedIds.includes(p.id));
+
+          select.innerHTML = '<option value="">Select a parent</option>' +
+            availableParents.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.phone || 'no phone'})</option>`).join('');
+        } catch (e) {
+          console.error('Error loading parents:', e);
+        }
+      };
+
+      window.linkSelectedParent = async function () {
+        const parentId = document.getElementById('parentSelect').value;
+        const studentId = document.getElementById('editStudentId').value;
+
+        if (!parentId || !studentId) {
+          alert('Please select a parent');
+          return;
+        }
+
+        const token = auth.getToken();
+        try {
+          const res = await api.linkParentStudent(token, { parent_id: parentId, student_id: studentId });
+          if (res.success) {
+            showToast('Parent linked successfully', 'success');
+            hideLinkParentDropdown();
+            await new Promise(r => setTimeout(r, 500));
+            await loadLinkedParents(studentId);
+            await loadAllParentsForDropdown();
+          } else {
+            showToast(res.error || 'Failed to link parent', 'error');
+          }
+        } catch (e) {
+          console.error('Error linking parent:', e);
+          showToast('Error linking parent', 'error');
+        }
+      };
+
+      window.unlinkParent = async function (parentId, studentId) {
+        if (!confirm('Are you sure you want to unlink this parent?')) return;
+
+        const token = auth.getToken();
+        try {
+          const res = await api.unlinkParentStudent(token, parentId, studentId);
+          if (res.success) {
+            showToast('Parent unlinked successfully', 'success');
+            await loadLinkedParents(studentId);
+            await loadAllParentsForDropdown();
+          } else {
+            alert(res.error || 'Failed to unlink parent');
+          }
+        } catch (e) {
+          alert('Error unlinking parent');
+        }
+      };
+
+      window.bulkAutoLinkParents = async function () {
+        const btn = document.getElementById('globalAutoLinkBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        btn.disabled = true;
+
+        const token = auth.getToken();
+        try {
+          const res = await api.autoLinkParents(token);
+          if (res.success) {
+            showToast(`Auto-link completed: ${res.linked} new links created, ${res.existing || 0} already existed`, 'success');
+            // Small delay to allow sheet to update
+            await new Promise(r => setTimeout(r, 800));
+            loadStudents(); // Refresh main list to show any new status
+          } else {
+            showToast(res.error || 'Bulk Auto-link failed', 'error');
+          }
+        } catch (e) {
+          showToast('Error during bulk auto-link', 'error');
+        } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
       };
 
       window.editStudent = showStudentModal;
@@ -5045,6 +5337,212 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           alert('Error generating report card');
         }
       };
+
+      // ============ NOTICEBOARD MANAGEMENT ============
+      let noticesData = [];
+
+      async function loadNotices(force = false) {
+        if (!document.getElementById('noticeboard').classList.contains('active')) return;
+
+        const loader = document.getElementById('notices-loading');
+        const content = document.getElementById('notices-content');
+        const empty = document.getElementById('notices-empty');
+
+        if (noticesData.length === 0 || force) {
+          loader.classList.remove('hidden');
+          content.classList.add('hidden');
+          empty.classList.add('hidden');
+        }
+
+        try {
+          const res = await api.getNotices(auth.getToken());
+          if (res && res.success) {
+            noticesData = res.notices || [];
+          }
+        } catch (e) {
+          console.error('Failed to load notices', e);
+        }
+
+        loader.classList.add('hidden');
+        renderNotices();
+      }
+
+      function renderNotices() {
+        const content = document.getElementById('notices-content');
+        const empty = document.getElementById('notices-empty');
+        const userRole = auth.getUser()?.role;
+
+        // Show add button only for admins
+        const actionsDiv = document.getElementById('noticeboard-actions');
+        if (userRole === 'super_admin' || userRole === 'admin') {
+          actionsDiv.classList.remove('hidden');
+        } else {
+          actionsDiv.classList.add('hidden');
+        }
+
+        if (noticesData.length === 0) {
+          content.classList.add('hidden');
+          empty.classList.remove('hidden');
+          return;
+        }
+
+        empty.classList.add('hidden');
+        content.classList.remove('hidden');
+
+        content.innerHTML = noticesData.map(n => {
+          // Check if admin to show edit/delete
+          const isAdmin = userRole === 'super_admin' || userRole === 'admin';
+          const createdDate = new Date(n.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+          return `
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition">
+            ${n.image_url ? `<div class="h-48 w-full bg-gray-100 overflow-hidden"><img src="${escapeHtml(n.image_url)}" class="w-full h-full object-cover" alt="Notice Image"></div>` : ''}
+            <div class="p-5 flex-1 flex flex-col">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-gray-800 text-lg line-clamp-2">${escapeHtml(n.title)}</h3>
+                ${n.status === 'hidden' ? `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider ml-2 shrink-0">Hidden</span>` : ''}
+              </div>
+              <p class="text-sm text-gray-600 whitespace-pre-wrap flex-1 mb-4">${escapeHtml(n.content)}</p>
+              <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <div class="flex items-center gap-1">
+                  <i class="fas fa-user-circle"></i> ${escapeHtml(n.created_by || 'Admin')}
+                  <span class="mx-1">•</span>
+                  ${escapeHtml(createdDate)}
+                </div>
+                ${isAdmin ? `
+                <div class="flex gap-2">
+                  <button onclick="showNoticeModal('${n.id}')" class="text-indigo-600 hover:text-indigo-800" title="Edit"><i class="fas fa-edit"></i></button>
+                  <button onclick="deleteNotice('${n.id}')" class="text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+          `;
+        }).join('');
+      }
+
+      window.showNoticeModal = function (id = null) {
+        document.getElementById('noticeModal').classList.add('show');
+        const form = document.getElementById('noticeForm');
+        form.reset();
+        document.getElementById('currentNoticeImageTxt').textContent = '';
+        document.getElementById('editNoticeId').value = '';
+
+        if (id) {
+          const notice = noticesData.find(n => n.id === id);
+          if (notice) {
+            document.getElementById('noticeModalTitle').textContent = 'Edit Notice';
+            document.getElementById('editNoticeId').value = notice.id;
+            document.getElementById('noticeTitle').value = notice.title;
+            document.getElementById('noticeContent').value = notice.content;
+            document.getElementById('noticeStatus').value = notice.status || 'published';
+            if (notice.image_url) {
+              document.getElementById('currentNoticeImageTxt').textContent = 'Leave empty to keep current image.';
+            }
+          }
+        } else {
+          document.getElementById('noticeModalTitle').textContent = 'Add Notice';
+          document.getElementById('noticeStatus').value = 'published';
+        }
+      };
+
+      window.closeNoticeModal = function () {
+        document.getElementById('noticeModal').classList.remove('show');
+      };
+
+      document.getElementById('noticeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('editNoticeId').value;
+        const title = document.getElementById('noticeTitle').value;
+        const content = document.getElementById('noticeContent').value;
+        const status = document.getElementById('noticeStatus').value;
+        const imageFile = document.getElementById('noticeImage').files[0];
+
+        const btn = document.getElementById('saveNoticeBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        try {
+          let base64Image = null;
+          if (imageFile) {
+            // Helper to compress and convert to WebP
+            base64Image = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(imageFile);
+              reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const MAX_WIDTH = 600; // Small enough to fit in sheet cell safely
+                  let width = img.width;
+                  let height = img.height;
+
+                  if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                  }
+
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, width, height);
+
+                  // Use lower quality to ensure it fits in ~50KB
+                  resolve(canvas.toDataURL('image/webp', 0.6));
+                };
+              };
+            });
+          }
+
+          const data = { title, content, status };
+          if (base64Image) {
+            data.image_base64 = base64Image;
+          }
+
+          let res;
+          if (id) {
+            data.id = id;
+            res = await api.updateNotice(auth.getToken(), data);
+          } else {
+            res = await api.createNotice(auth.getToken(), data);
+          }
+
+          if (res.success) {
+            showToast(id ? 'Notice updated' : 'Notice posted', 'success');
+            closeNoticeModal();
+            loadNotices(true);
+          } else {
+            showToast(res.error || 'Failed to save notice', 'error');
+          }
+        } catch (err) {
+          showToast('Error saving notice', 'error');
+          console.error(err);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+
+      window.deleteNotice = async function (id) {
+        if (!confirm('Are you sure you want to delete this notice?')) return;
+
+        try {
+          const res = await api.deleteNotice(auth.getToken(), id);
+          if (res.success) {
+            showToast('Notice deleted', 'success');
+            loadNotices(true);
+          } else {
+            showToast(res.error || 'Failed to delete notice', 'error');
+          }
+        } catch (e) {
+          showToast('Error deleting notice', 'error');
+        }
+      };
+
     </script>
   </div>
 </body>

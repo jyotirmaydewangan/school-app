@@ -1,4 +1,4 @@
 .clasp.json
 .claspignore
 SCRIPT_ID.txt
-config.gs
+# config.gs no longer ignored

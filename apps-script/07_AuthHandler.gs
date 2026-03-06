@@ -141,6 +141,6 @@ const AuthHandler = {
     if (!token) return false;
     const jwtResult = Utils.verifyJWT(token);
     if (!jwtResult.valid) return false;
-    return jwtResult.payload.role === 'admin';
+    return jwtResult.payload.role === 'admin' || jwtResult.payload.role === 'super_admin';
   }
 };

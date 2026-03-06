@@ -68,7 +68,7 @@ const UserRepository = {
     const id = Utils.generateId();
     const now = Utils.getCurrentTimestamp();
     
-    const isApproved = userData.role === 'admin' || userData.is_approved === true;
+    const isApproved = userData.role === 'admin' || userData.role === 'super_admin' || userData.is_approved === true;
     
     sheet.appendRow([
       id,
