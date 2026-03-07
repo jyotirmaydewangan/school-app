@@ -53,15 +53,32 @@ function deployPages(tenantName, args = []) {
     }
   });
 
+  function syncDirRecursive(srcDir, destDir, skipFiles = []) {
+    if (!fs.existsSync(srcDir)) return;
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    
+    fs.readdirSync(srcDir).forEach(f => {
+      const srcPath = path.join(srcDir, f);
+      const destPath = path.join(destDir, f);
+      
+      if (skipFiles.includes(f)) return;
+      
+      const stat = fs.statSync(srcPath);
+      if (stat.isDirectory()) {
+        syncDirRecursive(srcPath, destPath, []);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    });
+  }
+
   dirsToSync.forEach(dir => {
     const srcDir = path.join(templatePublicDir, dir);
     const destDir = path.join(tenantDir, 'public', dir);
     if (fs.existsSync(srcDir) && fs.existsSync(destDir)) {
-      fs.readdirSync(srcDir).forEach(f => {
-        if (f !== 'config.js') {
-          fs.copyFileSync(path.join(srcDir, f), path.join(destDir, f));
-        }
-      });
+      syncDirRecursive(srcDir, destDir, ['config.js']);
     }
   });
   log('✓ Public template files synced', 'success');

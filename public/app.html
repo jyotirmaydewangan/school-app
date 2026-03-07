@@ -2045,6 +2045,10 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
     </script>
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/components/SyncManager.js"></script>
+    <script src="js/components/Toast.js"></script>
+    <script src="js/components/Modal.js"></script>
+    <script src="js/components/ConfirmDialog.js"></script>
     <script>
       // Escape HTML to prevent XSS in dynamic content
       function escapeHtml(text) {
@@ -2054,13 +2058,46 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         return d.innerHTML;
       }
 
+      function mergeWithOptimistic(serverData, sourceId) {
+        const tempPrefix = 'opt_';
+        const optimisticItems = serverData.filter(item => item.id && item.id.toString().startsWith(tempPrefix));
+
+        if (optimisticItems.length === 0) return serverData;
+
+        const merged = [...serverData];
+        const existingIds = new Set(serverData.map(item => item.id));
+
+        if (sourceId === 'classes') {
+          classesData.forEach(localItem => {
+            if (localItem.id && localItem.id.toString().startsWith(tempPrefix) && !existingIds.has(localItem.id)) {
+              const serverMatch = merged.find(s => s.id === localItem.id || (s.name === localItem.name && s.stream === localItem.stream));
+              if (!serverMatch) {
+                merged.unshift(localItem);
+              }
+            }
+          });
+        }
+
+        if (sourceId === 'school') {
+          schoolsData.forEach(localItem => {
+            if (localItem.id && localItem.id.toString().startsWith(tempPrefix) && !existingIds.has(localItem.id)) {
+              merged.unshift(localItem);
+            }
+          });
+        }
+
+        return merged;
+      }
+
       let allUsersData = [];
       let filteredUsers = [];
+      let allRolesData = [];
       let currentPage = 1;
       const usersPerPage = 12;
       let searchTimeout = null;
       let setupSchool = null;
       let setupGrades = [];
+      let schoolsData = [];
       let studentsData = [];
       let linkedParentsData = [];
       let examsData = [];
@@ -2410,17 +2447,21 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           emptyState.classList.add('hidden');
 
           // Handle nested response structure from backend
-          const schoolsData = res.schools;
-          const schools = schoolsData && schoolsData.schools ? schoolsData.schools : (schoolsData || []);
+          const schoolsResponse = res.schools;
+          const schools = schoolsResponse && schoolsResponse.schools ? schoolsResponse.schools : (schoolsResponse || []);
 
-          console.log('[School] Schools data:', schools);
-          console.log('[School] First school _sync:', schools[0]?._sync);
+          // Merge with any existing optimistic updates
+          schoolsData = [...schools];
+          schoolsData = mergeWithOptimistic(schoolsData, 'school');
+
+          console.log('[School] Schools data:', schoolsData);
+          console.log('[School] First school _sync:', schoolsData[0]?._sync);
 
           // Monitor for pending sync status
-          SyncTracker.monitor('school', schools, (opts) => loadSetupWizard(opts));
+          SyncTracker.monitor('school', schoolsData, (opts) => loadSetupWizard(opts));
 
-          if (res.success && schools.length > 0) {
-            const school = schools[0];
+          if (res.success && schoolsData.length > 0) {
+            const school = schoolsData[0];
             console.log('School found:', school);
             setupSchool = school;
             document.getElementById('view-school-name').textContent = school.name || '-';
@@ -2497,64 +2538,76 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           contact: document.getElementById('setup-school-contact').value
         };
 
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        // Optimistic UI Update - close form immediately
+        document.getElementById('school-profile-form').classList.add('hidden');
+        document.getElementById('school-profile-empty').classList.add('hidden');
+        document.getElementById('school-profile-view').classList.remove('hidden');
+
+        // Create optimistic school object
+        const tempId = id || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optSchool = { ...data, id: tempId, _sync: { status: 'pending' } };
+
+        // Update global array
+        if (id) {
+          const idx = schoolsData.findIndex(s => s.id === id);
+          if (idx !== -1) {
+            schoolsData[idx] = optSchool;
+          } else {
+            schoolsData.unshift(optSchool);
+          }
+        } else {
+          schoolsData = [optSchool];
+        }
+
+        // Show optimistic UI immediately
+        const schoolCard = document.getElementById('school-card');
+        const schoolCardContent = document.getElementById('school-card-content');
+        const syncBadge = document.getElementById('school-sync-badge');
+        const editBtn = schoolCard.querySelector('button');
+
+        document.getElementById('view-school-name').textContent = data.name || '-';
+        document.getElementById('view-school-code').textContent = data.code || '-';
+        document.getElementById('view-school-address').textContent = data.address || '-';
+        document.getElementById('view-school-contact').textContent = data.contact || '-';
+
+        // Show SAVING status immediately
+        schoolCard.classList.add('opacity-70', 'border-orange-200', 'bg-orange-50/30');
+        schoolCardContent.classList.add('animate-pulse');
+        syncBadge.innerHTML = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse">SAVING...</span>';
+        editBtn.disabled = true;
+        editBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        // Start monitoring for sync
+        SyncTracker.monitor('school', schoolsData, (opts) => loadSetupWizard(opts));
 
         try {
-          // Warm up cache to ensure optimistic mutation can be applied
-          console.log('[School] Warming up cache before save...');
-          await api.getSchools(token);
-          console.log('[School] Cache warmed up, now saving...');
-
           let res = id ? await api.updateSchool(token, { id, ...data }) : await api.createSchool(token, data);
           console.log('[School] Save response:', res);
+
           if (res.success) {
-            submitBtn.innerHTML = originalBtnText;
-            submitBtn.disabled = false;
-
-            // Close form immediately and show card with SAVING status
-            document.getElementById('school-profile-form').classList.add('hidden');
-            document.getElementById('school-profile-empty').classList.add('hidden');
-            document.getElementById('school-profile-view').classList.remove('hidden');
-
-            // Show the data immediately with SAVING status (optimistic)
-            const schoolCard = document.getElementById('school-card');
-            const schoolCardContent = document.getElementById('school-card-content');
-            const syncBadge = document.getElementById('school-sync-badge');
-            const editBtn = schoolCard.querySelector('button');
-
-            document.getElementById('view-school-name').textContent = data.name || '-';
-            document.getElementById('view-school-code').textContent = data.code || '-';
-            document.getElementById('view-school-address').textContent = data.address || '-';
-            document.getElementById('view-school-contact').textContent = data.contact || '-';
-
-            // Show SAVING status immediately
-            schoolCard.classList.add('opacity-70', 'border-orange-200', 'bg-orange-50/30');
-            schoolCardContent.classList.add('animate-pulse');
-            syncBadge.innerHTML = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse">SAVING...</span>';
-            editBtn.disabled = true;
-            editBtn.classList.add('opacity-50', 'cursor-not-allowed');
-
-            console.log('[School] Showing SAVING status, polling for completion...');
-
-            // If not optimistic, show success message
             if (!res.optimistic) {
               showToast(id ? 'School updated successfully' : 'School created successfully', 'success');
-            } else {
-              // Force cache bypass on the first load after mutation to ensure we see the pending state
-              loadSetupWizard({ cache: 'false' });
             }
+
+            // Clear sync status on success
+            const successIdx = schoolsData.findIndex(s => s.id === tempId || s.id === id);
+            if (successIdx !== -1) {
+              if (res.school) {
+                schoolsData[successIdx] = { ...res.school };
+              } else {
+                delete schoolsData[successIdx]._sync;
+              }
+            }
+
+            // Re-render to show synced state
+            loadSetupWizard({ cache: 'false' });
           } else {
             showToast(res.error || "Failed to save school", 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
+            loadSetupWizard({ cache: 'false' });
           }
         } catch (err) {
           showToast("Error saving school details", 'error');
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalBtnText;
+          loadSetupWizard({ cache: 'false' });
         }
       });
 
@@ -3228,6 +3281,23 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           is_active: document.getElementById('classIsActive')?.checked.toString() || 'true'
         };
 
+        const tempId = classId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optClass = { ...data, id: tempId, _sync: { status: 'pending' }, sections: [] };
+
+        if (classId) {
+          data.id = classId;
+          const idx = classesData.findIndex(c => c.id === classId);
+          if (idx !== -1) {
+            Object.assign(classesData[idx], optClass);
+          }
+        } else {
+          classesData.unshift(optClass);
+        }
+
+        closeClassModal();
+        applyClassFilters();
+        SyncTracker.monitor('classes', classesData, (opt) => loadClasses(opt));
+
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
@@ -3236,7 +3306,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         try {
           let response;
           if (classId) {
-            data.id = classId;
             response = await api.updateClass(token, data);
           } else {
             response = await api.createClass(token, data);
@@ -3246,13 +3315,23 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             if (!response.optimistic) {
               showToast(classId ? 'Class updated successfully' : 'Class created successfully', 'success');
             }
-            closeClassModal();
-            loadClasses();
+            if (classId) {
+              const idx = classesData.findIndex(c => c.id === classId);
+              if (idx !== -1) {
+                if (response.class) {
+                  Object.assign(classesData[idx], response.class);
+                }
+                delete classesData[idx]._sync;
+              }
+            }
+            applyClassFilters();
           } else {
             showToast(response.error || 'Failed to save class', 'error');
+            loadClasses({ cache: 'false' });
           }
         } catch (err) {
           showToast('Error saving class', 'error');
+          loadClasses({ cache: 'false' });
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerHTML = originalBtnText;
@@ -3308,6 +3387,8 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           classesData.forEach(cls => {
             cls.sections = classSectionsMap[cls.id] || [];
           });
+
+          classesData = mergeWithOptimistic(classesData, 'classes');
 
           applyClassFilters();
 
@@ -3438,6 +3519,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       async function deleteClass(id) {
         if (!confirm('Are you sure you want to delete this class?')) return;
 
+        const classIndex = classesData.findIndex(c => c.id === id);
+        if (classIndex === -1) return;
+
+        const originalClass = { ...classesData[classIndex] };
+        classesData[classIndex]._sync = { status: 'pending_delete' };
+        applyClassFilters();
+        SyncTracker.monitor('classes', classesData, (opt) => loadClasses(opt));
+
         const token = auth.getToken();
         try {
           const response = await api.deleteClass(token, id);
@@ -3445,12 +3534,17 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             if (!response.optimistic) {
               showToast('Class deleted successfully', 'success');
             }
-            loadClasses();
+            classesData.splice(classIndex, 1);
+            applyClassFilters();
           } else {
             showToast(response.error || 'Failed to delete class', 'error');
+            classesData[classIndex] = originalClass;
+            applyClassFilters();
           }
         } catch (err) {
           showToast('Error deleting class', 'error');
+          classesData[classIndex] = originalClass;
+          applyClassFilters();
         }
       }
 
@@ -3544,64 +3638,71 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const roles = response.roles || [];
 
           loadingEl.classList.add('hidden');
+          allRolesData = roles;
 
-          if (roles.length > 0) {
-            // Responsive card grid instead of table
-            let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-
-            roles.forEach(role => {
-              const perms = role.permissions && role.permissions.length > 0
-                ? role.permissions.map(p => `<span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">${p}</span>`).join('')
-                : '<span class="text-gray-400 text-sm">none</span>';
-
-              const statusClass = role.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-              const statusText = role.is_active ? 'Active' : 'Inactive';
-
-              const syncStatus = role._sync ? role._sync.status : 'synced';
-              const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
-              const syncBadge = syncStatus === 'pending'
-                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse ml-2">SAVING...</span>'
-                : syncStatus === 'pending_delete'
-                  ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 animate-pulse ml-2">DELETING...</span>'
-                  : '';
-
-              html += `<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition ${isPending ? 'opacity-70' : ''}">
-              <div class="flex items-start justify-between mb-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                    <i class="fas fa-user-shield text-purple-500"></i>
-                  </div>
-                  <div>
-                    <h4 class="font-semibold text-gray-800 capitalize">${escapeHtml(role.role_name)}${syncBadge}</h4>
-                    <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
-                  </div>
-                </div>
-                <div class="flex gap-1">
-                  <button onclick="editRole('${role.role_id}', '${role.role_name}', '${(role.permissions || []).join(',')}', ${role.is_active})" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
-                    <i class="fas fa-edit text-xs"></i>
-                  </button>
-                  <button onclick="window.deleteRole('${role.role_id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
-                    <i class="fas fa-trash text-xs"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="mt-3">
-                <p class="text-xs text-gray-500 mb-2">Permissions:</p>
-                <div class="flex flex-wrap gap-1">${perms}</div>
-              </div>
-            </div>`;
-            });
-
-            html += '</div>';
-            contentEl.innerHTML = html;
-            SyncTracker.monitor('roles', roles, (opts) => loadRoles(token, opts));
-          } else {
-            contentEl.innerHTML = '<p class="text-gray-500">No roles found. Add a role using the form above.</p>';
-          }
+          renderRolesGrid(allRolesData);
+          SyncTracker.monitor('roles', allRolesData, (opts) => loadRoles(token, opts));
         } catch (err) {
           console.error('Error loading roles:', err);
           loadingEl.textContent = 'Failed to load roles: ' + err.message;
         }
+      }
+
+      function renderRolesGrid(roles) {
+        const contentEl = document.getElementById('roles-content');
+
+        if (!roles || roles.length === 0) {
+          contentEl.innerHTML = '<p class="text-gray-500">No roles found. Add a role using the form above.</p>';
+          return;
+        }
+
+        let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+
+        roles.forEach(role => {
+          const perms = role.permissions && role.permissions.length > 0
+            ? role.permissions.map(p => `<span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">${p}</span>`).join('')
+            : '<span class="text-gray-400 text-sm">none</span>';
+
+          const statusClass = role.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+          const statusText = role.is_active ? 'Active' : 'Inactive';
+
+          const syncStatus = role._sync ? role._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse ml-2">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 animate-pulse ml-2">DELETING...</span>'
+              : '';
+
+          html += `<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition ${isPending ? 'opacity-70' : ''}">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <i class="fas fa-user-shield text-purple-500"></i>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-800 capitalize">${escapeHtml(role.role_name)}${syncBadge}</h4>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
+              </div>
+            </div>
+            <div class="flex gap-1">
+              <button onclick="editRole('${role.role_id}', '${role.role_name}', '${(role.permissions || []).join(',')}', ${role.is_active})" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
+                <i class="fas fa-edit text-xs"></i>
+              </button>
+              <button onclick="window.deleteRole('${role.role_id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
+                <i class="fas fa-trash text-xs"></i>
+              </button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <p class="text-xs text-gray-500 mb-2">Permissions:</p>
+            <div class="flex flex-wrap gap-1">${perms}</div>
+          </div>
+        </div>`;
+        });
+
+        html += '</div>';
+        contentEl.innerHTML = html;
       }
 
       window.showRoleModal = function (roleId, roleName, permissions, isActive) {
@@ -3630,21 +3731,38 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       };
 
       window.deleteRole = async function (roleId) {
-        if (!confirm('Are you sure you want to delete this role?')) return;
+        const confirmed = await showConfirm({
+          title: 'Delete Role',
+          message: 'Are you sure you want to delete this role?'
+        });
+        if (!confirmed) return;
+
+        const roleIndex = allRolesData.findIndex(r => r.role_id === roleId);
+        if (roleIndex === -1) return;
+
+        const originalRole = { ...allRolesData[roleIndex] };
+        allRolesData[roleIndex]._sync = { status: 'pending_delete' };
+        renderRolesGrid(allRolesData);
+        SyncTracker.monitor('roles', allRolesData, (opts) => loadRoles(auth.getToken(), opts));
 
         const token = auth.getToken();
         try {
           const response = await api.deleteRole(token, { role_id: roleId });
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('Role deleted successfully!');
-            }
-            loadRoles(token, { cache: 'false' });
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to delete role', 'error');
+            allRolesData[roleIndex] = originalRole;
+            renderRolesGrid(allRolesData);
           } else {
-            alert(response.error || 'Failed to delete role');
+            if (!response.optimistic) {
+              showToast('Role deleted', 'success');
+            }
+            allRolesData.splice(roleIndex, 1);
+            renderRolesGrid(allRolesData);
           }
         } catch (err) {
-          alert('Error deleting role');
+          showToast('Error deleting role', 'error');
+          allRolesData[roleIndex] = originalRole;
+          renderRolesGrid(allRolesData);
         }
       };
 
@@ -3657,28 +3775,54 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const isActive = document.getElementById('roleActive').checked;
 
         const permissions = permissionsStr ? permissionsStr.split(',').map(p => p.trim()).filter(p => p) : [];
+        const data = { role_name: roleName, permissions, is_active: isActive };
+
+        // Optimistic UI Update
+        const tempId = roleId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optRole = { ...data, role_id: tempId, _sync: { status: 'pending' } };
+
+        if (roleId) {
+          data.role_id = roleId;
+          const idx = allRolesData.findIndex(r => r.role_id === roleId);
+          if (idx !== -1) Object.assign(allRolesData[idx], optRole);
+        } else {
+          allRolesData.unshift(optRole);
+        }
+
+        closeRoleModal();
+        renderRolesGrid(allRolesData);
 
         try {
           let response;
           if (roleId) {
-            response = await api.updateRole(token, { role_id: roleId, role_name: roleName, permissions, is_active: isActive });
+            response = await api.updateRole(token, data);
           } else {
-            response = await api.createRole(token, { role_name: roleName, permissions, is_active: isActive });
+            response = await api.createRole(token, data);
           }
 
-          if (response.success) {
-            if (response.optimistic) {
-              console.log('Optimistic response received');
-            } else {
-              alert('Role saved successfully!');
-            }
-            closeRoleModal();
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to save role', 'error');
             loadRoles(token, { cache: 'false' });
           } else {
-            alert(response.error || 'Failed to save role');
+            if (!response.optimistic) {
+              showToast(roleId ? 'Role updated' : 'Role created', 'success');
+            }
+            if (roleId) {
+              const updatedIndex = allRolesData.findIndex(r => r.role_id === roleId);
+              if (updatedIndex !== -1) {
+                if (response.role) {
+                  Object.assign(allRolesData[updatedIndex], response.role);
+                }
+                delete allRolesData[updatedIndex]._sync;
+              }
+              renderRolesGrid(allRolesData);
+            } else {
+              loadRoles(token, { cache: 'false' }); // Fetch real new role details from DB
+            }
           }
         } catch (err) {
-          alert('Error saving role');
+          showToast('Error saving role', 'error');
+          loadRoles(token, { cache: 'false' });
         }
       });
 
@@ -3719,21 +3863,34 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       };
 
       window.deleteUser = async function (userId) {
-        if (!confirm('Are you sure you want to delete this user?')) return;
+        const confirmed = await showConfirm({
+          title: 'Delete User',
+          message: 'Are you sure you want to delete this user?'
+        });
+        if (!confirmed) return;
 
         const token = auth.getToken();
+
+        // Optimistic UI Update
+        const userIndex = allUsersData.findIndex(u => u.id === userId);
+        if (userIndex !== -1) {
+          allUsersData[userIndex]._sync = { status: 'pending_delete' };
+          renderUsersTable(allUsersData);
+        }
+
         try {
           const response = await api.deleteUser(token, { user_id: userId });
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('User deleted successfully!');
-            }
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to delete user', 'error');
             loadUsers(token, { cache: 'false' });
           } else {
-            alert(response.error || 'Failed to delete user');
+            showToast('User deleted', 'success');
+            allUsersData = allUsersData.filter(u => u.id !== userId);
+            renderUsersTable(allUsersData);
           }
         } catch (err) {
-          alert('Error deleting user');
+          showToast('Error deleting user', 'error');
+          loadUsers(token, { cache: 'false' });
         }
       };
 
@@ -3747,29 +3904,51 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         const role = document.getElementById('userRole').value;
         const password = document.getElementById('userPassword').value;
 
+        const data = { name, email, phone, role };
+
+        // Optimistic UI Update
+        const tempId = userId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optUser = { ...data, id: tempId, _sync: { status: 'pending' } };
+
+        if (userId) {
+          data.user_id = userId;
+          const idx = allUsersData.findIndex(u => u.id === userId);
+          if (idx !== -1) Object.assign(allUsersData[idx], optUser);
+        } else {
+          data.password = password;
+          const d = new Date().toISOString();
+          allUsersData.unshift({ ...optUser, created_at: d, is_approved: role === 'parent' || role === 'student' ? false : true });
+        }
+
+        closeUserModal();
+        renderUsersTable(allUsersData);
+
         try {
           let response;
-          const data = { name, email, phone, role };
-
           if (userId) {
-            data.user_id = userId;
             response = await api.updateUser(token, data);
           } else {
-            data.password = password;
             response = await api.createUser(token, data);
           }
 
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('User saved successfully!');
-            }
-            closeUserModal();
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to save user', 'error');
             loadUsers(token, { cache: 'false' });
           } else {
-            alert(response.error || 'Failed to save user');
+            showToast(userId ? 'User updated' : 'User created', 'success');
+            if (userId) {
+              const updatedIndex = allUsersData.findIndex(u => u.id === tempId);
+              if (updatedIndex !== -1) {
+                delete allUsersData[updatedIndex]._sync;
+                renderUsersTable(allUsersData);
+              }
+            } else {
+              loadUsers(token, { cache: 'false' }); // Fetch real new user details from DB
+            }
           }
         } catch (err) {
-          alert('Error saving user');
+          showToast('Error saving user', 'error');
+          loadUsers(token, { cache: 'false' });
         }
       });
 
@@ -4124,45 +4303,70 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       window.editStudent = showStudentModal;
 
       window.deleteStudent = async function (id) {
-        if (!confirm('Are you sure you want to delete this student?')) return;
+        const confirmed = await showConfirm({
+          title: 'Delete Student',
+          message: 'Are you sure you want to delete this student?'
+        });
+        if (!confirmed) return;
 
         const token = auth.getToken();
+
+        // Optimistic UI Update
+        const studentIndex = studentsData.findIndex(s => s.id === id);
+        if (studentIndex !== -1) {
+          studentsData[studentIndex]._sync = { status: 'pending_delete' };
+          renderStudentsTable(studentsData);
+        }
+
         try {
           const response = await api.deleteStudent(token, id);
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('Student deleted successfully!');
-            }
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to delete student', 'error');
             loadStudents();
           } else {
-            alert(response.error || 'Failed to delete student');
+            showToast('Student deleted', 'success');
+            studentsData = studentsData.filter(s => s.id !== id);
+            renderStudentsTable(studentsData);
           }
         } catch (err) {
-          alert('Error deleting student');
+          showToast('Error deleting student', 'error');
+          loadStudents();
         }
       };
 
       window.approveStudent = async function (id) {
         const token = auth.getToken();
+
+        // Optimistic UI Update
+        const studentIndex = studentsData.findIndex(s => s.id === id);
+        if (studentIndex !== -1) {
+          studentsData[studentIndex].status = 'approved';
+          studentsData[studentIndex]._sync = { status: 'pending' };
+          renderStudentsTable(studentsData);
+        }
+
         try {
           const response = await api.approveStudent(token, id);
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('Student approved successfully!');
-            }
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to approve student', 'error');
             loadStudents();
           } else {
-            alert(response.error || 'Failed to approve student');
+            showToast('Student approved', 'success');
+            if (studentIndex !== -1) {
+              delete studentsData[studentIndex]._sync;
+              renderStudentsTable(studentsData);
+            }
           }
         } catch (err) {
-          alert('Error approving student');
+          showToast('Error approving student', 'error');
+          loadStudents();
         }
       };
 
       document.getElementById('studentForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = auth.getToken();
-        const id = document.getElementById('editStudentId').value;
+        const studentId = document.getElementById('editStudentId').value;
 
         const data = {
           admission_no: document.getElementById('studentAdmissionNo').value,
@@ -4173,29 +4377,58 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           parent_phone2: document.getElementById('studentParentPhone2').value
         };
 
+        // Needs Grade Name for UI
+        const grade = setupGrades.find(g => g.id === data.class_id);
+        const className = grade ? grade.name : '-';
+
+        // Optimistic UI Update
+        const tempId = studentId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optStudent = { ...data, id: tempId, class: className, _sync: { status: 'pending' }, status: 'approved' }; // default approve for UI display if needed
+
+        if (studentId) {
+          data.id = studentId;
+          const idx = studentsData.findIndex(s => s.id === studentId);
+          if (idx !== -1) {
+            // preserve existing status
+            optStudent.status = studentsData[idx].status;
+            Object.assign(studentsData[idx], optStudent);
+          }
+        } else {
+          optStudent.status = 'approved';
+          studentsData.unshift(optStudent);
+        }
+
+        closeStudentModal();
+        renderStudentsTable(studentsData);
+
         try {
           let response;
-          if (id) {
-            data.id = id;
+          if (studentId) {
             response = await api.updateStudent(token, data);
           } else {
             response = await api.createStudent(token, data);
           }
 
-          if (response.success) {
-            if (!response.optimistic) {
-              alert('Student saved successfully!');
-            }
-            closeStudentModal();
+          if (!response.success && !response.optimistic) {
+            showToast(response.error || 'Failed to save student', 'error');
             loadStudents();
           } else {
-            alert(response.error || 'Failed to save student');
+            showToast(studentId ? 'Student updated' : 'Student created', 'success');
+            if (studentId) {
+              const updatedStudentIndex = studentsData.findIndex(s => s.id === tempId);
+              if (updatedStudentIndex !== -1) {
+                delete studentsData[updatedStudentIndex]._sync;
+                renderStudentsTable(studentsData);
+              }
+            } else {
+              loadStudents(); // fetch real id and data for new student
+            }
           }
         } catch (err) {
-          alert('Error saving student');
+          showToast('Error saving student', 'error');
+          loadStudents();
         }
       });
-
       window.showImportModal = function () {
         document.getElementById('importModal').classList.add('show');
       };
@@ -4544,6 +4777,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           if (response.success) {
             examsData = response.exams || [];
             renderExamsTable(examsData);
+            SyncTracker.monitor('exams', examsData, (opt) => loadExams(opt));
           } else {
             showError(response.error || 'Failed to load exams');
           }
@@ -4564,15 +4798,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         let html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
 
         exams.forEach(e => {
-          html += `<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition">
+          const syncStatus = e._sync ? e._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const pendingClass = isPending ? 'opacity-60' : '';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse ml-2">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 animate-pulse ml-2">DELETING...</span>'
+              : '';
+
+          html += `<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition ${pendingClass}">
           <div class="flex items-start justify-between mb-2">
-            <h4 class="font-semibold text-gray-800">${escapeHtml(e.name)}</h4>
+            <h4 class="font-semibold text-gray-800">${escapeHtml(e.name)}${syncBadge}</h4>
             <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${escapeHtml(e.class)}</span>
           </div>
           <p class="text-sm text-gray-500 mb-3">Date: ${e.date} | Max Marks: ${e.max_marks}</p>
           <div class="flex gap-2">
-            <button onclick="enterMarks('${e.id}', '${escapeHtml(e.name)}')" class="flex-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200">Enter Marks</button>
-            <button onclick="deleteExam('${e.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">Delete</button>
+            <button onclick="enterMarks('${e.id}', '${escapeHtml(e.name)}')" class="flex-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Enter Marks</button>
+            <button onclick="deleteExam('${e.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Delete</button>
           </div>
         </div>`;
         });
@@ -4611,17 +4854,30 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       window.deleteExam = async function (id) {
         if (!confirm('Are you sure you want to delete this exam?')) return;
 
+        const examIndex = examsData.findIndex(e => e.id === id);
+        if (examIndex === -1) return;
+
+        const originalExam = { ...examsData[examIndex] };
+        examsData[examIndex]._sync = { status: 'pending_delete' };
+        renderExamsTable(examsData);
+        SyncTracker.monitor('exams', examsData, (opt) => loadExams(opt));
+
         const token = auth.getToken();
         try {
           const response = await api.deleteExam(token, id);
           if (response.success) {
-            alert('Exam deleted successfully!');
-            loadExams();
+            showToast('Exam deleted successfully', 'success');
+            examsData.splice(examIndex, 1);
+            renderExamsTable(examsData);
           } else {
-            alert(response.error || 'Failed to delete exam');
+            showToast(response.error || 'Failed to delete exam', 'error');
+            examsData[examIndex] = originalExam;
+            renderExamsTable(examsData);
           }
         } catch (err) {
-          alert('Error deleting exam');
+          showToast('Error deleting exam', 'error');
+          examsData[examIndex] = originalExam;
+          renderExamsTable(examsData);
         }
       };
 
@@ -4679,7 +4935,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       document.getElementById('examForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = auth.getToken();
-        const id = document.getElementById('editExamId').value;
+        const examId = document.getElementById('editExamId').value;
 
         const data = {
           name: document.getElementById('examName').value,
@@ -4689,24 +4945,46 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           max_marks: parseInt(document.getElementById('examMaxMarks').value) || 100
         };
 
+        const tempId = examId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optExam = { ...data, id: tempId, _sync: { status: 'pending' } };
+
+        if (examId) {
+          data.id = examId;
+          const idx = examsData.findIndex(e => e.id === examId);
+          if (idx !== -1) Object.assign(examsData[idx], optExam);
+        } else {
+          examsData.unshift(optExam);
+        }
+
+        closeExamModal();
+        renderExamsTable(examsData);
+        SyncTracker.monitor('exams', examsData, (opt) => loadExams(opt));
+
         try {
           let response;
-          if (id) {
-            data.id = id;
+          if (examId) {
             response = await api.updateExam(token, data);
           } else {
             response = await api.createExam(token, data);
           }
 
           if (response.success) {
-            alert('Exam saved successfully!');
-            closeExamModal();
-            loadExams();
+            showToast(examId ? 'Exam updated successfully' : 'Exam created successfully', 'success');
+            if (examId) {
+              const idx = examsData.findIndex(e => e.id === examId);
+              if (idx !== -1 && response.exam) {
+                Object.assign(examsData[idx], response.exam);
+                delete examsData[idx]._sync;
+              }
+            }
+            renderExamsTable(examsData);
           } else {
-            alert(response.error || 'Failed to save exam');
+            showToast(response.error || 'Failed to save exam', 'error');
+            loadExams({ cache: 'false' });
           }
         } catch (err) {
-          alert('Error saving exam');
+          showToast('Error saving exam', 'error');
+          loadExams({ cache: 'false' });
         }
       });
 
@@ -4838,6 +5116,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           if (response.success) {
             subjectsData = response.subjects || [];
             renderSubjectsTable(subjectsData);
+            SyncTracker.monitor('subjects', subjectsData, (opt) => loadSubjects(opt));
           } else {
             showError(response.error || 'Failed to load subjects');
           }
@@ -4858,13 +5137,21 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject Name</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody class="divide-y divide-gray-100">';
 
         subjects.forEach(s => {
-          html += `<tr class="hover:bg-gray-50">
-          <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}</td>
+          const syncStatus = s._sync ? s._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>'
+              : '';
+
+          html += `<tr class="hover:bg-gray-50 ${isPending ? 'opacity-60' : ''}">
+          <td class="px-4 py-3 font-medium">${escapeHtml(s.name)}${syncBadge}</td>
           <td class="px-4 py-3">${escapeHtml(s.class)}</td>
           <td class="px-4 py-3">
             <div class="flex gap-2">
-              <button onclick="editSubject('${s.id}')" class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs hover:bg-amber-200">Edit</button>
-              <button onclick="deleteSubject('${s.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">Delete</button>
+              <button onclick="editSubject('${s.id}')" class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs hover:bg-amber-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Edit</button>
+              <button onclick="deleteSubject('${s.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Delete</button>
             </div>
           </td>
         </tr>`;
@@ -4902,24 +5189,37 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       window.deleteSubject = async function (id) {
         if (!confirm('Are you sure you want to delete this subject?')) return;
 
+        const subjectIndex = subjectsData.findIndex(s => s.id === id);
+        if (subjectIndex === -1) return;
+
+        const originalSubject = { ...subjectsData[subjectIndex] };
+        subjectsData[subjectIndex]._sync = { status: 'pending_delete' };
+        renderSubjectsTable(subjectsData);
+        SyncTracker.monitor('subjects', subjectsData, (opt) => loadSubjects(opt));
+
         const token = auth.getToken();
         try {
           const response = await api.deleteSubject(token, id);
           if (response.success) {
-            alert('Subject deleted successfully!');
-            loadSubjects();
+            showToast('Subject deleted successfully', 'success');
+            subjectsData.splice(subjectIndex, 1);
+            renderSubjectsTable(subjectsData);
           } else {
-            alert(response.error || 'Failed to delete subject');
+            showToast(response.error || 'Failed to delete subject', 'error');
+            subjectsData[subjectIndex] = originalSubject;
+            renderSubjectsTable(subjectsData);
           }
         } catch (err) {
-          alert('Error deleting subject');
+          showToast('Error deleting subject', 'error');
+          subjectsData[subjectIndex] = originalSubject;
+          renderSubjectsTable(subjectsData);
         }
       };
 
       document.getElementById('subjectForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const token = auth.getToken();
-        const id = document.getElementById('editSubjectId').value;
+        const subjectId = document.getElementById('editSubjectId').value;
 
         const data = {
           name: document.getElementById('subjectName').value,
@@ -4927,24 +5227,46 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           teacher_id: document.getElementById('subjectTeacher').value || null
         };
 
+        const tempId = subjectId || 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optSubject = { ...data, id: tempId, _sync: { status: 'pending' } };
+
+        if (subjectId) {
+          data.id = subjectId;
+          const idx = subjectsData.findIndex(s => s.id === subjectId);
+          if (idx !== -1) Object.assign(subjectsData[idx], optSubject);
+        } else {
+          subjectsData.unshift(optSubject);
+        }
+
+        closeSubjectModal();
+        renderSubjectsTable(subjectsData);
+        SyncTracker.monitor('subjects', subjectsData, (opt) => loadSubjects(opt));
+
         try {
           let response;
-          if (id) {
-            data.id = id;
+          if (subjectId) {
             response = await api.updateSubject(token, data);
           } else {
             response = await api.createSubject(token, data);
           }
 
           if (response.success) {
-            alert('Subject saved successfully!');
-            closeSubjectModal();
-            loadSubjects();
+            showToast(subjectId ? 'Subject updated successfully' : 'Subject created successfully', 'success');
+            if (subjectId) {
+              const idx = subjectsData.findIndex(s => s.id === tempId);
+              if (idx !== -1 && response.subject) {
+                Object.assign(subjectsData[idx], response.subject);
+                delete subjectsData[idx]._sync;
+              }
+            }
+            renderSubjectsTable(subjectsData);
           } else {
-            alert(response.error || 'Failed to save subject');
+            showToast(response.error || 'Failed to save subject', 'error');
+            loadSubjects({ cache: 'false' });
           }
         } catch (err) {
-          alert('Error saving subject');
+          showToast('Error saving subject', 'error');
+          loadSubjects({ cache: 'false' });
         }
       });
 
@@ -4971,6 +5293,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           if (response.success) {
             curriculumData = response.syllabus || [];
             renderCurriculum(curriculumData);
+            SyncTracker.monitor('curriculum', curriculumData, (opt) => loadCurriculum(opt));
           } else {
             showError(response.error || 'Failed to load curriculum');
           }
@@ -4994,14 +5317,22 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const statusColors = { pending: 'yellow', 'in-progress': 'blue', completed: 'green' };
           const color = statusColors[s.status] || 'gray';
 
-          html += `<tr class="hover:bg-gray-50">
-          <td class="px-4 py-3 font-medium">${escapeHtml(s.topic)}</td>
+          const syncStatus = s._sync ? s._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold animate-pulse">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold animate-pulse">DELETING...</span>'
+              : '';
+
+          html += `<tr class="hover:bg-gray-50 ${isPending ? 'opacity-60' : ''}">
+          <td class="px-4 py-3 font-medium">${escapeHtml(s.topic)}${syncBadge}</td>
           <td class="px-4 py-3 text-gray-500">${escapeHtml(s.description || '-')}</td>
           <td class="px-4 py-3"><span class="px-2 py-1 bg-${color}-100 text-${color}-700 rounded-full text-xs capitalize">${s.status}</span></td>
           <td class="px-4 py-3">
             <div class="flex gap-2">
-              <button onclick="updateSyllabusStatus('${s.id}', 'completed')" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200">Complete</button>
-              <button onclick="deleteSyllabus('${s.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">Delete</button>
+              <button onclick="updateSyllabusStatus('${s.id}', 'completed')" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Complete</button>
+              <button onclick="deleteSyllabus('${s.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 ${isPending ? 'pointer-events-none opacity-50' : ''}">Delete</button>
             </div>
           </td>
         </tr>`;
@@ -5036,16 +5367,30 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       window.deleteSyllabus = async function (id) {
         if (!confirm('Are you sure you want to delete this topic?')) return;
 
+        const syllabusIndex = curriculumData.findIndex(s => s.id === id);
+        if (syllabusIndex === -1) return;
+
+        const originalSyllabus = { ...curriculumData[syllabusIndex] };
+        curriculumData[syllabusIndex]._sync = { status: 'pending_delete' };
+        renderCurriculum(curriculumData);
+        SyncTracker.monitor('curriculum', curriculumData, (opt) => loadCurriculum(opt));
+
         const token = auth.getToken();
         try {
           const response = await api.deleteSyllabus(token, id);
           if (response.success) {
-            loadCurriculum();
+            showToast('Topic deleted successfully', 'success');
+            curriculumData.splice(syllabusIndex, 1);
+            renderCurriculum(curriculumData);
           } else {
-            alert(response.error || 'Failed to delete topic');
+            showToast(response.error || 'Failed to delete topic', 'error');
+            curriculumData[syllabusIndex] = originalSyllabus;
+            renderCurriculum(curriculumData);
           }
         } catch (err) {
-          alert('Error deleting topic');
+          showToast('Error deleting topic', 'error');
+          curriculumData[syllabusIndex] = originalSyllabus;
+          renderCurriculum(curriculumData);
         }
       };
 
@@ -5061,17 +5406,26 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           status: document.getElementById('curriculumStatus').value
         };
 
+        const tempId = 'opt_' + Math.random().toString(36).substr(2, 9);
+        const optSyllabus = { ...data, id: tempId, _sync: { status: 'pending' } };
+
+        curriculumData.unshift(optSyllabus);
+        closeCurriculumModal();
+        renderCurriculum(curriculumData);
+        SyncTracker.monitor('curriculum', curriculumData, (opt) => loadCurriculum(opt));
+
         try {
           const response = await api.addSyllabus(token, data);
           if (response.success) {
-            alert('Topic saved successfully!');
-            closeCurriculumModal();
-            loadCurriculum();
+            showToast('Topic created successfully', 'success');
+            renderCurriculum(curriculumData);
           } else {
-            alert(response.error || 'Failed to save topic');
+            showToast(response.error || 'Failed to save topic', 'error');
+            loadCurriculum({ cache: 'false' });
           }
         } catch (err) {
-          alert('Error saving topic');
+          showToast('Error saving topic', 'error');
+          loadCurriculum({ cache: 'false' });
         }
       });
 

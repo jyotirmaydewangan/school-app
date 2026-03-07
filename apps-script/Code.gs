@@ -566,7 +566,8 @@ function handleApproveStudent(token, data) {
     return { success: false, error: 'Student not found' };
   }
   
-  return StudentRepository.update(data.id, { status: 'approved' });
+  const updated = StudentRepository.update(data.id, { status: 'approved' });
+  return updated ? { success: true, student: updated } : { success: false, error: 'Failed to update student status' };
 }
 
 function handleMarkAttendance(token, data) {

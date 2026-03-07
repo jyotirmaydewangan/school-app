@@ -14,7 +14,7 @@ const SHEET_NAMES = Object.freeze({
   CLASS_INDEX: 'class_index',
   CLASSES: 'classes',
   SCHOOLS: 'schools',
-  NOTICES: 'notices',
+  SECTIONS: 'sections',
   NOTICEBOARD: 'noticeboard'
 });
 
