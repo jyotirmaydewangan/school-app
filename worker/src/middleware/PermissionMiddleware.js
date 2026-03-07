@@ -44,7 +44,19 @@ function _getDefaultRequirements() {
         createNotice: 'write:noticeboard',
         updateNotice: 'write:noticeboard',
         deleteNotice: 'write:noticeboard',
-        getNotices: 'read:noticeboard'
+        getNotices: 'read:noticeboard',
+        // User Management
+        getUsers: 'read:users',
+        createUser: 'write:users',
+        updateUser: 'write:users',
+        deleteUser: 'write:users',
+        approveUser: 'write:users',
+        rejectUser: 'write:users',
+        updateUserRole: 'write:users',
+        getRoles: 'read:users',
+        createRole: 'write:users',
+        updateRole: 'write:users',
+        deleteRole: 'write:users'
     };
 }
 

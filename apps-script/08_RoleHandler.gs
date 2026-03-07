@@ -1,17 +1,15 @@
 const RoleHandler = {
   getRoles(token) {
-    if (!AuthHandler.isAdmin(token)) {
-      return { success: false, error: 'Admin access required' };
-    }
+    const auth = requirePermission(token, 'read:users');
+    if (!auth.success) return auth;
     
     const roles = RoleRepository.findAll();
     return { success: true, roles: roles };
   },
 
   createRole(token, data) {
-    if (!AuthHandler.isAdmin(token)) {
-      return { success: false, error: 'Admin access required' };
-    }
+    const auth = requirePermission(token, 'write:users');
+    if (!auth.success) return auth;
     
     if (!data.role_name) {
       return { success: false, error: 'Role name is required' };
@@ -37,9 +35,8 @@ const RoleHandler = {
   },
 
   updateRole(token, data) {
-    if (!AuthHandler.isAdmin(token)) {
-      return { success: false, error: 'Admin access required' };
-    }
+    const auth = requirePermission(token, 'write:users');
+    if (!auth.success) return auth;
     
     if (!data.role_id) {
       return { success: false, error: 'Role ID is required' };
@@ -70,9 +67,8 @@ const RoleHandler = {
   },
 
   deleteRole(token, data) {
-    if (!AuthHandler.isAdmin(token)) {
-      return { success: false, error: 'Admin access required' };
-    }
+    const auth = requirePermission(token, 'write:users');
+    if (!auth.success) return auth;
     
     if (!data.role_id) {
       return { success: false, error: 'Role ID is required' };
@@ -97,9 +93,8 @@ const RoleHandler = {
   },
 
   updateUserRole(token, data) {
-    if (!AuthHandler.isAdmin(token)) {
-      return { success: false, error: 'Admin access required' };
-    }
+    const auth = requirePermission(token, 'write:users');
+    if (!auth.success) return auth;
     
     if (!data.user_id || !data.role) {
       return { success: false, error: 'User ID and role are required' };

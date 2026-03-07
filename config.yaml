@@ -163,6 +163,9 @@ kv:
 # Noticeboard permissions:
 #   read:noticeboard  — can view all notices
 #   write:noticeboard — can create / edit / delete notices
+# User Management permissions:
+#   read:users  — can view the User Management page and list users
+#   write:users — can create / edit / delete / approve users
 roles:
   admin:
     permissions: ["*"]
@@ -208,7 +211,23 @@ roles:
 # Add new entries here to gate any future feature — no code changes needed.
 permissions:
   actionRequirements:
-    createNotice: "write:noticeboard"
-    updateNotice: "write:noticeboard"
-    deleteNotice: "write:noticeboard"
-    getNotices:   "read:noticeboard"
+    # Noticeboard
+    createNotice:  "write:noticeboard"
+    updateNotice:  "write:noticeboard"
+    deleteNotice:  "write:noticeboard"
+    getNotices:    "read:noticeboard"
+    # User Management
+    # write:users — create, update, delete, approve/reject users and roles
+    # read:users  — list users (getUsers)
+    getUsers:      "read:users"
+    createUser:    "write:users"
+    updateUser:    "write:users"
+    deleteUser:    "write:users"
+    approveUser:   "write:users"
+    rejectUser:    "write:users"
+    updateUserRole: "write:users"
+    # Role management is an admin-only sub-feature of user management
+    getRoles:      "read:users"
+    createRole:    "write:users"
+    updateRole:    "write:users"
+    deleteRole:    "write:users"

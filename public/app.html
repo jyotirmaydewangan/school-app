@@ -1167,7 +1167,7 @@
                   <option value="approved">Approved</option>
                   <option value="pending">Pending</option>
                 </select>
-                <button onclick="showUserModal()"
+                <button id="add-user-btn" onclick="showUserModal()"
                   class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2 justify-center whitespace-nowrap">
                   <i class="fas fa-plus"></i>
                   <span>Add User</span>
@@ -2356,6 +2356,13 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       }
 
       async function navigateTo(sectionId) {
+        // Access Guard
+        const checkSection = sectionId === 'students' ? 'school-mgmt' : sectionId;
+        if (!RoleAccess.hasPageAccess(checkSection)) {
+          showToast('Access denied', 'error');
+          return;
+        }
+
         document.querySelectorAll('.nav-item').forEach(item => {
           const isActive = item.dataset.section === sectionId;
           item.classList.toggle('bg-indigo-600', isActive);
@@ -2871,26 +2878,36 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             }
           });
 
-          // Show role-specific dashboard
-          document.getElementById('admin-stats').classList.add('hidden');
-          document.getElementById('teacher-dashboard').classList.add('hidden');
-          document.getElementById('student-dashboard').classList.add('hidden');
-          document.getElementById('parent-dashboard').classList.add('hidden');
+          // Show role-specific UI elements based on permissions
+          // User Management Dashboard Stats
+          if (this.hasPermission('read:users')) {
+            document.getElementById('admin-stats').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+          } else {
+            document.getElementById('admin-stats').classList.add('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
+          }
+
+          // Role Management (Sub-panel of User Management)
+          if (this.hasPermission('write:users')) {
+            document.getElementById('roles-panel').classList.remove('hidden');
+          } else {
+            document.getElementById('roles-panel').classList.add('hidden');
+          }
 
           const role = (user.role || '').toLowerCase();
 
-          if (role === 'admin') {
-            document.getElementById('admin-stats').classList.remove('hidden');
-            document.getElementById('admin-panel').classList.remove('hidden');
-            document.getElementById('roles-panel').classList.remove('hidden');
+          // Role-specific dashboards (Legacy display logic for separate dashboard layouts)
+          document.getElementById('teacher-dashboard').classList.toggle('hidden', role !== 'teacher');
+          document.getElementById('student-dashboard').classList.toggle('hidden', role !== 'student');
+          document.getElementById('parent-dashboard').classList.toggle('hidden', role !== 'parent');
+
+          // Initial data loading based on permissions
+          if (this.hasPermission('read:users')) {
             loadUsers(auth.getToken());
+          }
+          if (this.hasPermission('write:users')) {
             loadRoles(auth.getToken());
-          } else if (role === 'teacher') {
-            document.getElementById('teacher-dashboard').classList.remove('hidden');
-          } else if (role === 'student') {
-            document.getElementById('student-dashboard').classList.remove('hidden');
-          } else if (role === 'parent') {
-            document.getElementById('parent-dashboard').classList.remove('hidden');
           }
         }
       };
@@ -3041,6 +3058,12 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             allUsersData = response.users;
             filteredUsers = response.users;
             currentPage = 1;
+
+            // Permission-based UI: show/hide Add User button
+            const canWrite = RoleAccess.hasPermission('write:users');
+            const addUserBtn = document.getElementById('add-user-btn');
+            if (addUserBtn) addUserBtn.classList.toggle('hidden', !canWrite);
+
             renderUsersTable(response.users);
             loadDashboardStats();
             SyncTracker.monitor('users', response.users, (opts) => loadUsers(token, opts));
@@ -3055,6 +3078,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       function renderUsersTable(users) {
         const contentEl = document.getElementById('users-content');
         const paginationEl = document.getElementById('users-pagination');
+        const canWrite = RoleAccess.hasPermission('write:users');
 
         if (!users || users.length === 0) {
           contentEl.innerHTML = '<div class="text-center py-12"><div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center"><i class="fas fa-users text-2xl text-gray-400"></i></div><h3 class="text-lg font-medium text-gray-800 mb-1">No users found</h3><p class="text-gray-500">Try adjusting your search or filters.</p></div>';
@@ -3129,7 +3153,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
               </div>
             </div>
             <div class="flex gap-1">
-              ${!isApproved ? `
+              ${canWrite && !isApproved ? `
                 <button onclick="approveUser('${user.id}')" class="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition" title="Approve">
                   <i class="fas fa-check text-xs"></i>
                 </button>
@@ -3137,12 +3161,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                   <i class="fas fa-times text-xs"></i>
                 </button>
               ` : ''}
-              <button onclick="editUser('${user.id}')" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
-                <i class="fas fa-edit text-xs"></i>
-              </button>
-              <button onclick="window.deleteUser('${user.id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
-                <i class="fas fa-trash text-xs"></i>
-              </button>
+              ${canWrite ? `
+                <button onclick="editUser('${user.id}')" class="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit">
+                  <i class="fas fa-edit text-xs"></i>
+                </button>
+                <button onclick="window.deleteUser('${user.id}')" class="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete">
+                  <i class="fas fa-trash text-xs"></i>
+                </button>
+              ` : ''}
             </div>
           </div>
           <div class="space-y-2 text-sm">

@@ -1,6 +1,6 @@
 const UserHandler = {
   createUser(token, data) {
-    const auth = requireAdmin(token);
+    const auth = requirePermission(token, 'write:users');
     if (!auth.success) return auth;
     
     const currentUser = auth.user;
@@ -36,7 +36,7 @@ const UserHandler = {
   },
 
   updateUser(token, data) {
-    const auth = requireAdmin(token);
+    const auth = requirePermission(token, 'write:users');
     if (!auth.success) return auth;
     
     const currentUser = auth.user;
@@ -70,7 +70,7 @@ const UserHandler = {
   },
 
   deleteUser(token, data) {
-    const auth = requireAdmin(token);
+    const auth = requirePermission(token, 'write:users');
     if (!auth.success) return auth;
     
     const currentUser = auth.user;

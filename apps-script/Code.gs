@@ -319,7 +319,7 @@ function createJsonResponse(data) {
 }
 
 function handleGetUsers(token, params) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'read:users');
   if (!auth.success) return auth;
   
   const user = auth.user;
@@ -1139,7 +1139,7 @@ function handleGetPendingRegistrations(token, params) {
 }
 
 function handleApproveUser(token, params) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'write:users');
   if (!auth.success) return auth;
   
   if (!params.userId) {
@@ -1155,7 +1155,7 @@ function handleApproveUser(token, params) {
 }
 
 function handleRejectUser(token, params) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'write:users');
   if (!auth.success) return auth;
   
   if (!params.userId) {
