@@ -113,21 +113,32 @@ describe('CacheConfig - Remaining Coverage', () => {
 
 describe('RequestParser.parseBody()', () => {
     /** Build a minimal mock Request */
-    const makeJsonReq = (body) => ({
-        headers: { get: (key) => key === 'Content-Type' ? 'application/json' : null },
-        text: async () => body
-    });
+    const makeJsonReq = (body) => {
+        const req = {
+            headers: { get: (key) => key === 'Content-Type' ? 'application/json' : null },
+            text: async () => body,
+            clone: () => req
+        };
+        return req;
+    };
 
-    const makeFormReq = (contentType, entries) => ({
-        headers: { get: (key) => key === 'Content-Type' ? contentType : null },
-        // Object.fromEntries requires an iterable of [key, value] pairs — Map satisfies this
-        formData: async () => new Map(entries)
-    });
+    const makeFormReq = (contentType, entries) => {
+        const req = {
+            headers: { get: (key) => key === 'Content-Type' ? contentType : null },
+            formData: async () => new Map(entries),
+            clone: () => req
+        };
+        return req;
+    };
 
-    const makeUnknownReq = (contentType) => ({
-        headers: { get: (key) => key === 'Content-Type' ? contentType : null },
-        text: async () => 'body'
-    });
+    const makeUnknownReq = (contentType) => {
+        const req = {
+            headers: { get: (key) => key === 'Content-Type' ? contentType : null },
+            text: async () => 'body',
+            clone: () => req
+        };
+        return req;
+    };
 
     test('returns raw text for application/json', async () => {
         const result = await RequestParser.parseBody(makeJsonReq('{"key":"val"}'));

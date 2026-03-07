@@ -370,8 +370,9 @@ function checkAuth(token) {
 function requireAdmin(token) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
-  if (auth.user.role !== 'admin' && auth.user.role !== 'super_admin') {
-    return { success: false, error: 'Admin access required' };
+  
+  if (!AuthHandler.isAdmin(token)) {
+    return { success: false, error: 'Admin access required (Full Access permission required)' };
   }
   return auth;
 }
@@ -383,6 +384,109 @@ function requireTeacherOrAdmin(token) {
     return { success: false, error: 'Teacher or Admin access required' };
   }
   return auth;
+}
+
+/**
+ * Config-driven permission guard.
+ * Checks whether the authenticated user's role has the given permission,
+ * by looking it up in TENANT_CONFIG.ROLES (injected from config.yaml at deploy time).
+ * Supports wildcard ["*"] permissions for full-access roles.
+ *
+ * @param {string} token       - JWT from the request
+ * @param {string} permission  - e.g. 'write:noticeboard'
+ * @returns {{ success: boolean, user?: object, error?: string }}
+ */
+function requirePermission(token, permission) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+
+  const roleKey = auth.user.role;
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'role_perms_' + roleKey;
+  
+  let roleConfig;
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    roleConfig = JSON.parse(cached);
+  } else {
+    // Live lookup from Sheet-based repository
+    roleConfig = RoleRepository.findByName(roleKey);
+    if (roleConfig) {
+      cache.put(cacheKey, JSON.stringify(roleConfig), 900); // 15 minutes
+    }
+  }
+  
+  if (!roleConfig || !roleConfig.is_active) {
+    return { success: false, error: 'Role is inactive or not found' };
+  }
+
+  const perms = Array.isArray(roleConfig.permissions) ? roleConfig.permissions : [];
+
+  if (perms.includes('*') || perms.includes(permission)) {
+    return auth; // allowed
+  }
+
+  return {
+    success: false,
+    error: `Permission '${permission}' is required for this action`
+  };
+}
+
+function handleSyncRolesToKV(token) {
+  try {
+    // If called from UI menu, token is undefined. 
+    // We trust the menu call if the user has edit access to the sheet.
+    // If called from RoleHandler, token is passed and we check if admin.
+    if (token) {
+      const auth = requirePermission(token, '*');
+      if (!auth.success) return auth;
+    }
+
+    const roles = RoleRepository.findAll();
+    const rolesMap = {};
+    roles.forEach(r => {
+      rolesMap[r.role_name] = {
+        permissions: r.permissions,
+        pages: r.pages,
+        isActive: r.is_active
+      };
+    });
+
+    const workerUrl = ConfigService.get('worker_url');
+    const jwtSecret = TENANT_CONFIG.JWT_SECRET;
+    
+    if (!workerUrl) throw new Error('Worker URL not configured. Set "worker_url" in Config sheet.');
+
+    const response = UrlFetchApp.fetch(workerUrl + '/syncConfig', {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        action: 'syncRoles',
+        roles: rolesMap,
+        syncSecret: jwtSecret
+      }),
+      muteHttpExceptions: true
+    });
+
+    const result = JSON.parse(response.getContentText());
+    if (response.getResponseCode() !== 200 || !result.success) {
+      throw new Error(result.error || 'Sync failed');
+    }
+
+    if (typeof SpreadsheetApp !== 'undefined' && !token) {
+      SpreadsheetApp.getUi().alert('Success: Roles synced to Cloud successfully.');
+    }
+    
+    return { success: true, message: 'Roles synced to Cloud successfully' };
+  } catch (e) {
+    const errorMsg = 'Sync failed: ' + e.message;
+    Logger.log(errorMsg);
+    if (typeof SpreadsheetApp !== 'undefined' && !token) {
+      SpreadsheetApp.getUi().alert('Error: ' + errorMsg);
+    }
+    return { success: false, error: e.message };
+  }
 }
 
 function handleGetStudents(token, params) {
@@ -1305,7 +1409,7 @@ function handleDeleteSection(token, data) {
 // --- Noticeboard Handlers ---
 
 function handleGetNotices(token, params) {
-  const auth = checkAuth(token);
+  const auth = requirePermission(token, 'read:noticeboard');
   if (!auth.success) return auth;
   
   const notices = NoticeboardRepository.findAll();
@@ -1313,21 +1417,21 @@ function handleGetNotices(token, params) {
 }
 
 function handleCreateNotice(token, data) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'write:noticeboard');
   if (!auth.success) return auth;
-  
+
   if (!data.title || !data.content) return { success: false, error: 'Title and content are required' };
-  
+
   const notice = NoticeboardRepository.create(data, auth.user);
   return { success: true, notice };
 }
 
 function handleUpdateNotice(token, data) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'write:noticeboard');
   if (!auth.success) return auth;
-  
+
   if (!data.id) return { success: false, error: 'Notice ID is required' };
-  
+
   try {
     const notice = NoticeboardRepository.update(data.id, data);
     return { success: true, notice };
@@ -1337,11 +1441,11 @@ function handleUpdateNotice(token, data) {
 }
 
 function handleDeleteNotice(token, data) {
-  const auth = requireAdmin(token);
+  const auth = requirePermission(token, 'write:noticeboard');
   if (!auth.success) return auth;
-  
+
   if (!data.id) return { success: false, error: 'Notice ID is required' };
-  
+
   try {
     const result = NoticeboardRepository.delete(data.id);
     return result;

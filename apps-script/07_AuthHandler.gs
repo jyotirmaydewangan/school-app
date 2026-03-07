@@ -1,5 +1,9 @@
 function getValidRoles() {
   try {
+    const roles = RoleRepository.findAll();
+    if (roles && roles.length > 0) {
+      return roles.map(r => r.role_name);
+    }
     if (TENANT_CONFIG.ROLES) {
       return Object.keys(TENANT_CONFIG.ROLES);
     }
@@ -124,6 +128,7 @@ const AuthHandler = {
     }
     
     const payload = jwtResult.payload;
+    const roleConfig = RoleRepository.findByName(payload.role);
     
     return {
       success: true,
@@ -132,7 +137,9 @@ const AuthHandler = {
         id: payload.userId,
         email: payload.email,
         name: payload.name,
-        role: payload.role
+        role: payload.role,
+        // Include live permissions in the verification result
+        permissions: (roleConfig && roleConfig.is_active) ? roleConfig.permissions : []
       }
     };
   },
@@ -141,6 +148,10 @@ const AuthHandler = {
     if (!token) return false;
     const jwtResult = Utils.verifyJWT(token);
     if (!jwtResult.valid) return false;
-    return jwtResult.payload.role === 'admin' || jwtResult.payload.role === 'super_admin';
+    
+    const role = RoleRepository.findByName(jwtResult.payload.role);
+    if (!role || !role.is_active) return false;
+    
+    return role.permissions.includes('*');
   }
 };

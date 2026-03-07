@@ -67,6 +67,19 @@ const SessionRepository = {
     return false;
   },
 
+  deleteByUserId(userId) {
+    const sheet = SheetService.getSheet(SHEET_NAMES.SESSIONS);
+    let data = sheet.getDataRange().getValues();
+    
+    // Iterate backwards to avoid index shifts when deleting rows
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][1] === userId) {
+        sheet.deleteRow(i + 1);
+      }
+    }
+    return true;
+  },
+
   isValid(token) {
     const session = this.findByToken(token);
     return session && Utils.isValidSession(session);

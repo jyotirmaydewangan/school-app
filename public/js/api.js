@@ -82,23 +82,23 @@ const api = {
   },
 
   async getUsers(token, options = {}) {
-    const params = new URLSearchParams();
-    params.append('token', token);
-    if (options.limit) params.append('limit', options.limit);
-    if (options.offset) params.append('offset', options.offset);
-    if (options.role) params.append('role', options.role);
-    if (options.status) params.append('status', options.status);
+    const body = {
+      token,
+      ...options
+    };
 
     return this.request('/getUsers', {
       method: 'POST',
-      body: JSON.stringify(Object.fromEntries(params))
+      body: JSON.stringify(body),
+      ...options
     });
   },
 
-  async getRoles(token) {
+  async getRoles(token, options = {}) {
     return this.request('/getRoles', {
       method: 'POST',
-      body: JSON.stringify({ token })
+      body: JSON.stringify({ token }),
+      ...options
     });
   },
 

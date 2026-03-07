@@ -158,22 +158,57 @@ kv:
   binding: "DATA_CACHE"
 
 # Default roles and permissions
-# permissions: ["*"] means full access
+# permissions: ["*"] means full access to everything
 # pages: ["*"] means visible in navigation
+# Noticeboard permissions:
+#   read:noticeboard  — can view all notices
+#   write:noticeboard — can create / edit / delete notices
 roles:
   admin:
     permissions: ["*"]
     isActive: true
     pages: ["*"]
   teacher:
-    permissions: ["read:students", "write:students", "read:attendance", "write:attendance", "read:marks", "write:marks", "read:timetable", "write:timetable", "read:curriculum", "write:curriculum"]
+    permissions:
+      - "read:students"
+      - "write:students"
+      - "read:attendance"
+      - "write:attendance"
+      - "read:marks"
+      - "write:marks"
+      - "read:timetable"
+      - "write:timetable"
+      - "read:curriculum"
+      - "write:curriculum"
+      - "read:noticeboard"
+      - "write:noticeboard"
     isActive: true
-    pages: ["dashboard", "students", "attendance", "exams", "marks", "timetable", "curriculum"]
+    pages: ["dashboard", "noticeboard", "students", "attendance", "exams", "marks", "timetable", "curriculum"]
   parent:
-    permissions: ["read:own_child", "read:child_attendance", "read:child_marks", "read:child_timetable"]
+    permissions:
+      - "read:own_child"
+      - "read:child_attendance"
+      - "read:child_marks"
+      - "read:child_timetable"
+      - "read:noticeboard"
     isActive: true
-    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum"]
+    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum"]
   student:
-    permissions: ["read:own_grades", "read:own_attendance", "read:own_timetable"]
+    permissions:
+      - "read:own_grades"
+      - "read:own_attendance"
+      - "read:own_timetable"
+      - "read:noticeboard"
     isActive: true
-    pages: ["dashboard", "attendance", "marks", "timetable", "curriculum"]
+    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum"]
+
+# Action-level permission requirements
+# Maps each write action to the permission it requires.
+# Checked at Worker level (before proxying) AND Apps Script level (double enforcement).
+# Add new entries here to gate any future feature — no code changes needed.
+permissions:
+  actionRequirements:
+    createNotice: "write:noticeboard"
+    updateNotice: "write:noticeboard"
+    deleteNotice: "write:noticeboard"
+    getNotices:   "read:noticeboard"

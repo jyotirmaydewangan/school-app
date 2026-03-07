@@ -23,6 +23,7 @@ function onOpen() {
   ui.createMenu('Initialize')
     .addItem('Initialize Sheet', 'SheetService.initializeAll')
     .addItem('Authorize Drive', 'checkDrivePermission')
+    .addItem('Sync Roles to Cloud', 'handleSyncRolesToKV')
     .addToUi();
 }
 
@@ -166,7 +167,7 @@ const SheetService = {
       [SHEET_NAMES.USERS]: ['id', 'email', 'phone', 'password_hash', 'role', 'name', 'is_approved', 'rejected_at', 'created_at', 'updated_at'],
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
       [SHEET_NAMES.CONFIG]: ['key', 'value'],
-      [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'is_active'],
+      [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'pages', 'is_active'],
       [SHEET_NAMES.RESOURCES]: ['id', 'class', 'subject_id', 'title', 'type', 'drive_file_id', 'drive_url', 'created_at'],
       [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class_id', 'section_id', 'admission_no', 'name'],
       [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
@@ -206,7 +207,7 @@ const SheetService = {
     let data = sheet.getDataRange().getValues();
     if (!data || data.length === 0 || (data.length === 1 && (!data[0][0] || data[0][0] === ''))) {
       Logger.log('seedDefaultRoles: Sheet empty, adding headers');
-      sheet.appendRow(['role_id', 'role_name', 'permissions', 'is_active']);
+      sheet.appendRow(['role_id', 'role_name', 'permissions', 'pages', 'is_active']);
       SpreadsheetApp.flush();
       data = sheet.getDataRange().getValues();
     }
@@ -224,7 +225,7 @@ const SheetService = {
         const defaults = Object.entries(roles).map(function(entry) {
           const roleName = entry[0];
           const roleData = entry[1];
-          return [Utilities.getUuid(), roleName, JSON.stringify(roleData.permissions), roleData.isActive];
+          return [Utilities.getUuid(), roleName, JSON.stringify(roleData.permissions), JSON.stringify(roleData.pages || []), roleData.isActive];
         });
         // Batch append rows using setValues if possible, but appendRow is fine for seeding
         defaults.forEach(function(row) {

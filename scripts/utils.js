@@ -50,6 +50,16 @@ function getRolesJson() {
   return JSON.stringify(roles);
 }
 
+function getPermissionRequirements() {
+  const config = loadConfig();
+  return config?.permissions?.actionRequirements || {};
+}
+
+function getPermissionRequirementsJson() {
+  const reqs = getPermissionRequirements();
+  return JSON.stringify(reqs);
+}
+
 function getKVConfig() {
   const config = loadConfig();
   return config?.kv || {};
@@ -182,5 +192,7 @@ module.exports = {
   getCacheConfig,
   getRoles,
   getRolesJson,
-  getKVConfig
+  getKVConfig,
+  getPermissionRequirements,
+  getPermissionRequirementsJson
 };

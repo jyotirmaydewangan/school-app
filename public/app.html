@@ -2793,46 +2793,20 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
       // RBAC System
       const RoleAccess = {
-        getRoleConfig(roleName) {
-          if (!roleName) return {};
-          const roles = window.TENANT_CONFIG?.ROLES || {};
-          const normalized = roleName.toLowerCase();
-          // Try exact match first, then lowercase match
-          return roles[roleName] || roles[normalized] || {};
-        },
-
         hasPermission(permission) {
-          const user = window.currentUser;
-          if (!user || !user.role) return false;
-
-          const roleConfig = this.getRoleConfig(user.role);
-          const permissions = roleConfig.permissions || [];
-
-          // Admin role by name or wildcard permission
-          if (user.role.toLowerCase() === 'admin' || permissions.includes('*')) return true;
-
-          return permissions.includes(permission);
+          return auth.hasPermission(permission);
         },
 
         hasPageAccess(pageName) {
-          if (!pageName) return true; // Default visible if no page specified
-          const user = window.currentUser;
-          if (!user || !user.role) return false;
-
-          const roleConfig = this.getRoleConfig(user.role);
-          const pages = roleConfig.pages || [];
-
-          // Admin role by name or wildcard page access
-          if (user.role.toLowerCase() === 'admin' || pages.includes('*')) return true;
-
-          return pages.includes(pageName);
+          return auth.hasPageAccess(pageName);
         },
 
-        init() {
+        async init() {
           const user = window.currentUser;
           if (!user) return;
 
-          const roleConfig = this.getRoleConfig(user.role);
+          // Fetch latest roles for real-time edge-case updates (e.g. admin just changed permissions)
+          await auth.fetchRoles();
 
           // Show/hide nav items based on page access
           document.querySelectorAll('.nav-item').forEach(item => {
@@ -5427,15 +5401,17 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       function renderNotices() {
         const content = document.getElementById('notices-content');
         const empty = document.getElementById('notices-empty');
-        const userRole = auth.getUser()?.role;
 
-        // Show add button only for admins
+        // ── Permission-driven UI: no hardcoded role names ────────────────────────
+        // auth.hasPermission() reads ROLES_JSON injected from config.yaml at deploy time.
+        // To grant write access to a role, add 'write:noticeboard' to its permissions
+        // in config.yaml — no code change needed here.
+        const canWrite = auth.hasPermission('write:noticeboard');
+
+        // Element 1: "Add Notice" header button
         const actionsDiv = document.getElementById('noticeboard-actions');
-        if (userRole === 'super_admin' || userRole === 'admin') {
-          actionsDiv.classList.remove('hidden');
-        } else {
-          actionsDiv.classList.add('hidden');
-        }
+        actionsDiv.classList.toggle('hidden', !canWrite);
+        // ───────────────────────────────────────────────────────────────────────
 
         if (noticesData.length === 0) {
           content.classList.add('hidden');
@@ -5447,8 +5423,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         content.classList.remove('hidden');
 
         content.innerHTML = noticesData.map(n => {
-          // Check if admin to show edit/delete
-          const isAdmin = userRole === 'super_admin' || userRole === 'admin';
           const createdDate = new Date(n.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
           const syncStatus = n._sync ? n._sync.status : 'synced';
@@ -5478,9 +5452,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                   <span class="mx-1">•</span>
                   ${escapeHtml(createdDate)}
                 </div>
-                ${isAdmin ? `
+                ${canWrite ? `
                 <div class="flex gap-2">
+                  <!-- Element 2: Edit icon — only rendered when canWrite is true -->
                   <button onclick="showNoticeModal('${n.id}')" class="text-indigo-600 hover:text-indigo-800 ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit"><i class="fas fa-edit"></i></button>
+                  <!-- Element 3: Delete icon — only rendered when canWrite is true -->
                   <button onclick="deleteNotice('${n.id}')" class="text-red-600 hover:text-red-800 ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete"><i class="fas fa-trash"></i></button>
                 </div>
                 ` : ''}

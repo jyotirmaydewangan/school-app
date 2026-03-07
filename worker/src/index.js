@@ -1,6 +1,7 @@
 import { RouteConfig, RequestParser } from './routes/RouteConfig.js';
 import { CorsMiddleware } from './middleware/CorsMiddleware.js';
 import { AuthMiddleware } from './middleware/AuthMiddleware.js';
+import { PermissionMiddleware } from './middleware/PermissionMiddleware.js';
 import { CacheConfig } from './cache/CacheConfig.js';
 import { KVCacheHandler } from './cache/KVCacheHandler.js';
 import { ResponseHandler } from './utils/ResponseHandler.js';
@@ -21,6 +22,13 @@ const Router = {
         const urlObj = new URL(url);
         const pathname = urlObj.pathname;
         const action = RouteConfig.parsePath(pathname);
+
+        // ── Handle Internal Config Sync ──────────────────────────────────────
+        if (action === 'syncConfig' && method === 'POST') {
+          return this.handleSyncConfigRequest(request);
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         const isPostReadAction = method === 'POST' && CacheConfig.isPostReadAction(action);
 
         const tenantId = this.env.TENANT_ID || 'unknown';
@@ -45,6 +53,62 @@ const Router = {
         return this.handleReadRequest(request, action, method, urlObj, tenantId);
       },
 
+      /**
+       * Handle role synchronization from Apps Script.
+       */
+      async handleSyncConfigRequest(request) {
+        try {
+          const body = await RequestParser.parseBody(request);
+          const data = JSON.parse(body);
+          const { roles, syncSecret } = data;
+
+          // 1. Verify Secret
+          const expectedSecret = this.env.JWT_SECRET;
+          if (!syncSecret || syncSecret !== expectedSecret) {
+            return this.responseHandler.forbidden('Invalid sync secret');
+          }
+
+          if (!roles) {
+            return this.responseHandler.badRequest('Roles data missing');
+          }
+
+          // 2. Save to KV
+          const tenantId = this.env.TENANT_ID || 'unknown';
+          await this.kvHandler.set(`roles_${tenantId}`, roles);
+
+          // 3. Broad Invalidation: 
+          // After roles change, we must invalidate any broad master lists that might 
+          // refer to old role sets (like getUsers and getRoles APIs themselves).
+          const patterns = ['getUsers', 'getRoles'];
+          await this.kvHandler.invalidateByPattern(tenantId, patterns, {});
+
+          console.log(`[Sync] Roles synced for tenant ${tenantId}. Invalidated patterns: ${patterns.join(', ')}`);
+
+          return new Response(JSON.stringify({ success: true, message: 'Config synced successfully' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...CorsMiddleware.buildHeaders() }
+          });
+        } catch (e) {
+          console.error('[Sync] Failed to sync config:', e);
+          return this.responseHandler.serverError(e.message);
+        }
+      },
+
+      /**
+       * Get roles from KV or fallback to injected config.
+       */
+      async getRolesConfig(tenantId) {
+        try {
+          const cached = await this.kvHandler.get(`roles_${tenantId}`);
+          if (cached) {
+            return typeof cached === 'string' ? JSON.parse(cached) : cached;
+          }
+        } catch (e) {
+          console.error('Failed to fetch roles from KV', e);
+        }
+        return null; // Signals fallback to PermissionMiddleware's internal ROLES_CONFIG
+      },
+
       async handlePostReadRequest(request, action, urlObj, tenantId) {
         const isCacheable = CacheConfig.shouldCache(action);
         const queryParams = Object.fromEntries(urlObj.searchParams);
@@ -52,6 +116,13 @@ const Router = {
 
         const body = await RequestParser.parseBody(request);
         const token = AuthMiddleware.extractToken(request);
+        const rolesConfig = await this.getRolesConfig(tenantId);
+
+        // ── Worker-level RBAC check ──────────────────────────────────────────
+        const permDenied = PermissionMiddleware.check(action, token, rolesConfig);
+        if (permDenied) return permDenied;
+        // ────────────────────────────────────────────────────────────────────
+
         const bodyWithToken = AuthMiddleware.addTokenToBody(body, token);
 
         let forceRefresh = cacheHeader === 'no-cache';
@@ -149,6 +220,13 @@ const Router = {
 
         if (this.kvHandler.isEnabled() && isCacheable && !forceRefresh) {
           const token = AuthMiddleware.extractToken(request);
+          const rolesConfig = await this.getRolesConfig(tenantId);
+
+          // ── Worker-level RBAC check ──────────────────────────────────────────
+          const permDenied = PermissionMiddleware.check(action, token, rolesConfig);
+          if (permDenied) return permDenied;
+          // ────────────────────────────────────────────────────────────────────
+
           const isBroad = CacheConfig.isBroad(action);
 
           const cacheKey = this.kvHandler.buildKeyForAction(tenantId, action, {
@@ -213,6 +291,13 @@ const Router = {
       async handleWriteRequest(request, action, method, urlObj, tenantId) {
         const bodyText = await RequestParser.parseBody(request);
         const body = bodyText ? JSON.parse(bodyText) : {};
+        const token = AuthMiddleware.extractToken(request);
+        const rolesConfig = await this.getRolesConfig(tenantId);
+
+        // ── Worker-level RBAC check ──────────────────────────────────────────
+        const permDenied = PermissionMiddleware.check(action, token, rolesConfig);
+        if (permDenied) return permDenied;
+        // ────────────────────────────────────────────────────────────────────
 
         // Generic Mutation Handling - Applies to any action with a 'get*' invalidation pattern
         const mutationContext = await this.kvHandler.applyMutation(tenantId, action, body);

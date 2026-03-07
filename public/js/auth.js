@@ -118,6 +118,30 @@ const auth = {
     localStorage.removeItem(this.USER_KEY);
   },
 
+  async fetchRoles() {
+    const token = this.getToken();
+    if (!token) return null;
+
+    try {
+      const response = await api.getRoles(token);
+      if (response.success && response.roles) {
+        const rolesMap = {};
+        response.roles.forEach(r => {
+          rolesMap[r.role_name] = {
+            permissions: r.permissions,
+            pages: r.pages,
+            isActive: r.is_active
+          };
+        });
+        localStorage.setItem(this.STORAGE_PREFIX + '_roles', JSON.stringify(rolesMap));
+        return rolesMap;
+      }
+    } catch (e) {
+      console.error('Failed to fetch roles', e);
+    }
+    return null;
+  },
+
   hasRole(role) {
     const user = this.getUser();
     return user && user.role === role;
@@ -127,10 +151,59 @@ const auth = {
     const user = this.getUser();
     if (!user) return false;
 
-    const rolePermissions = { ROLES_JSON };
+    // Priority 1: User-specific roles from localStorage (refreshed on login/sync)
+    let rolePermissions = {};
+    const cachedRoles = localStorage.getItem(this.STORAGE_PREFIX + '_roles');
+    if (cachedRoles) {
+      try {
+        rolePermissions = JSON.parse(cachedRoles);
+      } catch (e) {
+        console.error('Failed to parse cached roles', e);
+      }
+    }
 
-    const permissions = rolePermissions[user.role]?.permissions || [];
+    // Priority 2: Fallback to injected ROLES_JSON
+    if (Object.keys(rolePermissions).length === 0) {
+      const injected = '{' + 'ROLES_JSON' + '}';
+      const rawValue = '{ROLES_JSON}';
+      if (rawValue !== injected && rawValue !== '' && rawValue !== '{}') {
+        try {
+          rolePermissions = JSON.parse(rawValue);
+        } catch (e) {
+          console.error('Failed to parse ROLES_JSON', e);
+        }
+      }
+    }
+
+    const roleData = rolePermissions[user.role] || {};
+    const permissions = roleData.permissions || [];
     return permissions.includes('*') || permissions.includes(permission);
+  },
+
+  hasPageAccess(pageName) {
+    if (!pageName) return true;
+    const user = this.getUser();
+    if (!user) return false;
+
+    let rolePermissions = {};
+    const cachedRoles = localStorage.getItem(this.STORAGE_PREFIX + '_roles');
+    if (cachedRoles) {
+      try {
+        rolePermissions = JSON.parse(cachedRoles);
+      } catch (e) { }
+    }
+
+    if (Object.keys(rolePermissions).length === 0) {
+      // Fallback logic similar to hasPermission if needed
+    }
+
+    const roleData = rolePermissions[user.role] || {};
+    const pages = roleData.pages || [];
+
+    // Admin or wildcard page access
+    if (user.role.toLowerCase() === 'admin' || pages.includes('*')) return true;
+
+    return pages.includes(pageName);
   }
 };
 

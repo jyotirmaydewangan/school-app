@@ -290,10 +290,12 @@ export const KVCacheHandler = {
       console.warn(`[KV] Falling back to broad invalidation for ${action} due to missing params. Context keys: ${Object.keys(enrichedContext).join(', ')}`);
     }
 
-    const prefix = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action + ":";
-    console.warn(`[KV] BROAD INVALIDATION! Scanning prefix: ${prefix} ...`);
+    const baseKey = "cache:" + CACHE_VERSION + ":" + tenantId + ":" + action;
+    const prefix = baseKey + ":";
+    console.warn(`[KV] BROAD INVALIDATION! Deleting base key and scanning prefix: ${prefix} ...`);
 
     try {
+      await this.kv.delete(baseKey);
       const list = await this.kv.list({ prefix });
       const keys = list.keys.map(k => k.name);
 
@@ -564,6 +566,10 @@ export const KVCacheHandler = {
     if (!payload) return null;
     const idField = idFieldHint || this._detectIdentityField(payload, false);
     return payload[idField] || payload.id || payload.role_id || payload.user_id || payload.admission_no || payload.userId;
+  },
+
+  _extractItemIdFromMutatedData(payload) {
+    return this._extractItemId(payload);
   },
 
   buildResponse(data, isStale = false) {

@@ -23,6 +23,7 @@ function syncWorkerFiles(tenantDir) {
     'src/routes/RouteConfig.js',
     'src/middleware/AuthMiddleware.js',
     'src/middleware/CorsMiddleware.js',
+    'src/middleware/PermissionMiddleware.js',
     'src/utils/ResponseHandler.js'
   ];
 
@@ -51,7 +52,9 @@ function getCachePolicyConstants() {
     '{TTL_ONE_MIN}': String(cache.ttls?.oneMin || 60),
     '{CACHE_POLICY_JSON}': JSON.stringify(cache.policy || {}), // Assuming we might move policy later
     '{INVALIDATION_MAP_JSON}': JSON.stringify(cache.invalidationMap || {}),
-    '{TENANT_ID_DEFAULT}': require('./utils').getConfig().worker?.tenantIdDefault || 'unknown'
+    '{TENANT_ID_DEFAULT}': require('./utils').getConfig().worker?.tenantIdDefault || 'unknown',
+    '{ROLES_JSON}': JSON.stringify(require('./utils').getRoles() || {}),
+    '{PERMISSION_REQUIREMENTS_JSON}': JSON.stringify(require('./utils').getPermissionRequirements() || {})
   };
 }
 
@@ -112,7 +115,8 @@ function deployWorker(tenantName, args = []) {
   const workerFiles = [
     'src/index.js',
     'src/cache/KVCacheHandler.js',
-    'src/cache/CacheConfig.js'
+    'src/cache/CacheConfig.js',
+    'src/middleware/PermissionMiddleware.js'
   ];
   workerFiles.forEach(file => {
     replaceInFile(path.join(tenantDir, 'worker', file), cacheReplacements);

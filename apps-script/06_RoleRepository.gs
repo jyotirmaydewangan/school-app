@@ -4,7 +4,7 @@ const RoleRepository = {
     const data = sheet.getDataRange().getValues();
     
     for (let i = 1; i < data.length; i++) {
-      if (data[i][1] === roleName) {
+      if (data[i][1] && data[i][1].toString().toLowerCase() === roleName.toString().toLowerCase()) {
         return this.mapToRole(data[i]);
       }
     }
@@ -48,6 +48,7 @@ const RoleRepository = {
       roleId,
       roleData.role_name,
       JSON.stringify(roleData.permissions || []),
+      JSON.stringify(roleData.pages || []),
       roleData.is_active !== false
     ]);
     
@@ -64,7 +65,8 @@ const RoleRepository = {
         // Batch updates if possible
         if (roleData.role_name) sheet.getRange(row, 2).setValue(roleData.role_name);
         if (roleData.permissions) sheet.getRange(row, 3).setValue(JSON.stringify(roleData.permissions));
-        if (roleData.is_active !== undefined) sheet.getRange(row, 4).setValue(roleData.is_active);
+        if (roleData.pages) sheet.getRange(row, 4).setValue(JSON.stringify(roleData.pages));
+        if (roleData.is_active !== undefined) sheet.getRange(row, 5).setValue(roleData.is_active);
         return true;
       }
     }
@@ -102,7 +104,8 @@ const RoleRepository = {
       role_id: row[0],
       role_name: row[1],
       permissions: Utils.parseJson(row[2]),
-      is_active: row[3]
+      pages: Utils.parseJson(row[3]),
+      is_active: row[4]
     };
   }
 };

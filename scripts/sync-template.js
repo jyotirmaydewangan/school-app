@@ -10,7 +10,8 @@ const {
   getDefaults,
   getKVConfig,
   getProjectPrefix,
-  getRoles
+  getRoles,
+  getPermissionRequirements
 } = require('./utils');
 
 function syncTemplateFiles(tenantName, options = {}) {
@@ -73,6 +74,7 @@ function syncTemplateFiles(tenantName, options = {}) {
     '{KV_NAMESPACE_ID}': kvConfig.namespaceId || '',
     '{KV_BINDING}': kvConfig.binding || 'DATA_CACHE',
     '{ROLES_JSON}': JSON.stringify(getRoles() || {}),
+    '{PERMISSION_REQUIREMENTS_JSON}': JSON.stringify(getPermissionRequirements() || {}),
     '{API_URL_PLACEHOLDER}': existingWorkerUrl ? existingWorkerUrl.replace('/exec', '') : ''
   };
 
@@ -169,7 +171,10 @@ function syncTemplateFiles(tenantName, options = {}) {
           '{TENANT}': tenantName
         }
       },
-      { file: 'worker/wrangler.toml', replacements }
+      { file: 'worker/wrangler.toml', replacements },
+      // Worker source files that carry injected placeholders
+      { file: 'worker/src/cache/CacheConfig.js', replacements },
+      { file: 'worker/src/middleware/PermissionMiddleware.js', replacements }
     ];
 
     configFiles.forEach(({ file, replacements: repl }) => {

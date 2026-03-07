@@ -54,7 +54,7 @@ function _getDefaultPolicy() {
     'getNoticeboard': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: true },
     'getNotices': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: true },
     'getDashboardStats': { scope: CACHE_SCOPES.GLOBAL, ttl: FIFTEEN_MIN, isBroad: true },
-    'getAttendance': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK, isBroad: false },
+    'getAttendance': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
     'getAttendanceByClass': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_WEEK * 2, isBroad: true, keyParameters: ['class', 'section', 'year', 'month'] },
     'getAttendanceSummary': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: false },
     'getMarks': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
