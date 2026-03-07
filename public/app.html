@@ -816,6 +816,50 @@
           </div>
         </section>
 
+        <!-- Image Viewer Modal -->
+        <div id="imageModal"
+          class="modal fixed inset-0 z-[60] items-center justify-center p-4 bg-black/90 backdrop-blur-md transition-all duration-300"
+          onclick="closeImageModal()">
+          <div class="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+            onclick="event.stopPropagation()">
+            <button onclick="closeImageModal()"
+              class="absolute top-2 right-2 z-10 bg-white/20 hover:bg-white/30 text-white rounded-full w-8 h-8 flex items-center justify-center transition">
+              <i class="fas fa-times"></i>
+            </button>
+            <img id="modalImage" src="" alt="Notice Image"
+              class="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl">
+          </div>
+        </div>
+
+        <!-- Custom Confirm Dialog -->
+        <div id="confirmModal"
+          class="modal fixed inset-0 z-[70] items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden transform transition-all"
+            onclick="event.stopPropagation()">
+            <div class="p-6">
+              <div class="flex items-center gap-4 mb-4">
+                <div class="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                  <i class="fas fa-triangle-exclamation text-red-500 text-lg"></i>
+                </div>
+                <div>
+                  <h3 id="confirmTitle" class="text-base font-semibold text-gray-900">Are you sure?</h3>
+                  <p id="confirmMessage" class="text-sm text-gray-500 mt-0.5">This action cannot be undone.</p>
+                </div>
+              </div>
+              <div class="flex gap-3 mt-6">
+                <button id="confirmCancelBtn" onclick="_confirmResolve(false)"
+                  class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition text-sm">
+                  Cancel
+                </button>
+                <button id="confirmOkBtn" onclick="_confirmResolve(true)"
+                  class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition text-sm">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Noticeboard Modal -->
         <div id="noticeModal"
           class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2002,6 +2046,14 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
     <script>
+      // Escape HTML to prevent XSS in dynamic content
+      function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+      }
+
       let allUsersData = [];
       let filteredUsers = [];
       let currentPage = 1;
@@ -5365,6 +5417,11 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
         loader.classList.add('hidden');
         renderNotices();
+
+        // Monitor for optimistic updates
+        if (noticesData.length > 0) {
+          try { SyncTracker.monitor('notices', noticesData, () => loadNotices()); } catch (e) { }
+        }
       }
 
       function renderNotices() {
@@ -5394,12 +5451,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           const isAdmin = userRole === 'super_admin' || userRole === 'admin';
           const createdDate = new Date(n.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+          const syncStatus = n._sync ? n._sync.status : 'synced';
+          const isPending = syncStatus === 'pending' || syncStatus === 'pending_delete';
+          const pendingClass = isPending ? 'opacity-70 border-orange-200 bg-orange-50/30' : '';
+          const syncBadge = syncStatus === 'pending'
+            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 animate-pulse">SAVING...</span>'
+            : syncStatus === 'pending_delete'
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 animate-pulse">DELETING...</span>'
+              : '';
+
           return `
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition">
-            ${n.image_url ? `<div class="h-48 w-full bg-gray-100 overflow-hidden"><img src="${escapeHtml(n.image_url)}" class="w-full h-full object-cover" alt="Notice Image"></div>` : ''}
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition ${pendingClass}">
+            ${n.image_url ? `<div class="h-48 w-full bg-gray-50 overflow-hidden flex items-center justify-center border-b border-gray-100 cursor-zoom-in" onclick="viewImageNative('${escapeHtml(n.image_url)}')"><img src="${escapeHtml(n.image_url)}" class="max-w-full max-h-full object-contain" alt="Notice Image"></div>` : ''}
             <div class="p-5 flex-1 flex flex-col">
               <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-gray-800 text-lg line-clamp-2">${escapeHtml(n.title)}</h3>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-gray-800 text-lg line-clamp-2">${escapeHtml(n.title)}</h3>
+                  ${syncBadge}
+                </div>
                 ${n.status === 'hidden' ? `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider ml-2 shrink-0">Hidden</span>` : ''}
               </div>
               <p class="text-sm text-gray-600 whitespace-pre-wrap flex-1 mb-4">${escapeHtml(n.content)}</p>
@@ -5411,8 +5480,8 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
                 </div>
                 ${isAdmin ? `
                 <div class="flex gap-2">
-                  <button onclick="showNoticeModal('${n.id}')" class="text-indigo-600 hover:text-indigo-800" title="Edit"><i class="fas fa-edit"></i></button>
-                  <button onclick="deleteNotice('${n.id}')" class="text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
+                  <button onclick="showNoticeModal('${n.id}')" class="text-indigo-600 hover:text-indigo-800 ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Edit"><i class="fas fa-edit"></i></button>
+                  <button onclick="deleteNotice('${n.id}')" class="text-red-600 hover:text-red-800 ${isPending ? 'pointer-events-none opacity-50' : ''}" title="Delete"><i class="fas fa-trash"></i></button>
                 </div>
                 ` : ''}
               </div>
@@ -5447,8 +5516,37 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         }
       };
 
+      // Modern confirm dialog — returns a Promise<boolean>
+      let _confirmResolve = () => { };
+      function showConfirm({ title = 'Are you sure?', message = 'This action cannot be undone.', okLabel = 'Delete', okClass = 'bg-red-500 hover:bg-red-600' } = {}) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        const okBtn = document.getElementById('confirmOkBtn');
+        okBtn.textContent = okLabel;
+        okBtn.className = `flex-1 px-4 py-2.5 ${okClass} text-white rounded-xl font-medium transition text-sm`;
+        document.getElementById('confirmModal').classList.add('show');
+        return new Promise(resolve => {
+          _confirmResolve = (result) => {
+            document.getElementById('confirmModal').classList.remove('show');
+            resolve(result);
+          };
+        });
+      }
+
       window.closeNoticeModal = function () {
         document.getElementById('noticeModal').classList.remove('show');
+      };
+
+      window.viewImageNative = function (url) {
+        const modal = document.getElementById('imageModal');
+        const img = document.getElementById('modalImage');
+        img.src = url;
+        modal.classList.add('show');
+      };
+
+      window.closeImageModal = function () {
+        document.getElementById('imageModal').classList.remove('show');
+        document.getElementById('modalImage').src = '';
       };
 
       document.getElementById('noticeForm').addEventListener('submit', async (e) => {
@@ -5503,19 +5601,71 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             data.image_base64 = base64Image;
           }
 
-          let res;
+          // --- Optimistic update: mutate noticesData immediately ---
+          const tempId = id || ('temp_' + Date.now());
+          const optimisticNotice = {
+            id: tempId,
+            title,
+            content,
+            status,
+            created_by: auth.getUser()?.name || auth.getUser()?.email || 'Me',
+            created_at: new Date().toISOString(),
+            image_url: null, // new image won't preview yet — keep existing if editing
+            _sync: { status: 'pending' }
+          };
+
           if (id) {
-            data.id = id;
-            res = await api.updateNotice(auth.getToken(), data);
+            // For edit: replace existing notice in array with optimistic version
+            const existingNotice = noticesData.find(n => n.id === id);
+            if (existingNotice) {
+              optimisticNotice.image_url = existingNotice.image_url; // preserve image
+              optimisticNotice.created_at = existingNotice.created_at;
+              optimisticNotice.created_by = existingNotice.created_by;
+            }
+            noticesData = noticesData.map(n => n.id === id ? optimisticNotice : n);
           } else {
-            res = await api.createNotice(auth.getToken(), data);
+            // For create: prepend to top
+            noticesData = [optimisticNotice, ...noticesData];
+          }
+
+          closeNoticeModal();
+          renderNotices(); // Blink-free: re-renders with SAVING... badge immediately
+
+          // --- Fire API in background ---
+          let res;
+          try {
+            if (id) {
+              data.id = id;
+              res = await api.updateNotice(auth.getToken(), data);
+            } else {
+              res = await api.createNotice(auth.getToken(), data);
+            }
+          } catch (apiErr) {
+            // Network error: revert optimistic change
+            noticesData = noticesData.filter(n => n.id !== tempId);
+            renderNotices();
+            throw apiErr;
           }
 
           if (res.success) {
             showToast(id ? 'Notice updated' : 'Notice posted', 'success');
-            closeNoticeModal();
-            loadNotices(true);
+            // Replace optimistic item with real server data if returned
+            const savedNotice = res.notice || res.data;
+            if (savedNotice) {
+              savedNotice._sync = { status: 'synced' };
+              noticesData = noticesData.map(n => n.id === tempId ? savedNotice : n);
+            } else {
+              // Remove pending flag from the optimistic item
+              noticesData = noticesData.map(n =>
+                n.id === tempId ? { ...n, _sync: { status: 'synced' } } : n
+              );
+            }
+            renderNotices(); // Final smooth re-render with real data
           } else {
+            // Revert on server error
+            noticesData = noticesData.filter(n => n.id !== tempId);
+            if (!id) renderNotices(); // Remove the prepended card
+            else await loadNotices(true); // Restore original for edit reversal
             showToast(res.error || 'Failed to save notice', 'error');
           }
         } catch (err) {
@@ -5528,17 +5678,45 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       });
 
       window.deleteNotice = async function (id) {
-        if (!confirm('Are you sure you want to delete this notice?')) return;
+        const confirmed = await showConfirm({
+          title: 'Delete Notice',
+          message: 'This notice will be permanently removed. This action cannot be undone.',
+          okLabel: 'Delete'
+        });
+        if (!confirmed) return;
+
+        // Optimistic: mark as pending_delete immediately
+        const original = noticesData.find(n => n.id === id);
+        noticesData = noticesData.map(n =>
+          n.id === id ? { ...n, _sync: { status: 'pending_delete' } } : n
+        );
+        renderNotices(); // Shows DELETING... badge instantly, no blink
 
         try {
           const res = await api.deleteNotice(auth.getToken(), id);
           if (res.success) {
+            // Smooth removal from data + re-render
+            noticesData = noticesData.filter(n => n.id !== id);
+            renderNotices();
             showToast('Notice deleted', 'success');
-            loadNotices(true);
           } else {
+            // Revert on failure
+            if (original) {
+              noticesData = noticesData.map(n =>
+                n.id === id ? original : n
+              );
+              renderNotices();
+            }
             showToast(res.error || 'Failed to delete notice', 'error');
           }
         } catch (e) {
+          // Revert on network error
+          if (original) {
+            noticesData = noticesData.map(n =>
+              n.id === id ? original : n
+            );
+            renderNotices();
+          }
           showToast('Error deleting notice', 'error');
         }
       };
