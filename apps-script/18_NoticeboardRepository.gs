@@ -64,52 +64,50 @@ class NoticeboardRepository {
 
   static update(id, noticeData) {
     const sheet = SheetService.getSheet(SHEET_NAMES.NOTICEBOARD);
-    const data = sheet.getDataRange().getValues();
+    const range = sheet.getDataRange();
+    const data = range.getValues();
     const headers = data[0];
-    const index = data.findIndex(row => row[0] === id);
+    const index = data.findIndex(row => String(row[0]) === String(id));
     
     if (index === -1) throw new Error('Notice not found');
     
     const rowNum = index + 1;
-    let imageUrl = data[index][3]; // keep old by default
-
+    const row = data[index];
+    
+    // Map data by header to avoid index mistakes
+    const statusIdx = headers.indexOf('status');
+    const titleIdx = headers.indexOf('title');
+    const contentIdx = headers.indexOf('content');
+    const imageIdx = headers.indexOf('image_url');
+    const updatedIdx = headers.indexOf('updated_at'); // If it exists
+    
+    if (noticeData.title !== undefined) row[titleIdx] = noticeData.title;
+    if (noticeData.content !== undefined) row[contentIdx] = noticeData.content;
+    if (noticeData.status !== undefined) row[statusIdx] = noticeData.status;
+    
     if (noticeData.image_base64) {
-      imageUrl = noticeData.image_base64;
+      row[imageIdx] = noticeData.image_base64;
     } else if (noticeData.remove_image) {
-      imageUrl = '';
+      row[imageIdx] = '';
     }
+    
+    if (updatedIdx !== -1) row[updatedIdx] = new Date().toISOString();
 
-    const updatedRecord = [
-      id,
-      noticeData.title || data[index][1],
-      noticeData.content || data[index][2],
-      imageUrl,
-      data[index][4], // created_by
-      data[index][5], // created_at
-      noticeData.status || data[index][6]
-    ];
-
-    sheet.getRange(rowNum, 1, 1, headers.length).setValues([updatedRecord]);
+    sheet.getRange(rowNum, 1, 1, headers.length).setValues([row]);
     CacheService.getScriptCache().remove(this.DB_NAME);
     
-    return {
-      id: updatedRecord[0],
-      title: updatedRecord[1],
-      content: updatedRecord[2],
-      image_url: updatedRecord[3],
-      created_by: updatedRecord[4],
-      created_at: updatedRecord[5],
-      status: updatedRecord[6]
-    };
+    // Convert row back to object for response
+    const result = {};
+    headers.forEach((h, i) => result[h] = row[i]);
+    return result;
   }
 
   static delete(id) {
     const sheet = SheetService.getSheet(SHEET_NAMES.NOTICEBOARD);
     const data = sheet.getDataRange().getValues();
-    const index = data.findIndex(row => row[0] === id);
+    const index = data.findIndex(row => String(row[0]) === String(id));
     
     if (index === -1) throw new Error('Notice not found');
-    
     
     sheet.deleteRow(index + 1);
     CacheService.getScriptCache().remove(this.DB_NAME);

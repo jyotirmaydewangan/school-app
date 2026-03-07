@@ -284,12 +284,6 @@ function doPost(e) {
       case 'deleteSection':
         result = handleDeleteSection(token, postData);
         break;
-      case 'createNotice':
-        result = handleCreateNotice(token, postData);
-        break;
-      case 'updateNotice':
-        result = handleUpdateNotice(token, postData);
-        break;
       case 'deleteNotice':
         result = handleDeleteNotice(token, postData);
         break;
