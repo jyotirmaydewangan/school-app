@@ -79,6 +79,7 @@ cache:
     getSyllabus: { scope: GLOBAL, ttl: 604800, isBroad: true }
     getResources: { scope: GLOBAL, ttl: 604800, isBroad: true }
     getNoticeboard: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getNotices: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getDashboardStats: { scope: GLOBAL, ttl: 900, isBroad: true }
     getAttendance: { scope: USER, ttl: 604800, isBroad: false }
     getAttendanceByClass: { scope: GLOBAL, ttl: 1209600, isBroad: true, keyParameters: [class, section, year, month] }
