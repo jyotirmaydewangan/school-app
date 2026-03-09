@@ -49,6 +49,9 @@ function doGet(e) {
       case 'getAttendanceByClass':
         result = handleGetAttendanceByClass(params.token, params);
         break;
+      case 'getAttendanceByClassAndYear':
+        result = handleGetAttendanceByClassAndYear(params.token, params);
+        break;
       case 'getMarks':
         result = handleGetMarks(params.token, params);
         break;
@@ -127,6 +130,13 @@ function doPost(e) {
     postData = {};
   }
   
+  // Merge query parameters into postData to support Worker-side parameter promotion
+  for (var key in params) {
+    if (postData[key] === undefined) {
+      postData[key] = params[key];
+    }
+  }
+
   const action = params.action || postData.action;
   const token = params.token || postData.token;
   
@@ -199,6 +209,9 @@ function doPost(e) {
         break;
       case 'getAttendanceByClass':
         result = handleGetAttendanceByClass(token, postData);
+        break;
+      case 'getAttendanceByClassAndYear':
+        result = handleGetAttendanceByClassAndYear(token, postData);
         break;
       case 'createExam':
         result = handleCreateExam(token, postData);
@@ -642,6 +655,30 @@ function handleGetAttendanceSummary(token, data) {
   const summary = AttendanceRepository.getSummary(data.student_id, year);
   
   return { success: true, summary };
+}
+
+function handleGetAttendanceByClassAndYear(token, data) {
+  const auth = checkAuth(token);
+  if (!auth.success) return auth;
+  
+  const classId = data.class_id || data.class;
+  const sectionId = data.section_id || data.section;
+  const year = data.year;
+
+  if (!classId || !sectionId || !year) {
+    return { 
+      success: false, 
+      error: 'Class ID, Section ID, and Year are required',
+      debug: {
+        received: data,
+        resolved: { classId, sectionId, year }
+      }
+    };
+  }
+  
+  const result = AttendanceRepository.getByClassAndYear(classId, sectionId, year);
+  
+  return result;
 }
 
 function handleGetSubjects(token, params) {

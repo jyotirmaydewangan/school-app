@@ -358,15 +358,25 @@ const Router = {
           if (isBroad) {
             backendParams = new URLSearchParams();
             const tokenInQuery = urlObj.searchParams.get('token');
-            if (tokenInQuery) backendParams.set('token', tokenInQuery);
+            const effectiveToken = tokenInQuery || AuthMiddleware.extractToken(request);
+            if (effectiveToken) backendParams.set('token', effectiveToken);
 
             // Preserve keyParameters for Partitioned Broad Caches (like Attendance)
             const keyParams = CacheConfig.getRule(action)?.keyParameters;
             if (keyParams) {
+              let parsedBody = null;
+              if (bodyWithToken && typeof bodyWithToken === 'string' && bodyWithToken.trim().startsWith('{')) {
+                try { parsedBody = JSON.parse(bodyWithToken); } catch (e) { }
+              } else if (bodyWithToken && typeof bodyWithToken === 'object') {
+                parsedBody = bodyWithToken;
+              }
+
               for (const p of keyParams) {
-                // Use enriched queryParams if available, otherwise fetch from URL
-                const val = queryParams[p] || urlObj.searchParams.get(p);
-                if (val !== null) backendParams.set(p, val);
+                const lowerP = p.toLowerCase();
+                const val = queryParams[p] || queryParams[lowerP] || queryParams[lowerP + '_id'] || queryParams[lowerP + 'id'] ||
+                  urlObj.searchParams.get(p) || urlObj.searchParams.get(lowerP) || urlObj.searchParams.get(lowerP + '_id') || urlObj.searchParams.get(lowerP + 'id') ||
+                  (parsedBody ? (parsedBody[p] || parsedBody[lowerP] || parsedBody[lowerP + '_id'] || parsedBody[lowerP + 'id']) : null);
+                if (val !== null && val !== undefined) backendParams.set(p, val);
               }
             }
           } else {

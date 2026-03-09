@@ -7,6 +7,8 @@
   <title>School App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -1252,7 +1254,8 @@
 
         <!-- Attendance Section -->
         <section id="attendance" class="content-section">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <!-- Admin/Teacher View: Class Level Attendance -->
+          <div id="attendance-class-view" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-6">Attendance Management</h2>
             <div class="flex flex-wrap gap-4 mb-6">
               <div>
@@ -1328,6 +1331,15 @@
                 </button>
               </div>
             </div>
+          </div>
+          <!-- Parent/Student View: Student Level Attendance -->
+          <div id="attendance-student-view" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-6">My Attendance</h2>
+            <div id="attendance-student-loading" class="hidden py-12 text-center text-gray-500">
+              <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+              <p>Loading attendance...</p>
+            </div>
+            <div id="attendance-student-content"></div>
           </div>
         </section>
 
@@ -2390,6 +2402,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           switchSchoolTab(lastTab);
         }
         if (sectionId === 'dashboard') loadDashboardStats();
+        if (sectionId === 'attendance') initAttendanceView();
+      }
+
+      window.initAttendanceView = function () {
+        const user = window.currentUser;
+        const role = (user?.role || '').toLowerCase();
+        const classView = document.getElementById('attendance-class-view');
+        const studentView = document.getElementById('attendance-student-view');
+
+        if (role === 'parent' || role === 'student') {
+          classView.classList.add('hidden');
+          studentView.classList.remove('hidden');
+          loadMyAttendance(true);
+        } else {
+          classView.classList.remove('hidden');
+          studentView.classList.add('hidden');
+          populateAttendanceClassFilter();
+        }
       }
 
       window.switchSchoolTab = function (tabId) {
@@ -5566,74 +5596,296 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         document.body.appendChild(modal);
       }
 
-      async function loadMyAttendance() {
+      async function loadMyAttendance(inline = true, selectedStudentId = null) {
         const token = auth.getToken();
+        const loadingEl = document.getElementById('attendance-student-loading');
+        const contentEl = document.getElementById('attendance-student-content');
+
+        if (inline) {
+          loadingEl.classList.remove('hidden');
+          contentEl.innerHTML = '';
+        }
 
         try {
-          const response = await api.getMyAttendance(token);
-          if (response.success && response.attendance) {
-            showMyAttendanceModal(response.attendance);
+          const linkedResponse = await api.getLinkedStudents(token);
+          if (!linkedResponse.success || !linkedResponse.students || linkedResponse.students.length === 0) {
+            const msg = 'No linked students found';
+            if (inline) {
+              contentEl.innerHTML = `<p class="text-gray-500">${msg}</p>`;
+            } else {
+              alert(msg);
+            }
+            loadingEl.classList.add('hidden');
+            return;
+          }
+
+          const students = linkedResponse.students;
+          const currentYear = new Date().getFullYear();
+
+          const classMap = {};
+          students.forEach(s => {
+            const key = `${s.class_id}-${s.section_id}`;
+            if (!classMap[key]) {
+              classMap[key] = {
+                class_id: s.class_id,
+                section_id: s.section_id,
+                class_name: s.class,
+                section_name: s.section,
+                students: []
+              };
+            }
+            classMap[key].students.push(s);
+          });
+
+          const classData = Object.values(classMap);
+          const allAttendanceData = {};
+
+          for (const cls of classData) {
+            const attResponse = await api.getAttendanceByClassAndYear(token, cls.class_id, cls.section_id, currentYear);
+            const key = `${cls.class_id}-${cls.section_id}`;
+            if (attResponse.success) {
+              allAttendanceData[key] = {
+                classInfo: cls,
+                attendance: attResponse
+              };
+            }
+          }
+
+          if (inline) {
+            showMyAttendanceInline(students, allAttendanceData, currentYear);
           } else {
-            alert(response.error || 'No attendance data available');
+            showMyAttendanceModalWithCalendar(students, allAttendanceData, currentYear, selectedStudentId);
           }
         } catch (err) {
-          alert('Error loading attendance');
+          console.error('Error loading attendance:', err);
+          if (inline) {
+            contentEl.innerHTML = '<p class="text-red-500">Error loading attendance</p>';
+          } else {
+            alert('Error loading attendance');
+          }
         }
       }
 
-      function showMyAttendanceModal(attendanceData) {
+      function showMyAttendanceInline(students, allAttendanceData, year) {
+        const loadingEl = document.getElementById('attendance-student-loading');
+        const contentEl = document.getElementById('attendance-student-content');
+
+        loadingEl.classList.add('hidden');
+
+        if (students.length === 0) {
+          contentEl.innerHTML = '<p class="text-gray-500">No attendance data available</p>';
+          return;
+        }
+
+        let html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+
+        students.forEach(student => {
+          const key = `${student.class_id}-${student.section_id}`;
+          const attendanceData = allAttendanceData[key]?.attendance?.students?.find(s => String(s.id) === String(student.id));
+          const attendance = attendanceData?.attendance || {};
+
+          let present = 0, total = 0;
+          Object.values(attendance).forEach(status => {
+            if (status === 'present') present++;
+            if (status !== 'not-marked') total++;
+          });
+
+          const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+          html += `
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
+              <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <i class="fas fa-user-graduate text-indigo-500 text-xl"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-gray-800">${student.name}</h3>
+                  <p class="text-sm text-gray-500">${student.class || 'N/A'} - ${student.section || 'N/A'}</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-xl p-3 text-center">
+                  <p class="text-2xl font-bold text-indigo-600">${percentage}%</p>
+                  <p class="text-xs text-gray-500">Attendance</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-3 text-center">
+                  <p class="text-2xl font-bold text-gray-800">${present}/${total}</p>
+                  <p class="text-xs text-gray-500">Present Days</p>
+                </div>
+              </div>
+              <button onclick="loadMyAttendance(false, '${student.id}')" class="w-full py-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-100 transition flex items-center justify-center gap-2">
+                <i class="fas fa-calendar-alt"></i>
+                View Detailed Calendar
+              </button>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+
+        contentEl.innerHTML = html;
+      }
+
+      function showMyAttendanceModalWithCalendar(students, allAttendanceData, year, selectedStudentId = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm';
+        modal.className = 'modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm show';
         modal.id = 'myAttendanceModal';
 
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const classMap = {};
+        students.forEach(s => {
+          const key = `${s.class_id}-${s.section_id}`;
+          if (!classMap[key]) {
+            classMap[key] = {
+              class_id: s.class_id,
+              section_id: s.section_id,
+              class_name: s.class,
+              section_name: s.section,
+              students: []
+            };
+          }
+          classMap[key].students.push(s);
+        });
 
-        let html = `<div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+        const classOptions = Object.values(classMap).map((cls, idx) =>
+          `<option value="${cls.class_id}-${cls.section_id}">${cls.class_name} - ${cls.section_name || 'N/A'}</option>`
+        ).join('');
+
+        let html = `<div class="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3 class="text-lg font-semibold text-gray-800">My Attendance</h3>
           <button onclick="this.closest('.modal').remove()" class="text-gray-400 hover:text-gray-600 transition">
             <i class="fas fa-times text-lg"></i>
           </button>
         </div>
-        <div class="p-6">`;
+        <div class="px-6 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">Select Child:</label>
+            <select id="attendance-student-select" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" onchange="updateAttendanceCalendar()">
+              ${students.map((s, idx) => `<option value="${s.id}" data-class="${s.class_id}" data-section="${s.section_id}" ${selectedStudentId && String(s.id) === String(selectedStudentId) ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-gray-700">Year:</label>
+            <select id="attendance-year-select" class="border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" onchange="updateAttendanceCalendar()">
+              <option value="${year}" selected>${year}</option>
+              <option value="${year - 1}">${year - 1}</option>
+            </select>
+          </div>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <div class="mb-4 flex flex-wrap gap-4 text-sm">
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Present</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Absent</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Late</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-400"></span> Leave</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-200"></span> Not Marked</div>
+          </div>
+          <div id="attendance-calendar" class="bg-white rounded-lg"></div>
+        </div>
+        <div class="px-6 py-3 border-t bg-gray-50 text-xs text-gray-500">
+          <span id="attendance-summary"></span>
+        </div>
+        </div>`;
 
-        const studentIds = Object.keys(attendanceData);
-        if (studentIds.length === 0) {
-          html += '<p class="text-gray-500">No attendance data available</p>';
-        } else {
-          studentIds.forEach(studentId => {
-            const data = attendanceData[studentId];
-            html += `<div class="mb-6">
-            <h4 class="font-semibold text-gray-800 mb-3">Attendance Summary</h4>
-            <table class="w-full text-sm">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="px-3 py-2 text-left">Month</th>
-                  <th class="px-3 py-2 text-center">Present</th>
-                  <th class="px-3 py-2 text-center">Absent</th>
-                  <th class="px-3 py-2 text-center">Late</th>
-                  <th class="px-3 py-2 text-center">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.map(m => `
-                <tr class="border-b">
-                  <td class="px-3 py-2">${months[m.month - 1]}</td>
-                  <td class="px-3 py-2 text-center text-green-600">${m.present}</td>
-                  <td class="px-3 py-2 text-center text-red-600">${m.absent}</td>
-                  <td class="px-3 py-2 text-center text-yellow-600">${m.late}</td>
-                  <td class="px-3 py-2 text-center font-medium ${m.percentage >= 75 ? 'text-green-600' : 'text-red-600'}">${m.percentage}%</td>
-                </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`;
-          });
-        }
-
-        html += `</div></div>`;
         modal.innerHTML = html;
         document.body.appendChild(modal);
+
+        setTimeout(() => {
+          const modal = document.getElementById('myAttendanceModal');
+          if (modal) {
+            modal._attendanceData = allAttendanceData;
+            updateAttendanceCalendar();
+          }
+        }, 300);
+      }
+
+      function updateAttendanceCalendar() {
+        const modal = document.getElementById('myAttendanceModal');
+        if (!modal) return;
+
+        const allAttendanceData = modal._attendanceData;
+
+        const studentSelect = document.getElementById('attendance-student-select');
+        const yearSelect = document.getElementById('attendance-year-select');
+        const calendarEl = document.getElementById('attendance-calendar');
+        const summaryEl = document.getElementById('attendance-summary');
+
+        if (!studentSelect || !yearSelect || !allAttendanceData) return;
+
+        const studentId = studentSelect.value;
+        const year = parseInt(yearSelect.value);
+
+        const selectedOption = studentSelect.options[studentSelect.selectedIndex];
+        const classId = selectedOption.dataset.class;
+        const sectionId = selectedOption.dataset.section;
+        const key = `${classId}-${sectionId}`;
+
+        const classData = allAttendanceData[key];
+        if (!classData || !classData.attendance.students) {
+          calendarEl.innerHTML = '<p class="text-gray-500">No attendance data available</p>';
+          return;
+        }
+
+        const studentData = classData.attendance.students.find(s => String(s.id) === String(studentId));
+        if (!studentData) {
+          calendarEl.innerHTML = '<p class="text-gray-500">Student not found</p>';
+          return;
+        }
+
+        const attendance = studentData.attendance || {};
+        const events = [];
+
+        let present = 0, absent = 0, late = 0, leave = 0, total = 0;
+
+        Object.entries(attendance).forEach(([date, status]) => {
+          const statusColors = {
+            present: '#22c55e',
+            absent: '#ef4444',
+            late: '#eab308',
+            leave: '#9ca3af'
+          };
+
+          if (status === 'present') present++;
+          else if (status === 'absent') absent++;
+          else if (status === 'late') late++;
+          else if (status === 'leave') leave++;
+          total++;
+
+          events.push({
+            date: date,
+            status: status,
+            color: statusColors[status] || '#9ca3af'
+          });
+        });
+
+        const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+        summaryEl.innerHTML = `Total: ${total} | Present: ${present} | Absent: ${absent} | Late: ${late} | Leave: ${leave} | Percentage: <span class="${percentage >= 75 ? 'text-green-600' : 'text-red-600'} font-medium">${percentage}%</span>`;
+
+        if (window.attendanceCalendar) {
+          window.attendanceCalendar.destroy();
+        }
+
+        const calendarEvents = events.map(e => ({
+          title: e.status.charAt(0).toUpperCase() + e.status.slice(1),
+          start: e.date,
+          backgroundColor: e.color,
+          borderColor: e.color
+        }));
+
+        window.attendanceCalendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          initialDate: `${year}-01-01`,
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listMonth'
+          },
+          events: calendarEvents,
+          eventDisplay: 'block',
+          height: 'auto'
+        });
+
+        window.attendanceCalendar.render();
       }
 
       async function loadMyTimetable() {

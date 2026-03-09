@@ -53,7 +53,6 @@ function _getDefaultRequirements() {
         approveUser: 'write:users',
         rejectUser: 'write:users',
         updateUserRole: 'write:users',
-        getRoles: 'read:users',
         createRole: 'write:users',
         updateRole: 'write:users',
         deleteRole: 'write:users'

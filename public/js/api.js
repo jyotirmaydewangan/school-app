@@ -224,6 +224,8 @@ const api = {
     if (classId) params.append('class', classId);
     if (sectionId) params.append('section', sectionId);
     if (date) params.append('date', date);
+    if (requestOptions.year) params.append('year', requestOptions.year);
+    if (requestOptions.month) params.append('month', requestOptions.month);
     if (requestOptions.cache) params.append('cache', requestOptions.cache);
 
     return this.request('/getAttendanceByClass?' + params.toString(), requestOptions);
@@ -234,6 +236,17 @@ const api = {
       method: 'POST',
       body: JSON.stringify({ token, ...data })
     });
+  },
+
+  async getAttendanceByClassAndYear(token, classId, sectionId, year, requestOptions = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (classId) params.append('class_id', classId);
+    if (sectionId) params.append('section_id', sectionId);
+    if (year) params.append('year', year);
+    if (requestOptions.cache) params.append('cache', requestOptions.cache);
+
+    return this.request('/getAttendanceByClassAndYear?' + params.toString(), requestOptions);
   },
 
   async getSubjects(token, options = {}) {
@@ -502,12 +515,6 @@ const api = {
     const params = new URLSearchParams();
     params.append('token', token);
     return this.request('/getLinkedStudents?' + params.toString());
-  },
-
-  async getMyAttendance(token) {
-    const params = new URLSearchParams();
-    params.append('token', token);
-    return this.request('/getMyAttendance?' + params.toString());
   },
 
   async getMyMarks(token) {

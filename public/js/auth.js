@@ -194,7 +194,15 @@ const auth = {
     }
 
     if (Object.keys(rolePermissions).length === 0) {
-      // Fallback logic similar to hasPermission if needed
+      const injected = '{' + 'ROLES_JSON' + '}';
+      const rawValue = '{ROLES_JSON}';
+      if (rawValue !== injected && rawValue !== '' && rawValue !== '{}') {
+        try {
+          rolePermissions = JSON.parse(rawValue);
+        } catch (e) {
+          console.error('Failed to parse ROLES_JSON for page access', e);
+        }
+      }
     }
 
     const roleData = rolePermissions[user.role] || {};

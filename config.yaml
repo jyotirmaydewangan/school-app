@@ -79,6 +79,7 @@ cache:
     getDashboardStats: { scope: GLOBAL, ttl: 900, isBroad: true }
     getAttendance: { scope: USER, ttl: 604800, isBroad: false }
     getAttendanceByClass: { scope: GLOBAL, ttl: 1209600, isBroad: true, keyParameters: [class, section, year, month] }
+    getAttendanceByClassAndYear: { scope: GLOBAL, ttl: 172800, isBroad: true, keyParameters: [class, section, year] }
     getAttendanceSummary: { scope: USER, ttl: 86400, isBroad: false }
     getMarks: { scope: USER, ttl: 604800, isBroad: false }
     getLinkedStudents: { scope: USER, ttl: 86400, isBroad: false }
@@ -114,7 +115,7 @@ cache:
     approveStudent: [getStudents, getDashboardStats]
     linkParentStudent: [getLinkedStudents]
     autoLinkParents: [getLinkedStudents]
-    markAttendance: [getAttendance, getAttendanceByClass, getAttendanceSummary, getDashboardStats]
+    markAttendance: [getAttendance, getAttendanceByClass, getAttendanceByClassAndYear, getAttendanceSummary, getDashboardStats]
     createExam: [getExams, getDashboardStats]
     updateExam: [getExams]
     deleteExam: [getExams]
@@ -227,7 +228,6 @@ permissions:
     rejectUser:    "write:users"
     updateUserRole: "write:users"
     # Role management is an admin-only sub-feature of user management
-    getRoles:      "read:users"
     createRole:    "write:users"
     updateRole:    "write:users"
     deleteRole:    "write:users"

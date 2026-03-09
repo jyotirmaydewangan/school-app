@@ -264,5 +264,45 @@ const AttendanceRepository = {
         parent_phones: student ? [student.parent_phone1, student.parent_phone2].filter(p => p) : []
       };
     });
+  },
+
+  getByClassAndYear(classId, sectionId, year) {
+    const studentsResult = StudentRepository.findAll({ class_id: classId, section_id: sectionId, status: 'approved' });
+    const students = studentsResult.students;
+    
+    const attendanceMap = {};
+    students.forEach(s => {
+      attendanceMap[String(s.id)] = {};
+    });
+    
+    for (let m = 1; m <= 12; m++) {
+      const data = this.getAllForMonth(parseInt(year), m);
+      
+      data.data.forEach(a => {
+        const studentId = String(a.student_id);
+        if (attendanceMap[studentId]) {
+          const dateKey = this.formatDate(a.date);
+          attendanceMap[studentId][dateKey] = a.status;
+        }
+      });
+    }
+    
+    const studentData = students.map(s => ({
+      id: s.id,
+      name: s.name,
+      admission_no: s.admission_no,
+      roll_no: s.roll_no,
+      attendance: attendanceMap[String(s.id)] || {}
+    }));
+    
+    return {
+      success: true,
+      class: ClassRepository.findById(classId)?.name,
+      class_id: classId,
+      section: SectionRepository.findById(sectionId)?.name,
+      section_id: sectionId,
+      year: parseInt(year),
+      students: studentData
+    };
   }
 };

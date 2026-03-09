@@ -1,6 +1,6 @@
 const RoleHandler = {
   getRoles(token) {
-    const auth = requirePermission(token, 'read:users');
+    const auth = checkAuth(token);
     if (!auth.success) return auth;
     
     const roles = RoleRepository.findAll();
