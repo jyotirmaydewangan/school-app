@@ -5687,7 +5687,24 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
         try {
           const linkedResponse = await api.getLinkedStudents(token);
-          if (!linkedResponse.success || !linkedResponse.students || linkedResponse.students.length === 0) {
+
+          let students = [];
+
+          if (linkedResponse.success && linkedResponse.students) {
+            students = linkedResponse.students.filter(s => {
+              const isParent = window.currentUser && window.currentUser.role === 'parent';
+              if (isParent) {
+                return s.parent_id === window.currentUser.id;
+              }
+              const isStudent = window.currentUser && window.currentUser.role === 'student';
+              if (isStudent) {
+                return s.user_id === window.currentUser.id;
+              }
+              return false;
+            });
+          }
+
+          if (students.length === 0) {
             const msg = 'No linked students found';
             if (inline) {
               contentEl.innerHTML = `<p class="text-gray-500">${msg}</p>`;
@@ -5697,8 +5714,6 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
             loadingEl.classList.add('hidden');
             return;
           }
-
-          const students = linkedResponse.students;
           const currentYear = new Date().getFullYear();
 
           const classMap = {};
@@ -6041,8 +6056,19 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
 
         try {
           const response = await api.getLinkedStudents(token);
-          if (response.success && response.students && response.students.length > 0) {
-            showReportCardSelection(response.students);
+          let students = [];
+          if (response.success && response.students) {
+            students = response.students.filter(s => {
+              const isParent = window.currentUser && window.currentUser.role === 'parent';
+              if (isParent) return s.parent_id === window.currentUser.id;
+              const isStudent = window.currentUser && window.currentUser.role === 'student';
+              if (isStudent) return s.user_id === window.currentUser.id;
+              return false;
+            });
+          }
+
+          if (students.length > 0) {
+            showReportCardSelection(students);
           } else {
             alert('No linked students found');
           }

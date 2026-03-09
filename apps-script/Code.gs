@@ -1249,24 +1249,41 @@ function handleGetLinkedStudents(token) {
   const auth = checkAuth(token);
   if (!auth.success) return auth;
   
-  if (auth.user.role !== 'parent' && auth.user.role !== 'student') {
-    return { success: false, error: 'Parent or Student access required' };
+  // Return ALL student-parent linking info (global cache, not user-specific)
+  
+  // 1. Get all students
+  const studentsRaw = StudentRepository.findAll({}).students;
+  let allLinkedStudents = [];
+  
+  // 2. Add mappings for Students (user_id)
+  studentsRaw.forEach(student => {
+    if (student.user_id) {
+       allLinkedStudents.push({ ...student });
+    }
+  });
+  
+  // 3. Add mappings for Parents (parent_id)
+  const linksSheet = SheetService.getSheet(SHEET_NAMES.PARENT_STUDENTS);
+  const linksData = linksSheet.getDataRange().getValues();
+  if (linksData.length > 1) {
+    const headers = linksData[0].map(h => String(h).trim().toLowerCase());
+    const pIdCol = headers.indexOf('parent_id');
+    const sIdCol = headers.indexOf('student_id');
+    
+    if (pIdCol !== -1 && sIdCol !== -1) {
+      for (let i = 1; i < linksData.length; i++) {
+        const pId = String(linksData[i][pIdCol]).trim();
+        const sId = String(linksData[i][sIdCol]).trim();
+        
+        const st = studentsRaw.find(s => String(s.id) === sId);
+        if (st) {
+          allLinkedStudents.push({ ...st, parent_id: pId });
+        }
+      }
+    }
   }
   
-  let studentIds = [];
-  
-  if (auth.user.role === 'parent') {
-    const links = ParentStudentRepository.findByParentId(auth.user.id);
-    studentIds = links.map(l => l.student_id);
-  } else if (auth.user.role === 'student') {
-    const students = StudentRepository.findAll({}).students;
-    const userStudent = students.filter(s => s.user_id === auth.user.id);
-    studentIds = userStudent.map(s => s.id);
-  }
-  
-  const students = studentIds.map(id => StudentRepository.findById(id)).filter(s => s);
-  
-  return { success: true, students: students };
+  return { success: true, students: allLinkedStudents };
 }
 
 function handleGetMyAttendance(token) {

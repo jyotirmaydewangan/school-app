@@ -16,7 +16,7 @@ const ONE_MIN = Number('{TTL_ONE_MIN}') || 60;
  */
 const CACHE_POLICY = (function () {
   const injected = '{CACHE_POLICY_JSON}';
-  if (injected === '{CACHE_POLICY_JSON}' || injected === '{}' || injected === '') return _getDefaultPolicy();
+  if (injected === '{' + 'CACHE_POLICY_JSON}' || injected === '{}' || injected === '') return _getDefaultPolicy();
   try {
     return JSON.parse(injected);
   } catch (e) {
@@ -29,7 +29,7 @@ const CACHE_POLICY = (function () {
  */
 const INVALIDATION_MAP = (function () {
   const injected = '{INVALIDATION_MAP_JSON}';
-  if (injected === '{INVALIDATION_MAP_JSON}' || injected === '{}' || injected === '') return _getDefaultInvalidationMap();
+  if (injected === '{' + 'INVALIDATION_MAP_JSON}' || injected === '{}' || injected === '') return _getDefaultInvalidationMap();
   try {
     return JSON.parse(injected);
   } catch (e) {
@@ -59,7 +59,7 @@ function _getDefaultPolicy() {
     'getAttendanceByClassAndYear': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY * 2, isBroad: true, keyParameters: ['class', 'section', 'year'] },
     'getAttendanceSummary': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_DAY, isBroad: false },
     'getMarks': { scope: CACHE_SCOPES.USER, ttl: ONE_WEEK, isBroad: false },
-    'getLinkedStudents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
+    'getLinkedStudents': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
     'getLinkedParents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
     'getPendingRegistrations': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MIN, isBroad: true },
     'verify': { scope: CACHE_SCOPES.SESSION, ttl: FIFTEEN_MIN, isBroad: true }

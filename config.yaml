@@ -85,7 +85,7 @@ cache:
     getAttendanceByClassAndYear: { scope: GLOBAL, ttl: 172800, isBroad: true, keyParameters: [class, section, year] }
     getAttendanceSummary: { scope: USER, ttl: 86400, isBroad: false }
     getMarks: { scope: USER, ttl: 604800, isBroad: false }
-    getLinkedStudents: { scope: USER, ttl: 86400, isBroad: false }
+    getLinkedStudents: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getPendingRegistrations: { scope: GLOBAL, ttl: 60, isBroad: true }
     verify: { scope: SESSION, ttl: 900, isBroad: true }
 
