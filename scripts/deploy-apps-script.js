@@ -78,7 +78,8 @@ async function deployAppsScript(tenantName) {
     '{JWT_SECRET}': require('crypto').randomBytes(32).toString('hex'),
     '{ROLES_JSON}': rolesJson,
     '{ACADEMIC_DAYS_JSON}': JSON.stringify(academic.daysOfWeek || []),
-    '{ACADEMIC_PERIODS_JSON}': JSON.stringify(academic.periods || {})
+    '{ACADEMIC_PERIODS_JSON}': JSON.stringify(academic.periods || {}),
+    '{MAX_ATTENDANCE_BACK_DAYS}': String(defaults.maxAttendanceBackDays || 3)
   };
 
   replaceInFile(path.join(appsScriptDir, 'config.gs'), replacements);

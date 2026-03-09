@@ -32,6 +32,25 @@ const AttendanceRepository = {
     
     try {
       const date = attendanceData.date || new Date().toISOString().split('T')[0];
+      
+      // Enforce back-dated attendance restriction
+      const maxBackDays = ConfigService.get('MAX_ATTENDANCE_BACK_DAYS', 3);
+      const timezone = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+      const today = new Date();
+      
+      const allowedDates = [];
+      for (let d = 0; d < maxBackDays; d++) {
+        const temp = new Date();
+        temp.setDate(today.getDate() - d);
+        allowedDates.push(Utilities.formatDate(temp, timezone, "yyyy-MM-dd"));
+      }
+      
+      if (!allowedDates.includes(date)) {
+        return { 
+          success: false, 
+          error: `Restricted: Attendance can only be marked for the last ${maxBackDays} days (including today).` 
+        };
+      }
       const year = parseInt(date.split('-')[0]);
       const month = parseInt(date.split('-')[1]);
       

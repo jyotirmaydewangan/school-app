@@ -51,6 +51,9 @@ defaults:
   # Show "Powered by" footer
   showPoweredBy: false
 
+  # Max days in the past allowed to mark attendance (including today)
+  maxAttendanceBackDays: 3
+
 # Cache configuration Defaults (in seconds)
 cache:
   version: "v1"

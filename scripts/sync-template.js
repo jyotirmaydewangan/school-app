@@ -208,13 +208,10 @@ function syncTemplateFiles(tenantName, options = {}) {
   const configBackupPath = path.join(tenantDir, 'public', 'js', 'config.js.backup');
   const configPath = path.join(tenantDir, 'public', 'js', 'config.js');
   let backedUpApiUrl = '';
-  let backedUpRoles = '';
   if (fs.existsSync(configPath)) {
     const backupContent = fs.readFileSync(configPath, 'utf8');
     const apiMatch = backupContent.match(/API_URL:\s*"([^"]+)"/);
     backedUpApiUrl = apiMatch ? apiMatch[1] : '';
-    const rolesMatch = backupContent.match(/ROLES:\s*({[\s\S]*?}|\[[\s\S]*?\])/);
-    backedUpRoles = rolesMatch ? rolesMatch[1] : '';
     fs.writeFileSync(configBackupPath, backupContent);
   }
 
@@ -248,21 +245,15 @@ function syncTemplateFiles(tenantName, options = {}) {
   // Replace placeholders in config files
   replaceInConfigFiles();
 
-  // Merge: restore old API_URL and ROLES if valid
-  if ((backedUpApiUrl && backedUpApiUrl.startsWith('http')) || backedUpRoles) {
+  // Merge: restore old API_URL if valid
+  if (backedUpApiUrl && backedUpApiUrl.startsWith('http')) {
     const newConfigPath = path.join(tenantDir, 'public', 'js', 'config.js');
     if (fs.existsSync(newConfigPath)) {
       let content = fs.readFileSync(newConfigPath, 'utf8');
       // Replace API_URL
-      if (backedUpApiUrl && backedUpApiUrl.startsWith('http')) {
-        content = content.replace(/API_URL:\s*"[^"]*"/, `API_URL: "${backedUpApiUrl}"`);
-      }
-      // Replace ROLES
-      if (backedUpRoles) {
-        content = content.replace(/ROLES:\s*({[\s\S]*?}|\[[\s\S]*?\])/, `ROLES: ${backedUpRoles}`);
-      }
+      content = content.replace(/API_URL:\s*"[^"]*"/, `API_URL: "${backedUpApiUrl}"`);
       fs.writeFileSync(newConfigPath, content);
-      if (verbose) log(`  ✓ Merged: restored API_URL and/or ROLES from backup`, 'success');
+      if (verbose) log(`  ✓ Merged: restored API_URL from backup`, 'success');
     }
   }
 

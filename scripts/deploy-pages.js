@@ -58,13 +58,13 @@ function deployPages(tenantName, args = []) {
     if (!fs.existsSync(destDir)) {
       fs.mkdirSync(destDir, { recursive: true });
     }
-    
+
     fs.readdirSync(srcDir).forEach(f => {
       const srcPath = path.join(srcDir, f);
       const destPath = path.join(destDir, f);
-      
+
       if (skipFiles.includes(f)) return;
-      
+
       const stat = fs.statSync(srcPath);
       if (stat.isDirectory()) {
         syncDirRecursive(srcPath, destPath, []);
@@ -112,7 +112,8 @@ function deployPages(tenantName, args = []) {
         is_active: data.isActive !== false
       }
     ]))),
-    '{API_URL_PLACEHOLDER}': backedUpApiUrl || ''
+    '{API_URL_PLACEHOLDER}': backedUpApiUrl || '',
+    '{MAX_ATTENDANCE_BACK_DAYS}': String(defaults.defaults?.maxAttendanceBackDays || 3)
   };
 
   // Now replace placeholders in the synced config.js
