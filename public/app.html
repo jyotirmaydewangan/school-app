@@ -4258,17 +4258,20 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
       window.loadLinkedParents = async function (studentId, retryCount = 0) {
         const token = auth.getToken();
         try {
-          const res = await api.getLinkedParents(token, studentId);
+          const [resLinks, resUsers] = await Promise.all([
+            api.getLinkedStudents(token),
+            api.getUsers(token)
+          ]);
 
-          // The API returns { success: true, parents: [...] }
-          if (res && res.success && Array.isArray(res.parents)) {
-            linkedParentsData = res.parents;
-          } else if (res && Array.isArray(res)) {
-            linkedParentsData = res;
-          } else if (res && res.parents && Array.isArray(res.parents)) {
-            linkedParentsData = res.parents;
+          if (resLinks && resLinks.success && Array.isArray(resLinks.students)) {
+            const studentLinks = resLinks.students.filter(s => String(s.id) === String(studentId) && s.parent_id);
+            const parentUsers = (resUsers.users || []).filter(u => u.role === 'parent');
+
+            linkedParentsData = studentLinks.map(link => {
+              const parent = parentUsers.find(p => String(p.id) === String(link.parent_id));
+              return parent ? { id: parent.id, name: parent.name, email: parent.email, phone: parent.phone } : null;
+            }).filter(p => p !== null);
           } else {
-            // Retry once if no valid data
             if (retryCount < 1) {
               await new Promise(r => setTimeout(r, 800));
               return loadLinkedParents(studentId, retryCount + 1);
