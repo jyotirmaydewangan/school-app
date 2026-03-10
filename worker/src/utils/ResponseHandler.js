@@ -11,26 +11,33 @@ export const ResponseHandler = {
   async handle(response, request, action, isCacheable) {
     const responseText = await response.text();
     let headers;
+    let status = response.status;
+
+    // Fix: If backend says token expired but returns 200 (Apps Script quirk), 
+    // force a 401 so the frontend triggers re-login.
+    if (status === 200 && responseText && responseText.includes('Token expired')) {
+      status = 401;
+    }
 
     if (isCacheable) {
       headers = CorsMiddleware.addHeaders(response);
       headers.set('X-Cache', 'MISS');
-      
+
       const isEmptyResponse = !responseText || responseText.trim() === '' || responseText === 'null';
-      const shouldNotCache = isEmptyResponse || response.status >= 400;
-      
+      const shouldNotCache = isEmptyResponse || status >= 400;
+
       if (!shouldNotCache) {
         const cachedResponse = new Response(responseText, {
-          status: response.status,
+          status: status,
           headers
         });
-        
+
         await CacheHandler.set(request, cachedResponse, action);
         return cachedResponse;
       }
-      
+
       return new Response(responseText, {
-        status: response.status,
+        status: status,
         headers
       });
     }
@@ -42,15 +49,15 @@ export const ResponseHandler = {
     }
 
     return new Response(responseText, {
-      status: response.status,
+      status: status,
       headers
     });
   },
 
   error(status, message) {
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: message 
+    return new Response(JSON.stringify({
+      success: false,
+      error: message
     }), {
       status,
       headers: CorsMiddleware.handleOptions()

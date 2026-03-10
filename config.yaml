@@ -66,9 +66,9 @@ cache:
     oneMin: 60
   # CACHE_POLICY defines the rules for every read action.
   policy:
-    getConfig: { scope: GLOBAL, ttl: 604800, isBroad: true }
+    getConfig: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getSchools: { scope: GLOBAL, ttl: 2592000, isBroad: true }
-    getClasses: { scope: GLOBAL, ttl: 86400, isBroad: true }
+    getClasses: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getSections: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getRoles: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getSubjects: { scope: GLOBAL, ttl: 2592000, isBroad: true }
@@ -82,7 +82,7 @@ cache:
     getNotices: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getDashboardStats: { scope: GLOBAL, ttl: 900, isBroad: true }
     getAttendance: { scope: USER, ttl: 604800, isBroad: false }
-    getAttendanceByClass: { scope: GLOBAL, ttl: 1209600, isBroad: true, keyParameters: [class, section, year, month] }
+    getAttendanceByClass: { scope: GLOBAL, ttl: 2592000, isBroad: true, keyParameters: [class, section, year, month] }
     getAttendanceByClassAndYear: { scope: GLOBAL, ttl: 172800, isBroad: true, keyParameters: [class, section, year] }
     getAttendanceSummary: { scope: USER, ttl: 86400, isBroad: false }
     getMarks: { scope: USER, ttl: 604800, isBroad: false }

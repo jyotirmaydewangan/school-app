@@ -31,6 +31,14 @@ const api = {
       const text = await response.text();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          console.warn('Authentication token expired or invalid. Logging out.');
+          auth.logout();
+          if (typeof window !== 'undefined') {
+            window.location.href = 'index.html?msg=expired';
+          }
+        }
+
         let errorData;
         try {
           errorData = JSON.parse(text);

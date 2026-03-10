@@ -77,7 +77,15 @@ function _extractRoleFromToken(token) {
         const padded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
         const json = atob(padded);
         const payload = JSON.parse(json);
-        return payload.role || null;
+
+        // Explicit Expiration Check
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < now) {
+            console.warn('[Worker] Token expired at the edge');
+            return { role: null, expired: true };
+        }
+
+        return { role: payload.role || null, expired: false };
     } catch (e) {
         return null;
     }
@@ -93,6 +101,24 @@ function _forbidden(message) {
         JSON.stringify({ success: false, error: message }),
         {
             status: 403,
+            headers: {
+                'Content-Type': 'application/json',
+                ...CorsMiddleware.buildHeaders()
+            }
+        }
+    );
+}
+
+/**
+ * Build a 401 JSON response.
+ * @param {string} message
+ * @returns {Response}
+ */
+function _unauthorized(message) {
+    return new Response(
+        JSON.stringify({ success: false, error: message }),
+        {
+            status: 401,
             headers: {
                 'Content-Type': 'application/json',
                 ...CorsMiddleware.buildHeaders()
@@ -131,10 +157,15 @@ export const PermissionMiddleware = {
             return _forbidden('Authentication required');
         }
 
-        const role = _extractRoleFromToken(token);
-        if (!role) {
+        const tokenResult = _extractRoleFromToken(token);
+        if (!tokenResult || !tokenResult.role) {
+            if (tokenResult && tokenResult.expired) {
+                return _unauthorized('Token expired');
+            }
             return _forbidden('Invalid or malformed token');
         }
+
+        const role = tokenResult.role;
 
         const config = rolesConfig || ROLES_CONFIG;
         const roleData = config[role] || {};
