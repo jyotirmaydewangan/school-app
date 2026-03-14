@@ -8,6 +8,22 @@ const ConfigService = {
         if (key === 'session_timeout_minutes' && TENANT_CONFIG.SESSION_TIMEOUT_MINUTES) {
           return TENANT_CONFIG.SESSION_TIMEOUT_MINUTES;
         }
+        
+        if (TENANT_CONFIG.PAYTM_CONFIG) {
+          if (key === 'paytm_mid' && TENANT_CONFIG.PAYTM_CONFIG.mid) {
+            return TENANT_CONFIG.PAYTM_CONFIG.mid;
+          }
+          if (key === 'paytm_merchant_key' && TENANT_CONFIG.PAYTM_CONFIG.merchantKey) {
+            return TENANT_CONFIG.PAYTM_CONFIG.merchantKey;
+          }
+          if (key === 'paytm_callback_url' && TENANT_CONFIG.PAYTM_CONFIG.callbackUrl) {
+            return TENANT_CONFIG.PAYTM_CONFIG.callbackUrl;
+          }
+          if (key === 'paytm_staging' && TENANT_CONFIG.PAYTM_CONFIG.staging !== undefined) {
+            return TENANT_CONFIG.PAYTM_CONFIG.staging;
+          }
+        }
+        
         if (TENANT_CONFIG[key] !== undefined) {
           return TENANT_CONFIG[key];
         }

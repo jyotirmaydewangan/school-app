@@ -88,6 +88,12 @@ cache:
     getMarks: { scope: USER, ttl: 604800, isBroad: false }
     getLinkedStudents: { scope: GLOBAL, ttl: 2592000, isBroad: true }
     getPendingRegistrations: { scope: GLOBAL, ttl: 60, isBroad: true }
+    getInvoices: { scope: USER, ttl: 900, isBroad: false }
+    getAllInvoices: { scope: GLOBAL, ttl: 300, isBroad: true }
+    getDefaulterList: { scope: GLOBAL, ttl: 300, isBroad: true }
+    getFeeStructures: { scope: GLOBAL, ttl: 86400, isBroad: true }
+    getFeeDashboardStats: { scope: GLOBAL, ttl: 300, isBroad: true }
+    getPaymentAnalytics: { scope: GLOBAL, ttl: 300, isBroad: true }
     verify: { scope: SESSION, ttl: 900, isBroad: true }
 
   # INVALIDATION_MAP maps write actions to the read caches they must invalidate.
@@ -135,6 +141,14 @@ cache:
     deleteSyllabus: [getSyllabus]
     addResource: [getResources]
     deleteResource: [getResources]
+    # Fee Management
+    createInvoice: [getInvoices, getAllInvoices, getDashboardStats]
+    updateInvoice: [getInvoices, getAllInvoices, getDashboardStats]
+    deleteInvoice: [getInvoices, getAllInvoices, getDashboardStats]
+    generateBulkInvoices: [getInvoices, getAllInvoices, getDashboardStats, getFeeDashboardStats]
+    createFeeStructure: [getFeeStructures]
+    updateFeeStructure: [getFeeStructures]
+    deleteFeeStructure: [getFeeStructures]
 
 # Academic Configuration
 academic:
@@ -176,6 +190,14 @@ roles:
     permissions: ["*"]
     isActive: true
     pages: ["*"]
+  finance_admin:
+    permissions:
+      - "read:users"
+      - "read:students"
+      - "invoice:write"
+      - "invoice:read"
+    isActive: true
+    pages: ["dashboard", "invoices", "reports"]
   teacher:
     permissions:
       - "read:students"
@@ -199,16 +221,18 @@ roles:
       - "read:child_marks"
       - "read:child_timetable"
       - "read:noticeboard"
+      - "invoice:read"
     isActive: true
-    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum"]
+    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum", "invoices"]
   student:
     permissions:
       - "read:own_grades"
       - "read:own_attendance"
       - "read:own_timetable"
       - "read:noticeboard"
+      - "invoice:read"
     isActive: true
-    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum"]
+    pages: ["dashboard", "noticeboard", "attendance", "marks", "timetable", "curriculum", "invoices"]
 
 # Action-level permission requirements
 # Maps each write action to the permission it requires.
@@ -235,3 +259,27 @@ permissions:
     createRole:    "write:users"
     updateRole:    "write:users"
     deleteRole:    "write:users"
+    # Fee Management
+    createInvoice:    "invoice:write"
+    updateInvoice:    "invoice:write"
+    deleteInvoice:    "invoice:write"
+    generateBulkInvoices: "invoice:write"
+    generateSchoolInvoices: "invoice:write"
+    getInvoices:      "invoice:read"
+    getInvoice:       "invoice:read"
+    getAllInvoices:   "invoice:write"
+    getDefaulterList:  "invoice:write"
+    getFeeStructures:  "invoice:read"
+    createFeeStructure: "invoice:write"
+    updateFeeStructure: "invoice:write"
+    deleteFeeStructure: "invoice:write"
+    getFeeDashboardStats: "invoice:write"
+    getPaymentAnalytics: "invoice:write"
+    # Payment
+    createPaymentOrder: "invoice:read"
+    verifyPayment:      "invoice:write"
+    verifyPaymentStatus: "invoice:write"
+    getPaymentStatus:  "invoice:read"
+    getPaymentConfig:  "invoice:write"
+    savePaymentConfig: "invoice:write"
+    getReceipt:        "invoice:read"

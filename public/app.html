@@ -581,6 +581,13 @@
             </a>
           </li>
           <li>
+            <a href="#" data-section="fees"
+              class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
+              <i class="fas fa-money-bill-wave w-5 text-center"></i>
+              <span>Fees</span>
+            </a>
+          </li>
+          <li>
             <a href="#" data-section="settings"
               class="nav-item flex items-center gap-3 px-6 py-3.5 text-gray-300 hover:bg-white/10 hover:text-white transition-all border-l-4 border-transparent hover:border-indigo-400">
               <i class="fas fa-cog w-5 text-center"></i>
@@ -964,6 +971,203 @@
           </div>
         </div>
 
+        <!-- Fees Section -->
+        <section id="fees" class="content-section">
+          <div class="mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Fee Management</h1>
+            <p class="text-gray-500 mt-1">Manage student fees and track payments</p>
+          </div>
+
+          <!-- Fee Stats -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-500 text-sm">Total Invoices</p>
+                  <p id="fee-stat-total" class="text-2xl font-bold text-gray-800">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <i class="fas fa-file-invoice text-blue-500 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-500 text-sm">Total Amount</p>
+                  <p id="fee-stat-amount" class="text-2xl font-bold text-gray-800">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                  <i class="fas fa-rupee-sign text-green-500 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-500 text-sm">Paid</p>
+                  <p id="fee-stat-paid" class="text-2xl font-bold text-green-600">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                  <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-500 text-sm">Pending</p>
+                  <p id="fee-stat-pending" class="text-2xl font-bold text-orange-600">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+                  <i class="fas fa-clock text-orange-500 text-xl"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+            <button onclick="switchFeeTab('invoices')" id="fee-tab-invoices"
+              class="fee-tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-gray-300 transition-all whitespace-nowrap active-tab">
+              <i class="fas fa-list mr-2"></i>Invoices
+            </button>
+            <button onclick="switchFeeTab('create')" id="fee-tab-btn-create"
+              class="fee-tab-btn hidden px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-gray-300 transition-all whitespace-nowrap">
+              <i class="fas fa-plus mr-2"></i>Create Invoice
+            </button>
+          </div>
+
+          <!-- Tab: Invoices List -->
+          <div id="fee-tab-invoices-content" class="fee-tab-content">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div class="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row gap-4">
+                <div class="flex-1 flex flex-wrap gap-3">
+                  <select id="fee-class-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
+                    onchange="loadInvoices()">
+                    <option value="">All Classes</option>
+                  </select>
+                  <select id="fee-status-filter" class="px-4 py-2.5 border border-gray-200 rounded-xl bg-white"
+                    onchange="loadInvoices()">
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                  <div class="flex-1 search-input-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="fee-search" placeholder="Search..."
+                      class="w-full px-4 py-2.5 pl-11 border border-gray-200 rounded-xl" oninput="loadInvoices()">
+                  </div>
+                </div>
+                <button onclick="switchFeeTab('create')" id="new-invoice-btn"
+                  class="hidden px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition flex items-center gap-2">
+                  <i class="fas fa-plus"></i> New Invoice
+                </button>
+              </div>
+              <div class="p-5 sm:p-6">
+                <div id="fees-loading" class="py-12 text-center text-gray-500">
+                  <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+                  <p>Loading invoices...</p>
+                </div>
+                <div id="fees-content"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Create Invoice -->
+          <div id="fee-tab-create" class="fee-tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-4xl">
+              <h3 class="text-lg font-bold text-gray-800 mb-6">Create New Invoice</h3>
+              
+              <form id="create-invoice-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Invoice Level *</label>
+                    <select id="invoice-level" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl"
+                      onchange="onInvoiceLevelChange()">
+                      <option value="">Select Level</option>
+                      <option value="student">Student</option>
+                      <option value="class">Class</option>
+                      <option value="section">Section</option>
+                      <option value="school">School (All Students)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Academic Year *</label>
+                    <select id="invoice-academic-year" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                    </select>
+                  </div>
+                </div>
+
+                <div id="student-fields" class="hidden">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                      <select id="invoice-class" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl"
+                        onchange="loadInvoiceStudents()">
+                        <option value="">Select Class</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Student *</label>
+                      <select id="invoice-student" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                        <option value="">Select Student</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="class-fields" class="hidden">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Class *</label>
+                      <select id="invoice-target-class" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl"
+                        onchange="onInvoiceTargetClassChange()">
+                        <option value="">Select Class</option>
+                      </select>
+                    </div>
+                    <div id="section-field">
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                      <select id="invoice-section" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                        <option value="">All Sections</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-6">
+                  <h4 class="text-md font-semibold text-gray-800 mb-4">Invoice Details</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Amount (Rs.) *</label>
+                      <input type="number" id="invoice-amount" required min="1" step="0.01"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="0.00">
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
+                      <input type="date" id="invoice-due-date" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl">
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                    <textarea id="invoice-description" required rows="3"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl" placeholder="e.g. Tuition Fee, Annual Charges, etc."></textarea>
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                  <button type="button" onclick="switchFeeTab('invoices')"
+                    class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">Cancel</button>
+                  <button type="submit"
+                    class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                    <i class="fas fa-paper-plane mr-2"></i>Create Invoice
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
         <!-- Dashboard Section -->
         <section id="dashboard" class="content-section active">
           <!-- Welcome Card -->
@@ -1187,6 +1391,21 @@
                 <button onclick="showReportCardModal()"
                   class="w-full py-2 bg-indigo-50 text-indigo-600 rounded-xl font-medium hover:bg-indigo-100 transition">
                   Generate
+                </button>
+              </div>
+              <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="flex items-center gap-4 mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-orange-500 text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-800">My Fees</h3>
+                    <p class="text-sm text-gray-500">View & pay fees</p>
+                  </div>
+                </div>
+                <button onclick="loadMyFees()"
+                  class="w-full py-2 bg-orange-50 text-orange-600 rounded-xl font-medium hover:bg-orange-100 transition">
+                  View Fees
                 </button>
               </div>
             </div>
@@ -1476,18 +1695,84 @@
         <!-- Settings Section -->
         <section id="settings" class="content-section">
           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12">
-            <div class="text-center">
-              <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
-                <i class="fas fa-cogs text-4xl text-gray-400"></i>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Settings</h2>
+            
+            <!-- Payment Settings -->
+            <div class="mb-8">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-lg font-medium text-gray-800">Payment Settings</h3>
+                  <p class="text-sm text-gray-500">Configure payment gateway (Paytm)</p>
+                </div>
+                <button onclick="loadPaymentConfig()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                  <i class="fas fa-cog mr-2"></i> Configure
+                </button>
               </div>
-              <h2 class="text-2xl font-semibold text-gray-800 mb-2">Settings</h2>
-              <p class="text-gray-500">Coming soon - System configurations</p>
             </div>
           </div>
         </section>
 
       </div>
     </main>
+
+    <!-- Payment Config Modal -->
+    <div id="paymentConfigModal" class="modal hidden fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-indigo-600">
+          <h3 class="text-lg font-semibold text-white">Payment Configuration</h3>
+          <button onclick="closePaymentConfigModal()" class="text-white/80 hover:text-white transition">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+        <form id="paymentConfigForm" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Environment</label>
+              <select id="paytmStaging"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition bg-white">
+                <option value="true">Test/Staging</option>
+                <option value="false">Production</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Use Test mode for development</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Merchant ID (MID) *</label>
+              <input type="text" id="paytmMid" required placeholder="e.g., XXXXXXXXXXXXXX"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Merchant Key *</label>
+              <input type="password" id="paytmMerchantKey" required placeholder="Your merchant key"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Website Name</label>
+              <input type="text" id="paytmWebsite" placeholder="WEBSTAGING"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Industry Type</label>
+              <input type="text" id="paytmIndustryType" placeholder="Retail"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Callback URL</label>
+              <input type="url" id="paytmCallbackUrl" placeholder="https://your-domain.com/payment/callback"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition">
+              <p class="text-xs text-gray-500 mt-1">URL where Paytm will send payment response</p>
+            </div>
+          </div>
+          <div class="mt-6 flex gap-3">
+            <button type="submit" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium">
+              Save Configuration
+            </button>
+            <button type="button" onclick="closePaymentConfigModal()" class="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Class Modal -->
     <div id="classModal" class="modal fixed inset-0 z-50 items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2111,6 +2396,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
     </script>
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/payment.js"></script>
     <script src="js/components/SyncManager.js"></script>
     <script src="js/components/Toast.js"></script>
     <script src="js/components/Modal.js"></script>
@@ -2457,6 +2743,7 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
         }
         if (sectionId === 'dashboard') loadDashboardStats();
         if (sectionId === 'attendance') initAttendanceView();
+        if (sectionId === 'fees') loadFeesPage();
       }
 
       window.initAttendanceView = function () {
@@ -6455,6 +6742,526 @@ Jane Smith, ADM002, 10, A, 0987654321, 1122334455"
           }
           showToast('Error deleting notice', 'error');
         }
+      };
+
+      // ==================== FEE MANAGEMENT ====================
+      let feesData = [];
+
+      window.loadFeesPage = async function() {
+        // Check permission for invoice operations
+        const canCreateInvoice = RoleAccess.hasPermission('invoice:write');
+        const user = window.currentUser;
+        
+        console.log('[Fees] loadFeesPage called, user role:', user?.role, 'canCreateInvoice:', canCreateInvoice);
+        
+        // Show/hide Create Invoice tab button based on permission
+        const newInvoiceBtn = document.getElementById('fee-tab-btn-create'); // Tab button
+        const quickNewInvoiceBtn = document.getElementById('new-invoice-btn'); // Quick action button
+        
+        console.log('[Fees] newInvoiceBtn found:', !!newInvoiceBtn);
+        
+        if (newInvoiceBtn) {
+          if (canCreateInvoice) {
+            newInvoiceBtn.classList.remove('hidden');
+            console.log('[Fees] Showed newInvoiceBtn (has permission)');
+          } else {
+            newInvoiceBtn.classList.add('hidden');
+          }
+        }
+        if (quickNewInvoiceBtn) {
+          if (canCreateInvoice) {
+            quickNewInvoiceBtn.classList.remove('hidden');
+            console.log('[Fees] Showed quickNewInvoiceBtn (has permission)');
+          } else {
+            quickNewInvoiceBtn.classList.add('hidden');
+          }
+        }
+        
+        await loadInvoices();
+        populateFeeClassFilter();
+        
+        // Only populate form fields for those who can create invoices
+        if (canCreateInvoice) {
+          populateInvoiceClassFilter();
+          populateAcademicYear();
+          setDefaultDueDate();
+          
+          // Ensure event listener is attached
+          const form = document.getElementById('create-invoice-form');
+          if (form) {
+            console.log('[Fees] Form found, attaching submit listener');
+            form.removeEventListener('submit', handleInvoiceSubmit);
+            form.addEventListener('submit', handleInvoiceSubmit);
+          } else {
+            console.log('[Fees] Form NOT found!');
+          }
+        }
+      };
+
+      async function handleInvoiceSubmit(e) {
+        e.preventDefault();
+        console.log('[Fees] Form submitted!');
+
+        const token = auth.getToken();
+        const level = document.getElementById('invoice-level')?.value;
+        const academicYear = document.getElementById('invoice-academic-year')?.value;
+        const amount = document.getElementById('invoice-amount')?.value;
+        const dueDate = document.getElementById('invoice-due-date')?.value;
+        const description = document.getElementById('invoice-description')?.value;
+
+        if (!level) {
+          showToast('Please select invoice level', 'error');
+          return;
+        }
+
+        try {
+          let response;
+          
+          if (level === 'student') {
+            const studentId = document.getElementById('invoice-student')?.value;
+            const studentSelect = document.getElementById('invoice-student');
+            const studentName = studentSelect?.options[studentSelect.selectedIndex]?.dataset?.name || '';
+            const classSelect = document.getElementById('invoice-class');
+            
+            if (!studentId) {
+              showToast('Please select a student', 'error');
+              return;
+            }
+
+            response = await api.createInvoice(token, {
+              student_id: studentId,
+              student_name: studentName,
+              class: classSelect?.options[classSelect.selectedIndex]?.text || '',
+              academic_year: academicYear,
+              amount: amount,
+              due_date: dueDate,
+              description: description
+            });
+          } else {
+            let classId = null;
+            let sectionId = null;
+            
+            if (level === 'class' || level === 'section') {
+              classId = document.getElementById('invoice-target-class')?.value;
+              if (!classId) {
+                showToast('Please select a class', 'error');
+                return;
+              }
+              sectionId = document.getElementById('invoice-section')?.value || null;
+            }
+
+            response = await api.createBulkInvoices(token, {
+              level: level,
+              class_id: classId,
+              section_id: sectionId,
+              academic_year: academicYear,
+              amount: amount,
+              due_date: dueDate,
+              description: description
+            });
+          }
+
+          if (response.success) {
+            showToast(response.message || 'Invoice(s) created successfully', 'success');
+            document.getElementById('create-invoice-form')?.reset();
+            setDefaultDueDate();
+            switchFeeTab('invoices');
+            loadInvoices();
+          } else {
+            showToast(response.error || 'Failed to create invoice', 'error');
+          }
+        } catch (e) {
+          console.error('[Fees] Error creating invoice:', e);
+          showToast('Error creating invoice', 'error');
+        }
+      };
+
+      window.switchFeeTab = function(tabName) {
+        console.log('[Fees] Switching to tab:', tabName);
+        
+        // Handle buttons
+        document.querySelectorAll('.fee-tab-btn').forEach(btn => {
+          btn.classList.remove('active-tab', 'border-indigo-500', 'text-indigo-600');
+          btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        // Button ID mapping
+        const buttonId = tabName === 'create' ? 'fee-tab-btn-create' : 'fee-tab-' + tabName;
+        const activeBtn = document.getElementById(buttonId);
+        if (activeBtn) {
+          activeBtn.classList.add('active-tab', 'border-indigo-500', 'text-indigo-600');
+          activeBtn.classList.remove('border-transparent', 'text-gray-500');
+        }
+        
+        // Handle content - map tab names to content IDs
+        document.querySelectorAll('.fee-tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        
+        let contentId;
+        if (tabName === 'invoices') {
+          contentId = 'fee-tab-invoices-content';
+        } else if (tabName === 'create') {
+          contentId = 'fee-tab-create';
+        } else {
+          contentId = 'fee-tab-' + tabName;
+        }
+        
+        const activeContent = document.getElementById(contentId);
+        console.log('[Fees] activeContent found:', !!activeContent, 'id:', 'fee-tab-' + tabName);
+        if (activeContent) {
+          console.log('[Fees] activeContent hidden:', activeContent.classList.contains('hidden'));
+          activeContent.classList.remove('hidden');
+          console.log('[Fees] After remove hidden, classList:', activeContent.className);
+        }
+
+        // Reload invoices when switching to invoices tab
+        if (tabName === 'invoices') {
+          console.log('[Fees] Tab switched to invoices, feesData length:', feesData.length);
+          if (feesData.length > 0) {
+            renderInvoices();
+          } else {
+            console.log('[Fees] No feesData, calling loadInvoices...');
+            (async () => { 
+              try {
+                await loadInvoices(); 
+                console.log('[Fees] loadInvoices completed, feesData length:', feesData.length);
+              } catch(e) {
+                console.error('[Fees] Error in loadInvoices:', e);
+              }
+            })();
+          }
+        }
+      };
+
+      async function loadInvoices() {
+        const token = auth.getToken();
+        const user = window.currentUser;
+        const canCreateInvoice = RoleAccess.hasPermission('invoice:write');
+        const classFilter = document.getElementById('fee-class-filter')?.value;
+        const statusFilter = document.getElementById('fee-status-filter')?.value;
+        const searchQuery = document.getElementById('fee-search')?.value;
+
+        const loadingEl = document.getElementById('fees-loading');
+        const contentEl = document.getElementById('fees-content');
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (contentEl) contentEl.innerHTML = '';
+
+        try {
+          let studentIds = null;
+          
+          // If parent, get linked students and filter
+          if (user?.role === 'parent') {
+            const linkedRes = await api.getLinkedStudents(token);
+            console.log('[Fees] All linked students:', linkedRes.students);
+            if (linkedRes.success && linkedRes.students && linkedRes.students.length > 0) {
+              // Filter to only show students linked to THIS parent
+              studentIds = linkedRes.students
+                .filter(s => s.parent_id === user.id)
+                .map(s => s.id);
+              console.log('[Fees] Parent - linked student IDs (filtered by parent_id ' + user.id + '):', studentIds);
+            }
+          }
+
+          const response = await api.getInvoices(token, {
+            class_id: canCreateInvoice ? (classFilter || undefined) : undefined,
+            status: canCreateInvoice ? (statusFilter || undefined) : undefined,
+            search: canCreateInvoice ? (searchQuery || undefined) : undefined
+          });
+
+          if (loadingEl) loadingEl.classList.add('hidden');
+
+          if (response.success) {
+            let invoices = response.invoices || [];
+            
+            console.log('[Fees] User role:', user?.role, 'canCreateInvoice:', canCreateInvoice, 'Total invoices:', invoices.length);
+            
+            // Filter for parents - only show their children's invoices
+            if (user?.role === 'parent') {
+              console.log('[Fees] Parent detected - filtering invoices');
+              console.log('[Fees] Invoice student_ids:', invoices.map(inv => inv.student_id));
+              if (studentIds && studentIds.length > 0) {
+                console.log('[Fees] Filtering by student IDs:', studentIds);
+                invoices = invoices.filter(inv => studentIds.includes(inv.student_id));
+                console.log('[Fees] After filtering:', invoices.length, 'invoices');
+              } else {
+                console.log('[Fees] No linked students found - showing empty');
+                invoices = [];
+              }
+            }
+            
+            feesData = invoices;
+            renderInvoices();
+            updateFeeStats();
+          } else {
+            showToast(response.error || 'Failed to load invoices', 'error');
+          }
+        } catch (e) {
+          if (loadingEl) loadingEl.classList.add('hidden');
+          showToast('Error loading invoices', 'error');
+        }
+      }
+
+      function renderInvoices() {
+        console.log('[Fees] renderInvoices called, feesData length:', feesData.length);
+        const container = document.getElementById('fees-content');
+        console.log('[Fees] container found:', !!container);
+        console.log('[Fees] container parent hidden:', container?.parentElement?.classList.contains('hidden'));
+        if (!container) return;
+        
+        if (!feesData.length) {
+          container.innerHTML = '<div class="text-center py-12 text-gray-500"><i class="fas fa-inbox text-4xl mb-3"></i><p>No invoices found</p></div>';
+          return;
+        }
+
+        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b border-gray-200"><tr>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Invoice #</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due Date</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>';
+        html += '<th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>';
+        html += '</tr></thead><tbody class="divide-y divide-gray-100">';
+
+        feesData.forEach(inv => {
+          // Invoice status colors
+          let statusClass = 'bg-gray-100 text-gray-700';
+          const status = inv.status || 'Pending';
+          if (status === 'Paid') statusClass = 'bg-green-100 text-green-700';
+          else if (status === 'Sent' || status === 'Pending') statusClass = 'bg-blue-100 text-blue-700';
+          else if (status === 'Partially Paid') statusClass = 'bg-yellow-100 text-yellow-700';
+          else if (status === 'Overdue') statusClass = 'bg-red-100 text-red-700';
+          else if (status === 'Cancelled') statusClass = 'bg-gray-100 text-gray-500';
+          else if (status === 'Draft') statusClass = 'bg-gray-100 text-gray-600';
+          
+          html += '<tr class="hover:bg-gray-50">';
+          html += `<td class="px-4 py-3 text-sm font-medium text-gray-800">${inv.invoice_no || '-'}</td>`;
+          html += `<td class="px-4 py-3 text-sm text-gray-600">${inv.student_name || '-'}</td>`;
+          html += `<td class="px-4 py-3 text-sm text-gray-600">${inv.class || '-'}</td>`;
+          html += `<td class="px-4 py-3 text-sm font-medium text-gray-800">₹${parseFloat(inv.amount || 0).toFixed(2)}</td>`;
+          html += `<td class="px-4 py-3 text-sm text-gray-600">${inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>`;
+          html += `<td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${status}</span></td>`;
+          html += `<td class="px-4 py-3 text-sm">`;
+          
+          // Only show actions for users with invoice:write permission
+          const canWrite = RoleAccess.hasPermission('invoice:write');
+          if (canWrite) {
+            if (inv.status !== 'Paid') {
+              html += `<button onclick="markInvoicePaid('${inv.id}')" class="text-green-600 hover:text-green-800 mr-3" title="Mark as Paid"><i class="fas fa-check"></i></button>`;
+            }
+            html += `<button onclick="deleteInvoice('${inv.id}')" class="text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>`;
+          }
+          
+          html += '</td></tr>';
+        });
+
+        html += '</tbody></table></div>';
+        console.log('[Fees] Setting innerHTML, row count:', feesData.length);
+        container.innerHTML = html;
+        console.log('[Fees] innerHTML now:', container.innerHTML.substring(0, 200));
+      }
+
+      function updateFeeStats() {
+        const total = feesData.length;
+        const totalAmount = feesData.reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+        const paid = feesData.filter(inv => inv.status === 'Paid').length;
+        const pending = feesData.filter(inv => inv.status !== 'Paid').length;
+
+        const el = document.getElementById('fee-stat-total');
+        if (el) el.textContent = total;
+        const el2 = document.getElementById('fee-stat-amount');
+        if (el2) el2.textContent = '₹' + totalAmount.toLocaleString();
+        const el3 = document.getElementById('fee-stat-paid');
+        if (el3) el3.textContent = paid;
+        const el4 = document.getElementById('fee-stat-pending');
+        if (el4) el4.textContent = pending;
+      }
+
+      async function populateFeeClassFilter() {
+        const select = document.getElementById('fee-class-filter');
+        if (!select) return;
+        
+        try {
+          const token = auth.getToken();
+          const res = await api.getClasses(token);
+          if (res.success && res.classes) {
+            let html = '<option value="">All Classes</option>';
+            res.classes.forEach(c => {
+              html += `<option value="${c.id}">${c.name}</option>`;
+            });
+            select.innerHTML = html;
+          }
+        } catch (e) {
+          console.warn('Could not load classes:', e);
+        }
+      }
+
+      window.populateInvoiceClassFilter = async function() {
+        const selects = ['invoice-class', 'invoice-target-class'];
+        try {
+          const token = auth.getToken();
+          const res = await api.getClasses(token);
+          if (res.success && res.classes) {
+            let html = '<option value="">Select Class</option>';
+            res.classes.forEach(c => {
+              html += `<option value="${c.id}">${c.name}</option>`;
+            });
+            selects.forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.innerHTML = html;
+            });
+          }
+        } catch (e) {
+          console.warn('Could not load classes:', e);
+        }
+        
+        // Also populate sections dropdown
+        await loadInvoiceSections();
+      };
+
+      window.loadInvoiceSections = async function() {
+        const select = document.getElementById('invoice-section');
+        if (!select) return;
+        
+        try {
+          const token = auth.getToken();
+          const res = await api.getSections(token);
+          if (res.success && res.sections) {
+            let html = '<option value="">All Sections</option>';
+            res.sections.forEach(s => {
+              html += `<option value="${s.id}">${s.name}</option>`;
+            });
+            select.innerHTML = html;
+          }
+        } catch (e) {
+          console.warn('Could not load sections:', e);
+        }
+      };
+
+      window.populateAcademicYear = function() {
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear, currentYear + 1, currentYear + 2];
+        let html = '';
+        years.forEach(y => {
+          html += `<option value="${y}-${y + 1}">${y}-${y + 1}</option>`;
+        });
+        const el = document.getElementById('invoice-academic-year');
+        if (el) el.innerHTML = html;
+      };
+
+      window.setDefaultDueDate = function() {
+        const today = new Date();
+        const dueDate = new Date(today.setDate(today.getDate() + 30));
+        const el = document.getElementById('invoice-due-date');
+        if (el) el.value = dueDate.toISOString().split('T')[0];
+      };
+
+      window.onInvoiceLevelChange = function() {
+        const level = document.getElementById('invoice-level')?.value;
+        const studentFields = document.getElementById('student-fields');
+        const classFields = document.getElementById('class-fields');
+        
+        if (studentFields) studentFields.classList.add('hidden');
+        if (classFields) classFields.classList.add('hidden');
+
+        if (level === 'student') {
+          if (studentFields) studentFields.classList.remove('hidden');
+        } else if (level === 'class' || level === 'section') {
+          if (classFields) classFields.classList.remove('hidden');
+        }
+      };
+
+      window.onInvoiceTargetClassChange = async function() {
+        const classId = document.getElementById('invoice-target-class')?.value;
+        const sectionSelect = document.getElementById('invoice-section');
+        
+        if (!sectionSelect) return;
+        
+        // Reset section dropdown
+        sectionSelect.innerHTML = '<option value="">All Sections</option>';
+        
+        if (!classId) return;
+        
+        try {
+          const token = auth.getToken();
+          // Get sections for this class
+          const res = await api.getSections(token, { class_id: classId });
+          if (res.success && res.sections) {
+            let html = '<option value="">All Sections</option>';
+            res.sections.forEach(s => {
+              html += `<option value="${s.id}">${s.name}</option>`;
+            });
+            sectionSelect.innerHTML = html;
+          }
+        } catch (e) {
+          console.warn('Could not load sections:', e);
+        }
+      };
+
+      window.loadInvoiceStudents = async function() {
+        const classId = document.getElementById('invoice-class')?.value;
+        const select = document.getElementById('invoice-student');
+        
+        if (!select) return;
+        if (!classId) {
+          select.innerHTML = '<option value="">Select Student</option>';
+          return;
+        }
+
+        try {
+          const token = auth.getToken();
+          const res = await api.getStudents(token, { class_id: classId });
+          if (res.success && res.students) {
+            let html = '<option value="">Select Student</option>';
+            res.students.forEach(s => {
+              html += `<option value="${s.id}" data-name="${s.name}">${s.name} (${s.admission_no || s.email})</option>`;
+            });
+            select.innerHTML = html;
+          }
+        } catch (e) {
+          showToast('Error loading students', 'error');
+        }
+      };
+
+      // Note: Form submit handler is now attached in loadFeesPage function
+
+      window.markInvoicePaid = async function(invoiceId) {
+        if (!confirm('Mark this invoice as paid?')) return;
+
+        const token = auth.getToken();
+        try {
+          const res = await api.updateInvoice(token, { id: invoiceId, status: 'Paid' });
+          if (res.success) {
+            showToast('Invoice marked as paid', 'success');
+            loadInvoices();
+          } else {
+            showToast(res.error || 'Failed to update invoice', 'error');
+          }
+        } catch (e) {
+          showToast('Error updating invoice', 'error');
+        }
+      };
+
+      window.deleteInvoice = async function(invoiceId) {
+        if (!confirm('Are you sure you want to delete this invoice?')) return;
+
+        const token = auth.getToken();
+        try {
+          const res = await api.deleteInvoice(token, { id: invoiceId });
+          if (res.success) {
+            showToast('Invoice deleted', 'success');
+            loadInvoices();
+          } else {
+            showToast(res.error || 'Failed to delete invoice', 'error');
+          }
+        } catch (e) {
+          showToast('Error deleting invoice', 'error');
+        }
+      };
+
+      window.loadMyFees = function() {
+        navigateTo('fees');
       };
 
     </script>

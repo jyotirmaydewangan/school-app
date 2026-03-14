@@ -42,4 +42,47 @@ describe('CacheConfig', () => {
     test('should return empty array for actions with no invalidation config', () => {
         expect(CacheConfig.getInvalidatePatterns('someReadAction')).toEqual([]);
     });
+
+    test('should handle isPostReadAction correctly', () => {
+        expect(CacheConfig.isPostReadAction('getUsers')).toBe(true);
+        expect(CacheConfig.isPostReadAction('unknownAction')).toBe(false);
+    });
+
+    test('should handle all invoice-related actions', () => {
+        expect(CacheConfig.getRule('getInvoices')).toBeDefined();
+        expect(CacheConfig.getScope('getInvoices')).toBe(CACHE_SCOPES.USER);
+        expect(CacheConfig.getRule('getAllInvoices')).toBeDefined();
+        expect(CacheConfig.getScope('getAllInvoices')).toBe(CACHE_SCOPES.GLOBAL);
+        expect(CacheConfig.getRule('getDefaulterList')).toBeDefined();
+        expect(CacheConfig.getRule('getFeeStructures')).toBeDefined();
+        expect(CacheConfig.getRule('getFeeDashboardStats')).toBeDefined();
+        expect(CacheConfig.getRule('getPaymentAnalytics')).toBeDefined();
+    });
+
+    test('should handle all invoice-related actions', () => {
+        expect(CacheConfig.getRule('getInvoices')).toBeDefined();
+        expect(CacheConfig.getScope('getInvoices')).toBe(CACHE_SCOPES.USER);
+        expect(CacheConfig.getRule('getAllInvoices')).toBeDefined();
+        expect(CacheConfig.getScope('getAllInvoices')).toBe(CACHE_SCOPES.GLOBAL);
+        expect(CacheConfig.getRule('getDefaulterList')).toBeDefined();
+        expect(CacheConfig.getRule('getFeeStructures')).toBeDefined();
+        expect(CacheConfig.getRule('getFeeDashboardStats')).toBeDefined();
+        expect(CacheConfig.getRule('getPaymentAnalytics')).toBeDefined();
+    });
+
+    test('should have correct invalidation patterns for notices', () => {
+        expect(CacheConfig.getInvalidatePatterns('createNotice')).toContain('getNotices');
+        expect(CacheConfig.getInvalidatePatterns('deleteNotice')).toContain('getNotices');
+    });
+
+    test('should have correct invalidation patterns for marks', () => {
+        expect(CacheConfig.getInvalidatePatterns('enterMarks')).toContain('getMarks');
+        expect(CacheConfig.getInvalidatePatterns('enterMarks')).toContain('getDashboardStats');
+    });
+
+    test('should handle write request detection', () => {
+        expect(CacheConfig.shouldCache('getUsers')).toBe(true);
+        expect(CacheConfig.shouldCache('createUser')).toBe(false);
+        expect(CacheConfig.shouldCache('unknown')).toBe(false);
+    });
 });

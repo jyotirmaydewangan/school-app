@@ -44,13 +44,16 @@ async function deployAppsScript(tenantName) {
   const templateDir = path.join(ROOT_DIR, 'apps-script');
 
   log('Syncing template files to tenant folder...', 'info');
-  const templateFiles = ['Code.gs', '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs',
+  const templateFiles = ['Code.gs', 'config.gs', 'appsscript.json', '.claspignore',
+    '01_SheetService.gs', '02_Utils.gs', '03_ConfigService.gs',
     '04_UserRepository.gs', '05_SessionRepository.gs', '06_RoleRepository.gs',
     '07_AuthHandler.gs', '08_RoleHandler.gs', '09_UserHandler.gs',
-    '10_StudentRepository.gs', '11_AttendanceRepository.gs', '12_ExamRepository.gs',
+    '10_StudentRepository.gs', '11_AttendanceRepository.gs',
+    '11a_SubjectRepository.gs', '12_ExamRepository.gs',
     '13_TimetableRepository.gs', '14_CurriculumRepository.gs', '15_ClassRepository.gs',
     '16_SchoolRepository.gs', '17_SectionRepository.gs', '18_NoticeboardRepository.gs',
-    'config.gs', 'appsscript.json', '.claspignore'];
+    '19_InvoiceRepository.gs', '20_TransactionRepository.gs', '21_ReceiptRepository.gs',
+    '22_PaytmPayments.gs'];
 
   templateFiles.forEach(file => {
     const src = path.join(templateDir, file);

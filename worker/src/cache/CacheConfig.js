@@ -62,7 +62,12 @@ function _getDefaultPolicy() {
     'getLinkedStudents': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MONTH, isBroad: true },
     'getLinkedParents': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
     'getPendingRegistrations': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MIN, isBroad: true },
-    'verify': { scope: CACHE_SCOPES.SESSION, ttl: FIFTEEN_MIN, isBroad: true }
+    'verify': { scope: CACHE_SCOPES.SESSION, ttl: FIFTEEN_MIN, isBroad: true },
+    'getInvoices': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
+    'getInvoice': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false },
+    'getPaymentStatus': { scope: CACHE_SCOPES.USER, ttl: ONE_MIN, isBroad: false },
+    'getPaymentConfig': { scope: CACHE_SCOPES.GLOBAL, ttl: ONE_MIN, isBroad: false },
+    'getReceipt': { scope: CACHE_SCOPES.USER, ttl: ONE_DAY, isBroad: false }
   };
 }
 
@@ -114,7 +119,13 @@ function _getDefaultInvalidationMap() {
     'deleteResource': ['getResources'],
     'createNotice': ['getNotices', 'getDashboardStats'],
     'updateNotice': ['getNotices'],
-    'deleteNotice': ['getNotices']
+    'deleteNotice': ['getNotices'],
+    'createInvoice': ['getInvoices'],
+    'updateInvoice': ['getInvoices'],
+    'deleteInvoice': ['getInvoices'],
+    'createPaymentOrder': ['getPaymentStatus', 'getInvoices'],
+    'verifyPaymentStatus': ['getPaymentStatus', 'getInvoices'],
+    'savePaymentConfig': ['getPaymentConfig']
   };
 }
 

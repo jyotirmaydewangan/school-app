@@ -15,7 +15,12 @@ const SHEET_NAMES = Object.freeze({
   CLASSES: 'classes',
   SCHOOLS: 'schools',
   SECTIONS: 'sections',
-  NOTICEBOARD: 'noticeboard'
+  NOTICEBOARD: 'noticeboard',
+  INVOICES: 'invoices',
+  FEE_STRUCTURES: 'fee_structures',
+  TRANSACTIONS: 'transactions',
+  PAYMENT_REQUESTS: 'payment_requests',
+  RECEIPTS: 'receipts'
 });
 
 function onOpen() {
@@ -116,7 +121,12 @@ const SheetService = {
       SHEET_NAMES.CLASSES,
       SHEET_NAMES.SCHOOLS,
       SHEET_NAMES.SECTIONS,
-      SHEET_NAMES.NOTICEBOARD
+      SHEET_NAMES.NOTICEBOARD,
+      SHEET_NAMES.INVOICES,
+      SHEET_NAMES.FEE_STRUCTURES,
+      SHEET_NAMES.TRANSACTIONS,
+      SHEET_NAMES.PAYMENT_REQUESTS,
+      SHEET_NAMES.RECEIPTS
     ];
     
     const totalSheets = sheetNames.length;
@@ -168,6 +178,8 @@ const SheetService = {
       [SHEET_NAMES.SESSIONS]: ['session_id', 'user_id', 'expires_at', 'last_activity', 'created_at'],
       [SHEET_NAMES.CONFIG]: ['key', 'value'],
       [SHEET_NAMES.ROLES]: ['role_id', 'role_name', 'permissions', 'pages', 'is_active'],
+      [SHEET_NAMES.SUBJECTS]: ['id', 'name', 'code', 'class', 'teacher_id', 'is_active', 'created_at'],
+      [SHEET_NAMES.MARKS]: ['id', 'student_id', 'exam_id', 'subject_id', 'marks', 'grade', 'remarks', 'entered_by', 'created_at', 'updated_at'],
       [SHEET_NAMES.RESOURCES]: ['id', 'class', 'subject_id', 'title', 'type', 'drive_file_id', 'drive_url', 'created_at'],
       [SHEET_NAMES.CLASS_INDEX]: ['student_id', 'class_id', 'section_id', 'admission_no', 'name'],
       [SHEET_NAMES.CLASSES]: ['id', 'school_id', 'name', 'stream', 'academic_year', 'is_active', 'created_at'],
@@ -175,7 +187,12 @@ const SheetService = {
       [SHEET_NAMES.SECTIONS]: ['id', 'class_id', 'name', 'room', 'class_teacher_id', 'created_at'],
       [SHEET_NAMES.STUDENTS]: ['id', 'admission_no', 'name', 'class_id', 'section_id', 'parent_phone1', 'parent_phone2', 'status', 'created_at', 'updated_at'],
       [SHEET_NAMES.PARENT_STUDENTS]: ['id', 'parent_id', 'student_id', 'created_at'],
-      [SHEET_NAMES.NOTICEBOARD]: ['id', 'title', 'content', 'image_url', 'created_by', 'created_at', 'status']
+      [SHEET_NAMES.NOTICEBOARD]: ['id', 'title', 'content', 'image_url', 'created_by', 'created_at', 'status'],
+      [SHEET_NAMES.INVOICES]: ['id', 'invoice_no', 'student_id', 'student_name', 'class', 'academic_year', 'amount', 'description', 'due_date', 'status', 'created_at', 'paid_at', 'created_by'],
+      [SHEET_NAMES.FEE_STRUCTURES]: ['id', 'name', 'fee_type', 'class', 'academic_year', 'amount', 'is_active', 'created_at', 'created_by'],
+      [SHEET_NAMES.TRANSACTIONS]: ['id', 'invoice_id', 'order_id', 'txn_token', 'amount', 'mode', 'status', 'transaction_id', 'paytm_response', 'checksum_verified', 'created_at', 'updated_at', 'payment_mode', 'bank_name'],
+      [SHEET_NAMES.PAYMENT_REQUESTS]: ['id', 'invoice_id', 'student_id', 'student_name', 'amount', 'mode', 'transaction_ref', 'transaction_date', 'status', 'submitted_by', 'created_at', 'remarks', 'reference_no', 'verified_by', 'verified_at', 'admin_remarks'],
+      [SHEET_NAMES.RECEIPTS]: ['id', 'transaction_id', 'invoice_id', 'receipt_no', 'student_id', 'amount', 'payment_mode', 'created_at']
     };
     
     if (schemas[name]) {

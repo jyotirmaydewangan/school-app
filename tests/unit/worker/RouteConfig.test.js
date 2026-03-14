@@ -78,6 +78,41 @@ describe('RouteConfig', () => {
 // ─── RequestParser ────────────────────────────────────────────────────────────
 
 describe('RequestParser', () => {
+    // ─── parseBody ────────────────────────────────────────────────────────────
+
+    describe('parseBody', () => {
+        test('parses JSON content type', async () => {
+            const request = {
+                headers: { get: () => 'application/json' },
+                clone: () => ({
+                    text: () => Promise.resolve(JSON.stringify({ foo: 'bar' }))
+                })
+            };
+            const result = await RequestParser.parseBody(request);
+            expect(result).toBe('{"foo":"bar"}');
+        });
+
+        test('returns null for unparseable JSON', async () => {
+            const request = {
+                headers: { get: () => 'application/json' },
+                clone: () => ({
+                    text: () => Promise.reject(new Error('Parse error'))
+                })
+            };
+            const result = await RequestParser.parseBody(request);
+            expect(result).toBeNull();
+        });
+
+        test('returns null for unsupported content type', async () => {
+            const request = {
+                headers: { get: () => 'text/plain' },
+                clone: () => ({})
+            };
+            const result = await RequestParser.parseBody(request);
+            expect(result).toBeNull();
+        });
+    });
+
     // ─── buildApiUrl ──────────────────────────────────────────────────────────
 
     describe('buildApiUrl', () => {
@@ -108,6 +143,30 @@ describe('RequestParser', () => {
         test('works with empty queryParams', () => {
             const url = RequestParser.buildApiUrl('https://script.google.com/exec', 'login', new URLSearchParams());
             expect(url).toContain('action=login');
+        });
+
+        test('handles plain object as queryParams', () => {
+            const params = { class: 'A', section: 'B', year: '2024' };
+            const url = RequestParser.buildApiUrl('https://script.google.com/exec', 'getAttendanceByClass', params);
+            expect(url).toContain('action=getAttendanceByClass');
+            expect(url).toContain('class=A');
+            expect(url).toContain('section=B');
+            expect(url).toContain('year=2024');
+        });
+
+        test('filters out undefined and null values from object', () => {
+            const params = { valid: 'yes', undef: undefined, nul: null };
+            const url = RequestParser.buildApiUrl('https://script.google.com/exec', 'test', params);
+            expect(url).toContain('valid=yes');
+            expect(url).not.toContain('undef');
+            expect(url).not.toContain('nul');
+        });
+
+        test('handles object with action key - excludes it', () => {
+            const params = { action: 'wrong', name: 'test' };
+            const url = RequestParser.buildApiUrl('https://script.google.com/exec', 'correctAction', params);
+            expect(url).toContain('action=correctAction');
+            expect(url).not.toContain('action=wrong');
         });
     });
 });

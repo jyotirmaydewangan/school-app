@@ -109,6 +109,21 @@ function doGet(e) {
       case 'getNotices':
         result = handleGetNotices(params.token, params);
         break;
+      case 'getInvoices':
+        result = handleGetInvoices(params.token, params);
+        break;
+      case 'getInvoice':
+        result = handleGetInvoice(params.token, params);
+        break;
+      case 'paytmCallback':
+        result = handlePaytmCallback(params);
+        break;
+      case 'getFeeStructures':
+        result = handleGetFeeStructures(params.token, params);
+        break;
+      case 'getFeeDashboardStats':
+        result = handleGetFeeDashboardStats(params.token);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -312,8 +327,80 @@ function doPost(e) {
       case 'approveUser':
         result = handleApproveUser(token, postData);
         break;
+      case 'getDashboardStats':
+        result = handleGetDashboardStats(token, postData);
+        break;
+      case 'getFeeDashboardStats':
+        result = handleGetFeeDashboardStats(token);
+        break;
       case 'rejectUser':
         result = handleRejectUser(token, postData);
+        break;
+      case 'getPaymentConfig':
+        result = handleGetPaymentConfig(token);
+        break;
+      case 'savePaymentConfig':
+        result = handleSavePaymentConfig(token, postData);
+        break;
+      case 'getInvoices':
+        result = handleGetInvoices(token, params);
+        break;
+      case 'getInvoice':
+        result = handleGetInvoice(token, params);
+        break;
+      case 'createPaymentOrder':
+        result = handleCreatePaymentOrder(token, postData);
+        break;
+      case 'getPaymentStatus':
+        result = handleGetPaymentStatus(token, postData);
+        break;
+      case 'verifyPaymentStatus':
+        result = handleVerifyPaymentStatus(token, postData);
+        break;
+      case 'getReceipt':
+        result = handleGetReceipt(token, params);
+        break;
+      case 'createInvoice':
+        result = handleCreateInvoice(token, postData);
+        break;
+      case 'createBulkInvoices':
+        result = handleCreateBulkInvoices(token, postData);
+        break;
+      case 'updateInvoice':
+        result = handleUpdateInvoice(token, postData);
+        break;
+      case 'deleteInvoice':
+        result = handleDeleteInvoice(token, postData);
+        break;
+      case 'getFeeStructures':
+        result = handleGetFeeStructures(token, postData);
+        break;
+      case 'createFeeStructure':
+        result = handleCreateFeeStructure(token, postData);
+        break;
+      case 'updateFeeStructure':
+        result = handleUpdateFeeStructure(token, postData);
+        break;
+      case 'deleteFeeStructure':
+        result = handleDeleteFeeStructure(token, postData);
+        break;
+      case 'generateBulkInvoices':
+        result = handleGenerateBulkInvoices(token, postData);
+        break;
+      case 'generateSchoolInvoices':
+        result = handleGenerateSchoolInvoices(token, postData);
+        break;
+      case 'getAllInvoices':
+        result = handleGetAllInvoices(token, postData);
+        break;
+      case 'getDefaulterList':
+        result = handleGetDefaulterList(token, postData);
+        break;
+      case 'getPaymentAnalytics':
+        result = handleGetPaymentAnalytics(token, postData);
+        break;
+      case 'getFeeDashboardStats':
+        result = handleGetFeeDashboardStats(token);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -1207,8 +1294,8 @@ function handleRejectUser(token, params) {
   return { success: true, message: 'User rejected successfully', user: user };
 }
 
-function handleGetDashboardStats(token) {
-  const auth = requireAdmin(token);
+function handleGetDashboardStats(token, params) {
+  const auth = requirePermission(token, 'read:users');
   if (!auth.success) return auth;
   
   const usersResult = UserRepository.findAll({});
@@ -1229,8 +1316,8 @@ function handleGetDashboardStats(token) {
   const teachersPending = pendingUsers.filter(u => u.role === 'teacher').length;
   const parentsApproved = approvedUsers.filter(u => u.role === 'parent').length;
   const parentsPending = pendingUsers.filter(u => u.role === 'parent').length;
-  
-  return {
+
+  const result = {
     success: true,
     stats: {
       users_approved: approvedUsers.length,
@@ -1243,6 +1330,19 @@ function handleGetDashboardStats(token) {
       parents_pending: parentsPending
     }
   };
+
+  if (params && params.include_fees === 'true') {
+    try {
+      const feeStats = handleGetFeeDashboardStats(token);
+      if (feeStats.success) {
+        result.stats.feeStats = feeStats.stats;
+      }
+    } catch (e) {
+      Logger.log('Error getting fee stats: ' + e.message);
+    }
+  }
+  
+  return result;
 }
 
 function handleGetLinkedStudents(token) {
@@ -1504,6 +1604,839 @@ function handleDeleteNotice(token, data) {
   try {
     const result = NoticeboardRepository.delete(data.id);
     return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetPaymentConfig(token) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    const config = {
+      staging: ConfigService.get('paytm_staging', true),
+      mid: ConfigService.get('paytm_mid', ''),
+      merchantKey: ConfigService.get('paytm_merchant_key', ''),
+      website: ConfigService.get('paytm_website', 'WEBSTAGING'),
+      industryType: ConfigService.get('paytm_industry_type', 'Retail'),
+      callbackUrl: ConfigService.get('paytm_callback_url', '')
+    };
+    return { success: true, config };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleSavePaymentConfig(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (data.staging !== undefined) {
+      ConfigService.set('paytm_staging', data.staging);
+    }
+    if (data.mid) {
+      ConfigService.set('paytm_mid', data.mid);
+    }
+    if (data.merchantKey) {
+      ConfigService.set('paytm_merchant_key', data.merchantKey);
+    }
+    if (data.website) {
+      ConfigService.set('paytm_website', data.website);
+    }
+    if (data.industryType) {
+      ConfigService.set('paytm_industry_type', data.industryType);
+    }
+    if (data.callbackUrl) {
+      ConfigService.set('paytm_callback_url', data.callbackUrl);
+    }
+
+    return { success: true, message: 'Payment configuration saved successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetInvoices(token, params) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    const options = {};
+    if (params.student_id) options.student_id = params.student_id;
+    if (params.status) options.status = params.status;
+    if (params.id) {
+      const invoice = InvoiceRepository.findById(params.id);
+      return { success: true, invoices: invoice ? [invoice] : [] };
+    }
+    
+    const invoices = InvoiceRepository.findAll(options);
+    return { success: true, invoices };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetInvoice(token, params) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    if (!params.id) {
+      return { success: false, error: 'Invoice ID is required' };
+    }
+    
+    const invoice = InvoiceRepository.findById(params.id);
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+    
+    return { success: true, invoice };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleCreateInvoice(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.student_id) {
+      return { success: false, error: 'Student ID is required' };
+    }
+    if (!data.amount) {
+      return { success: false, error: 'Amount is required' };
+    }
+    if (!data.due_date) {
+      return { success: false, error: 'Due date is required' };
+    }
+
+    const invoice = InvoiceRepository.create({
+      student_id: data.student_id,
+      student_name: data.student_name || '',
+      class: data.class || '',
+      academic_year: data.academic_year || new Date().getFullYear().toString(),
+      amount: parseFloat(data.amount),
+      description: data.description || '',
+      due_date: data.due_date,
+      status: 'Pending',
+      created_by: auth.user.name || auth.user.email
+    });
+
+    return { success: true, invoice, message: 'Invoice created successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleCreateBulkInvoices(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.level) {
+      return { success: false, error: 'Invoice level is required' };
+    }
+    if (!data.amount) {
+      return { success: false, error: 'Amount is required' };
+    }
+    if (!data.due_date) {
+      return { success: false, error: 'Due date is required' };
+    }
+
+    const studentsResult = StudentRepository.findAll({});
+    const students = studentsResult.students || [];
+    
+    Logger.log('handleCreateBulkInvoices: level=' + data.level + ', class_id=' + data.class_id + ', students count=' + students.length);
+    if (students.length > 0) {
+      Logger.log('First 3 students sample: ' + JSON.stringify(students.slice(0, 3)));
+    }
+
+    let targetStudents = [];
+    let className = null;
+    let sectionName = null;
+
+    // Get class name from class_id if provided
+    if (data.class_id) {
+      const classesResult = ClassRepository.findAll({});
+      const cls = (classesResult.classes || []).find(c => String(c.id) === String(data.class_id));
+      if (cls) {
+        className = cls.name;
+        Logger.log('Found class: ' + className);
+      }
+    }
+
+    // Debug: show all student class values
+    if (students.length > 0) {
+      const classValues = students.map(s => ({ name: s.name, class_id: s.class_id, class: s.class, class_name: s.class_name }));
+      Logger.log('All student class values: ' + JSON.stringify(classValues));
+    }
+
+    // Get section name from section_id if provided
+    if (data.section_id) {
+      const sectionsResult = SectionRepository.findAll({});
+      const sec = (sectionsResult.sections || []).find(s => String(s.id) === String(data.section_id));
+      if (sec) {
+        sectionName = sec.name;
+      }
+    }
+
+    if (data.level === 'school') {
+      // School level - all students (include all statuses for now)
+      targetStudents = students;
+      Logger.log('School level - target students: ' + targetStudents.length);
+    } else if (data.level === 'class') {
+      // Class level - filter by class_id
+      if (!className) {
+        return { success: false, error: 'Class is required for class-level invoice' };
+      }
+      // Students sheet uses class_id field - match against class ID
+      targetStudents = students.filter(function(s) {
+        // class_id is the actual field in students sheet
+        const studentClassId = s.class_id || '';
+        const matchesClass = String(studentClassId).toLowerCase().trim() === String(data.class_id).toLowerCase().trim();
+        Logger.log('Student: ' + s.name + ', class_id: ' + studentClassId + ', looking for: ' + data.class_id + ', matches: ' + matchesClass);
+        return matchesClass;
+      });
+      Logger.log('Class level - class: ' + className + ' (id: ' + data.class_id + '), target students: ' + targetStudents.length);
+    } else if (data.level === 'section') {
+      // Section level - filter by class_id and section_id
+      if (!className) {
+        return { success: false, error: 'Class is required for section-level invoice' };
+      }
+      targetStudents = students.filter(function(s) {
+        // Match by class_id
+        const studentClassId = s.class_id || '';
+        const matchesClass = String(studentClassId).toLowerCase().trim() === String(data.class_id).toLowerCase().trim();
+        
+        let matchesSection = true;
+        if (data.section_id) {
+          const studentSectionId = s.section_id || '';
+          matchesSection = String(studentSectionId).toLowerCase().trim() === String(data.section_id).toLowerCase().trim();
+        }
+        
+        return matchesClass && matchesSection;
+      });
+      Logger.log('Section level - class_id: ' + data.class_id + ', section_id: ' + data.section_id + ', target students: ' + targetStudents.length);
+    }
+
+    if (targetStudents.length === 0) {
+      // Debug: show all student class values in error
+      const classDebug = students.slice(0, 5).map(s => ({ name: s.name, class: s.class, class_name: s.class_name })).map(JSON.stringify).join('; ');
+      return { 
+        success: false, 
+        error: 'No students found. Level: ' + data.level + ', Looking for class: "' + className + '", Students: ' + classDebug + '. Total: ' + students.length
+      };
+    }
+
+    const createdInvoices = [];
+    targetStudents.forEach(function(student) {
+      const invoice = InvoiceRepository.create({
+        student_id: student.id,
+        student_name: student.name,
+        class: student.class_name || student.class || className || '',
+        academic_year: data.academic_year || new Date().getFullYear().toString(),
+        amount: parseFloat(data.amount),
+        description: data.description || '',
+        due_date: data.due_date,
+        status: 'Sent',
+        created_by: auth.user.name || auth.user.email
+      });
+      createdInvoices.push(invoice);
+    });
+
+    return { 
+      success: true, 
+      count: createdInvoices.length,
+      message: 'Created ' + createdInvoices.length + ' invoice(s) successfully' 
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleUpdateInvoice(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.id) {
+      return { success: false, error: 'Invoice ID is required' };
+    }
+
+    const invoice = InvoiceRepository.findById(data.id);
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+
+    const updateData = {};
+    if (data.status) updateData.status = data.status;
+    if (data.amount !== undefined) updateData.amount = parseFloat(data.amount);
+    if (data.due_date) updateData.due_date = data.due_date;
+    if (data.description) updateData.description = data.description;
+
+    InvoiceRepository.update(data.id, updateData);
+
+    return { success: true, message: 'Invoice updated successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleDeleteInvoice(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.id) {
+      return { success: false, error: 'Invoice ID is required' };
+    }
+
+    const invoice = InvoiceRepository.findById(data.id);
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+
+    InvoiceRepository.delete(data.id);
+
+    return { success: true, message: 'Invoice deleted successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleCreatePaymentOrder(token, data) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.invoice_id) {
+      return { success: false, error: 'Invoice ID is required' };
+    }
+
+    const invoice = InvoiceRepository.findById(data.invoice_id);
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+
+    if (invoice.status === 'Paid') {
+      return { success: false, error: 'Invoice is already paid' };
+    }
+
+    const staging = ConfigService.get('paytm_staging', true);
+    const mid = ConfigService.get('paytm_mid');
+    const merchantKey = ConfigService.get('paytm_merchant_key');
+    const callbackUrl = ConfigService.get('paytm_callback_url', '');
+    const website = ConfigService.get('paytm_website', 'WEBSTAGING');
+    const industryType = ConfigService.get('paytm_industry_type', 'Retail');
+
+    if (!mid || !merchantKey) {
+      return { success: false, error: 'Payment gateway not configured. Please contact administrator.' };
+    }
+
+    const orderId = 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const amount = parseFloat(invoice.amount);
+
+    let paymentUrl = 'https://secure.paytm.in/merchant-order-post';
+    if (staging === true || staging === 'true') {
+      paymentUrl = 'https://securegw-stage.paytm.in/theia/api/v1/initiateTransaction?orderId=' + orderId;
+    }
+
+    const txnToken = generatePaytmChecksum(orderId, mid, merchantKey, amount, staging);
+
+    TransactionRepository.create({
+      invoice_id: data.invoice_id,
+      order_id: orderId,
+      txn_token: txnToken,
+      amount: amount,
+      mode: 'Paytm',
+      status: 'Initiated'
+    });
+
+    const paymentUrlForm = staging === true || staging === 'true' 
+      ? 'https://securegw-stage.paytm.in/theia/api/v1/showPaymentPage?orderId=' + orderId
+      : 'https://secure.paytm.in/theia/api/v1/showPaymentPage?orderId=' + orderId;
+
+    return {
+      success: true,
+      orderId: orderId,
+      txnToken: txnToken,
+      paymentUrl: paymentUrlForm,
+      mid: mid,
+      amount: amount,
+      invoice: invoice
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetPaymentStatus(token, data) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.order_id) {
+      return { success: false, error: 'Order ID is required' };
+    }
+
+    const transaction = TransactionRepository.findByOrderId(data.order_id);
+    if (!transaction) {
+      return { success: false, error: 'Transaction not found' };
+    }
+
+    const invoice = InvoiceRepository.findById(transaction.invoice_id);
+    let receipt = null;
+    if (transaction.status === 'Success') {
+      receipt = ReceiptRepository.findByTransactionId(transaction.id);
+    }
+
+    return {
+      success: true,
+      transaction: transaction,
+      invoice: invoice,
+      receipt: receipt
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleVerifyPaymentStatus(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.order_id) {
+      return { success: false, error: 'Order ID is required' };
+    }
+
+    const transaction = TransactionRepository.findByOrderId(data.order_id);
+    if (!transaction) {
+      return { success: false, error: 'Transaction not found' };
+    }
+
+    const staging = ConfigService.get('paytm_staging', true);
+    const mid = ConfigService.get('paytm_mid');
+    const merchantKey = ConfigService.get('paytm_merchant_key');
+
+    const status = verifyPaytmChecksum(data.order_id, mid, merchantKey, staging);
+
+    if (status && status.RESPCODE === '01') {
+      TransactionRepository.updateByOrderId(data.order_id, {
+        status: 'Success',
+        transaction_id: status.TXNID || '',
+        paytm_response: JSON.stringify(status),
+        checksum_verified: true
+      });
+
+      InvoiceRepository.markAsPaid(transaction.invoice_id);
+
+      ReceiptRepository.create({
+        transaction_id: transaction.id,
+        invoice_id: transaction.invoice_id,
+        student_id: transaction.student_id || '',
+        amount: transaction.amount,
+        payment_mode: 'Online'
+      });
+
+      return {
+        success: true,
+        status: 'Success',
+        transaction: TransactionRepository.findByOrderId(data.order_id)
+      };
+    } else {
+      TransactionRepository.updateByOrderId(data.order_id, {
+        status: 'Failed',
+        paytm_response: JSON.stringify(status),
+        checksum_verified: false
+      });
+
+      return {
+        success: false,
+        status: 'Failed',
+        error: status.RESPMSG || 'Payment verification failed'
+      };
+    }
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetReceipt(token, params) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    let receipt = null;
+    
+    if (params.id) {
+      receipt = ReceiptRepository.findById(params.id);
+    } else if (params.receipt_no) {
+      receipt = ReceiptRepository.findByReceiptNo(params.receipt_no);
+    } else if (params.transaction_id) {
+      receipt = ReceiptRepository.findByTransactionId(params.transaction_id);
+    } else if (params.invoice_id) {
+      const receipts = ReceiptRepository.findByInvoiceId(params.invoice_id);
+      receipt = receipts.length > 0 ? receipts[0] : null;
+    } else {
+      return { success: false, error: 'Please provide receipt ID, receipt number, transaction ID, or invoice ID' };
+    }
+
+    if (!receipt) {
+      return { success: false, error: 'Receipt not found' };
+    }
+
+    const invoice = InvoiceRepository.findById(receipt.invoice_id);
+    const transaction = TransactionRepository.findById(receipt.transaction_id);
+
+    return {
+      success: true,
+      receipt: receipt,
+      invoice: invoice,
+      transaction: transaction
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function generatePaytmChecksum(orderId, mid, merchantKey, amount, staging) {
+  try {
+    const paytmPkg = PaytmPayments;
+    return paytmPkg.generateChecksum(orderId, mid, merchantKey, amount, staging);
+  } catch (e) {
+    Logger.log('Error generating checksum: ' + e.message);
+    return 'CHECKSUM_TEMP_' + Date.now();
+  }
+}
+
+function verifyPaytmChecksum(orderId, mid, merchantKey, staging) {
+  try {
+    const paytmPkg = PaytmPayments;
+    return paytmPkg.verifyChecksum(orderId, mid, merchantKey, staging);
+  } catch (e) {
+    Logger.log('Error verifying checksum: ' + e.message);
+    return null;
+  }
+}
+
+// --- Paytm Callback Handler ---
+
+function handlePaytmCallback(e) {
+  try {
+    const params = e.parameter;
+    Logger.log('Paytm Callback received: ' + JSON.stringify(params));
+
+    if (!params.ORDERID) {
+      return createJsonResponse({ success: false, error: 'Order ID not found' });
+    }
+
+    const formData = {
+      ORDERID: params.ORDERID,
+      MID: params.MID,
+      TXNID: params.TXNID,
+      TXNAMOUNT: params.TXNAMOUNT,
+      PAYMENTMODE: params.PAYMENTMODE,
+      CURRENCY: params.CURRENCY,
+      TXNDATE: params.TXNDATE,
+      STATUS: params.STATUS,
+      RESPCODE: params.RESPCODE,
+      RESPMSG: params.RESPMSG,
+      CHECKSUMHASH: params.CHECKSUMHASH
+    };
+
+    const result = PaytmPayments.handleCallback(formData);
+    
+    if (result.success) {
+      Logger.log('Payment reconciled successfully for order: ' + params.ORDERID);
+      return createJsonResponse({ success: true, status: 'PAID', orderId: params.ORDERID });
+    } else {
+      Logger.log('Payment reconciliation failed for order: ' + params.ORDERID + ' - ' + result.error);
+      return createJsonResponse({ success: false, error: result.error });
+    }
+  } catch (e) {
+    Logger.log('Paytm Callback Error: ' + e.message);
+    return createJsonResponse({ success: false, error: e.message });
+  }
+}
+
+// --- Fee Structure Handlers ---
+
+function handleGetFeeStructures(token, params) {
+  const auth = requirePermission(token, 'invoice:read');
+  if (!auth.success) return auth;
+
+  try {
+    const options = {};
+    if (params.class) options.class = params.class;
+    if (params.academic_year) options.academic_year = params.academic_year;
+    if (params.fee_type) options.fee_type = params.fee_type;
+    if (params.is_active) options.is_active = params.is_active === 'true';
+
+    const structures = FeeStructureRepository.findAll(options);
+    return { success: true, feeStructures: structures };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleCreateFeeStructure(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.name) {
+      return { success: false, error: 'Fee structure name is required' };
+    }
+    if (!data.amount) {
+      return { success: false, error: 'Amount is required' };
+    }
+
+    const structure = FeeStructureRepository.create({
+      name: data.name,
+      fee_type: data.fee_type || 'General',
+      class: data.class || 'All',
+      academic_year: data.academic_year || new Date().getFullYear().toString(),
+      amount: parseFloat(data.amount),
+      is_active: data.is_active !== false,
+      created_by: auth.user.name || auth.user.email
+    });
+
+    return { success: true, feeStructure: structure, message: 'Fee structure created successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleUpdateFeeStructure(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.id) {
+      return { success: false, error: 'Fee structure ID is required' };
+    }
+
+    const updateData = {};
+    if (data.name) updateData.name = data.name;
+    if (data.fee_type) updateData.fee_type = data.fee_type;
+    if (data.class) updateData.class = data.class;
+    if (data.academic_year) updateData.academic_year = data.academic_year;
+    if (data.amount !== undefined) updateData.amount = parseFloat(data.amount);
+    if (data.is_active !== undefined) updateData.is_active = data.is_active;
+
+    FeeStructureRepository.update(data.id, updateData);
+    return { success: true, message: 'Fee structure updated successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleDeleteFeeStructure(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.id) {
+      return { success: false, error: 'Fee structure ID is required' };
+    }
+
+    FeeStructureRepository.delete(data.id);
+    return { success: true, message: 'Fee structure deleted successfully' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGenerateBulkInvoices(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.class) {
+      return { success: false, error: 'Class is required' };
+    }
+    if (!data.academic_year) {
+      return { success: false, error: 'Academic year is required' };
+    }
+    if (!data.due_date) {
+      return { success: false, error: 'Due date is required' };
+    }
+
+    const result = InvoiceRepository.generateFromFeeStructure(
+      data.class,
+      data.academic_year,
+      data.due_date,
+      auth.user.name || auth.user.email
+    );
+
+    return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGenerateSchoolInvoices(token, data) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    if (!data.academic_year) {
+      return { success: false, error: 'Academic year is required' };
+    }
+    if (!data.due_date) {
+      return { success: false, error: 'Due date is required' };
+    }
+
+    const result = InvoiceRepository.generateSchoolWide(
+      data.academic_year,
+      data.due_date,
+      auth.user.name || auth.user.email
+    );
+
+    return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetAllInvoices(token, params) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    const options = {};
+    if (params.status) options.status = params.status;
+    if (params.academic_year) options.academic_year = params.academic_year;
+    if (params.class) options.class = params.class;
+    if (params.limit) options.limit = parseInt(params.limit);
+    if (params.offset) options.offset = parseInt(params.offset);
+
+    const invoices = InvoiceRepository.findAll(options);
+    return { success: true, invoices: invoices, total: invoices.length };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetDefaulterList(token, params) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    const options = {};
+    if (params.academic_year) options.academic_year = params.academic_year;
+
+    const overdueInvoices = InvoiceRepository.getOverdueInvoices();
+    return { success: true, defaulters: overdueInvoices, count: overdueInvoices.length };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetPaymentAnalytics(token, params) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    const invoices = InvoiceRepository.findAll({});
+    const transactions = TransactionRepository.findAll({});
+
+    const totalCollection = invoices
+      .filter(inv => inv.status === 'Paid')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+
+    const paidCount = invoices.filter(inv => inv.status === 'Paid').length;
+    const pendingCount = invoices.filter(inv => inv.status === 'Sent' || inv.status === 'Pending').length;
+    const overdueCount = invoices.filter(inv => inv.status === 'Overdue').length;
+
+    const pendingAmount = invoices
+      .filter(inv => inv.status === 'Sent' || inv.status === 'Pending')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+
+    const overdueAmount = invoices
+      .filter(inv => inv.status === 'Overdue')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+
+    const upiCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('UPI')).length;
+    const cardCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('CARD')).length;
+    const netBankingCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('NET')).length;
+    const totalTransactions = transactions.length || 1;
+
+    return {
+      success: true,
+      analytics: {
+        totalCollection: totalCollection,
+        paidCount: paidCount,
+        pendingCount: pendingCount,
+        overdueCount: overdueCount,
+        pendingAmount: pendingAmount,
+        overdueAmount: overdueAmount,
+        channelAnalytics: {
+          upi: Math.round((upiCount / totalTransactions) * 100),
+          cards: Math.round((cardCount / totalTransactions) * 100),
+          netBanking: Math.round((netBankingCount / totalTransactions) * 100)
+        }
+      }
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function handleGetFeeDashboardStats(token) {
+  const auth = requirePermission(token, 'invoice:write');
+  if (!auth.success) return auth;
+
+  try {
+    const invoices = InvoiceRepository.findAll({});
+    const academicYear = new Date().getFullYear().toString();
+
+    const yearInvoices = invoices.filter(inv => inv.academic_year === academicYear);
+
+    const totalTarget = yearInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+    const paidAmount = yearInvoices
+      .filter(inv => inv.status === 'Paid')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+    const pendingAmount = yearInvoices
+      .filter(inv => inv.status === 'Sent' || inv.status === 'Pending')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+    const overdueAmount = yearInvoices
+      .filter(inv => inv.status === 'Overdue')
+      .reduce((sum, inv) => sum + parseFloat(inv.amount || 0), 0);
+
+    const transactions = TransactionRepository.findAll({});
+    const upiCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('UPI')).length;
+    const cardCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('CARD')).length;
+    const netBankingCount = transactions.filter(t => t.payment_mode && t.payment_mode.toUpperCase().includes('NET')).length;
+    const totalTransactions = transactions.length || 1;
+
+    const overdueInvoices = InvoiceRepository.getOverdueInvoices();
+
+    return {
+      success: true,
+      stats: {
+        totalCollection: paidAmount,
+        targetCollection: totalTarget,
+        paidAmount: paidAmount,
+        pendingAmount: pendingAmount,
+        overdueAmount: overdueAmount,
+        paidCount: yearInvoices.filter(inv => inv.status === 'Paid').length,
+        pendingCount: yearInvoices.filter(inv => inv.status === 'Sent' || inv.status === 'Pending').length,
+        overdueCount: overdueInvoices.length,
+        channelAnalytics: {
+          upi: Math.round((upiCount / totalTransactions) * 100),
+          cards: Math.round((cardCount / totalTransactions) * 100),
+          netBanking: Math.round((netBankingCount / totalTransactions) * 100)
+        },
+        totalDiscounts: 0,
+        totalWaivers: 0,
+        defaulters: overdueInvoices.slice(0, 10)
+      }
+    };
   } catch (e) {
     return { success: false, error: e.message };
   }

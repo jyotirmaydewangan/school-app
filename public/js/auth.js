@@ -177,6 +177,9 @@ const auth = {
 
     const roleData = rolePermissions[user.role] || {};
     const permissions = roleData.permissions || [];
+    
+    console.log('[Auth] hasPermission check:', { userRole: user.role, permission, roleData, permissions });
+    
     return permissions.includes('*') || permissions.includes(permission);
   },
 
@@ -207,6 +210,8 @@ const auth = {
 
     const roleData = rolePermissions[user.role] || {};
     const pages = roleData.pages || [];
+    
+    console.log('[Auth] hasPageAccess check:', { userRole: user.role, pageName, roleData, pages });
 
     // Admin or wildcard page access
     if (user.role.toLowerCase() === 'admin' || pages.includes('*')) return true;

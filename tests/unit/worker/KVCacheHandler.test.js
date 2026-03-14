@@ -261,4 +261,131 @@ describe('KVCacheHandler', () => {
             expect(KVCacheHandler.isEnabled()).toBe(true);
         });
     });
+
+    // ─── buildAttendanceKey ───────────────────────────────────────────────────
+
+    describe('buildAttendanceKey', () => {
+        test('builds correct attendance key format', () => {
+            const key = KVCacheHandler.buildAttendanceKey('Class 10', 'A', '2024-01-15');
+            expect(key).toContain('attendance');
+            expect(key).toContain('class_10');
+            expect(key).toContain('a');
+            expect(key).toContain('2024-01-15');
+        });
+
+        test('handles null section', () => {
+            const key = KVCacheHandler.buildAttendanceKey('Class 10', null, '2024-01-15');
+            expect(key).toContain('nosection');
+        });
+
+        test('handles empty section', () => {
+            const key = KVCacheHandler.buildAttendanceKey('Class 10', '', '2024-01-15');
+            expect(key).toContain('nosection');
+        });
+
+        test('handles null date', () => {
+            const key = KVCacheHandler.buildAttendanceKey('Class 10', 'A', null);
+            expect(key).toContain('class_10');
+        });
+    });
+
+    // ─── Key with keyParameters ───────────────────────────────────────────────
+
+    describe('buildKeyForAction with keyParameters', () => {
+        test('builds key with keyParameters from queryParams', () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getAttendanceByClass', {
+                queryParams: { class: '10A', section: 'B', year: '2024', month: '01' }
+            });
+            expect(key).toContain('10A');
+            expect(key).toContain('B');
+            expect(key).toContain('2024');
+            expect(key).toContain('01');
+        });
+
+        test('builds key with keyParameters from body', () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getAttendanceByClass', {
+                body: { class_id: '10A', section_id: 'B', year: '2024', month: '01' }
+            });
+            expect(key).toContain('10A');
+            expect(key).toContain('B');
+        });
+
+        test('handles fuzzy matching for keyParameters', () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getAttendanceByClass', {
+                queryParams: { CLASS: '10A', SECTION: 'B' }
+            });
+            expect(key).toContain('10A');
+        });
+
+        test('uses "any" for missing optional keyParameters', () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getAttendanceByClass', {
+                queryParams: { class: '10A' }
+            });
+            expect(key).toContain('any');
+        });
+
+        test('handles missing required keyParameters (class)', () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getAttendanceByClass', {
+                queryParams: { section: 'B', year: '2024' }
+            });
+            expect(key).toContain('any');
+        });
+    });
+
+    // ─── buildResponse ───────────────────────────────────────────────────────
+
+    describe('buildResponse', () => {
+        test('wraps array data in success response', () => {
+            const result = KVCacheHandler.buildResponse([1, 2, 3]);
+            expect(result.success).toBe(true);
+            expect(result.data).toEqual([1, 2, 3]);
+            expect(result.isFromCache).toBe(true);
+        });
+
+        test('preserves existing success flag', () => {
+            const result = KVCacheHandler.buildResponse({ success: false, error: 'Test' });
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Test');
+        });
+
+        test('marks stale responses', () => {
+            const result = KVCacheHandler.buildResponse({ data: 'test' }, true);
+            expect(result.isStale).toBe(true);
+        });
+    });
+
+    // ─── get with errors ───────────────────────────────────────────────────
+
+    describe('get error handling', () => {
+        test('returns null on KV get error', async () => {
+            const originalGet = global.MockKV.get;
+            global.MockKV.get = jest.fn().mockRejectedValue(new Error('KV Error'));
+            
+            const result = await KVCacheHandler.get('t1', 'getStudents', {});
+            expect(result).toBeNull();
+            
+            global.MockKV.get = originalGet;
+        });
+
+        test('returns null when cached data is invalid', async () => {
+            const key = KVCacheHandler.buildKeyForAction('t1', 'getStudents', {});
+            await global.MockKV.put(key, 'invalid-json');
+            
+            const result = await KVCacheHandler.get('t1', 'getStudents', {});
+            expect(result).toBeNull();
+        });
+    });
+
+    // ─── set error handling ─────────────────────────────────────────────────
+
+    describe('set error handling', () => {
+        test('does not throw on KV put error', async () => {
+            const originalPut = global.MockKV.put;
+            global.MockKV.put = jest.fn().mockRejectedValue(new Error('KV Error'));
+            
+            await expect(KVCacheHandler.set('t1', 'getStudents', { success: true, data: [] }, {})).resolves.toBeUndefined();
+            
+            global.MockKV.put = originalPut;
+        });
+    });
 });

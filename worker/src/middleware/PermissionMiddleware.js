@@ -41,6 +41,7 @@ const ROLES_CONFIG = (function () {
 
 function _getDefaultRequirements() {
     return {
+        // Noticeboard
         createNotice: 'write:noticeboard',
         updateNotice: 'write:noticeboard',
         deleteNotice: 'write:noticeboard',
@@ -55,7 +56,32 @@ function _getDefaultRequirements() {
         updateUserRole: 'write:users',
         createRole: 'write:users',
         updateRole: 'write:users',
-        deleteRole: 'write:users'
+        deleteRole: 'write:users',
+        // Invoice / Fee Management
+        getInvoices: 'invoice:read',
+        getInvoice: 'invoice:read',
+        createInvoice: 'invoice:write',
+        updateInvoice: 'invoice:write',
+        deleteInvoice: 'invoice:write',
+        createBulkInvoices: 'invoice:write',
+        generateBulkInvoices: 'invoice:write',
+        generateSchoolInvoices: 'invoice:write',
+        getAllInvoices: 'invoice:write',
+        getDefaulterList: 'invoice:write',
+        getFeeStructures: 'invoice:read',
+        createFeeStructure: 'invoice:write',
+        updateFeeStructure: 'invoice:write',
+        deleteFeeStructure: 'invoice:write',
+        getFeeDashboardStats: 'invoice:write',
+        getPaymentAnalytics: 'invoice:write',
+        // Payment
+        createPaymentOrder: 'invoice:read',
+        verifyPayment: 'invoice:write',
+        verifyPaymentStatus: 'invoice:write',
+        getPaymentStatus: 'invoice:read',
+        getPaymentConfig: 'invoice:write',
+        savePaymentConfig: 'invoice:write',
+        getReceipt: 'invoice:read'
     };
 }
 

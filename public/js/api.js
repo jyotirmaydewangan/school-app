@@ -612,6 +612,166 @@ const api = {
       method: 'POST',
       body: JSON.stringify({ token, id })
     });
+  },
+
+  async getInvoices(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.id) params.append('id', options.id);
+    if (options.student_id) params.append('student_id', options.student_id);
+    if (options.status) params.append('status', options.status);
+    if (options.academic_year) params.append('academic_year', options.academic_year);
+    if (options.limit) params.append('limit', options.limit);
+    if (options.offset) params.append('offset', options.offset);
+    return this.request('/getInvoices?' + params.toString());
+  },
+
+  async createInvoice(token, data) {
+    return this.request('/createInvoice', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async createBulkInvoices(token, data) {
+    return this.request('/createBulkInvoices', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateInvoice(token, data) {
+    return this.request('/updateInvoice', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteInvoice(token, id) {
+    return this.request('/deleteInvoice', {
+      method: 'POST',
+      body: JSON.stringify({ token, id })
+    });
+  },
+
+  async createPaymentOrder(token, invoiceId) {
+    return this.request('/createPaymentOrder', {
+      method: 'POST',
+      body: JSON.stringify({ token, invoice_id: invoiceId })
+    });
+  },
+
+  async verifyPaymentStatus(token, orderId) {
+    return this.request('/verifyPaymentStatus', {
+      method: 'POST',
+      body: JSON.stringify({ token, order_id: orderId })
+    });
+  },
+
+  async getPaymentStatus(token, options = {}) {
+    return this.request('/getPaymentStatus', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...options })
+    });
+  },
+
+  async getReceipt(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.id) params.append('id', options.id);
+    if (options.receipt_no) params.append('receipt_no', options.receipt_no);
+    if (options.transaction_id) params.append('transaction_id', options.transaction_id);
+    return this.request('/getReceipt?' + params.toString());
+  },
+
+  async getPaymentConfig(token) {
+    return this.request('/getPaymentConfig', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+  },
+
+  async savePaymentConfig(token, data) {
+    return this.request('/savePaymentConfig', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async getFeeStructures(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.class) params.append('class', options.class);
+    if (options.academic_year) params.append('academic_year', options.academic_year);
+    if (options.fee_type) params.append('fee_type', options.fee_type);
+    return this.request('/getFeeStructures?' + params.toString());
+  },
+
+  async createFeeStructure(token, data) {
+    return this.request('/createFeeStructure', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async updateFeeStructure(token, data) {
+    return this.request('/updateFeeStructure', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async deleteFeeStructure(token, id) {
+    return this.request('/deleteFeeStructure', {
+      method: 'POST',
+      body: JSON.stringify({ token, id })
+    });
+  },
+
+  async generateBulkInvoices(token, data) {
+    return this.request('/generateBulkInvoices', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async generateSchoolInvoices(token, data) {
+    return this.request('/generateSchoolInvoices', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data })
+    });
+  },
+
+  async getAllInvoices(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.status) params.append('status', options.status);
+    if (options.academic_year) params.append('academic_year', options.academic_year);
+    if (options.class) params.append('class', options.class);
+    if (options.limit) params.append('limit', options.limit);
+    if (options.offset) params.append('offset', options.offset);
+    return this.request('/getAllInvoices?' + params.toString());
+  },
+
+  async getDefaulterList(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.academic_year) params.append('academic_year', options.academic_year);
+    return this.request('/getDefaulterList?' + params.toString());
+  },
+
+  async getPaymentAnalytics(token, options = {}) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    if (options.academic_year) params.append('academic_year', options.academic_year);
+    if (options.month) params.append('month', options.month);
+    return this.request('/getPaymentAnalytics?' + params.toString());
+  },
+
+  async getFeeDashboardStats(token) {
+    const params = new URLSearchParams();
+    params.append('token', token);
+    return this.request('/getFeeDashboardStats?' + params.toString());
   }
 };
 
